@@ -1490,6 +1490,12 @@ def _reading(facts: dict, raw: dict) -> dict:
     before = _as_int(tvl.get("before"), -1) if tvl_ok else -1
     low = _as_int(tvl.get("low"), -1) if tvl_ok else -1
     drop = _drop(before, low) if id_match else 0
+    # SEVERITY IS MEASURABLE only with a TVL point before the incident (and
+    # a non-zero one - a ratio needs a denominator) and at least one point in
+    # the window from it. Missing data is not "no damage": `_outcome` turns a
+    # COVERED reading with no measurable severity into INCONCLUSIVE, which is
+    # refileable, rather than a final 0% NO_PAYOUT.
+    measured = bool(id_match) and before > 0 and low >= 0
 
     pinned = ""
     if contest and novel == "":
@@ -1539,6 +1545,7 @@ def _reading(facts: dict, raw: dict) -> dict:
         "tvl_low": low,
         "drop_bps": drop,
         "bucket": _bucket(drop),
+        "tvl_measured": measured,
         "sources": sources,
         "perils_hit": perils_hit,
         "exclusions_hit": excl_hit,
@@ -1612,9 +1619,15 @@ def _reason(facts: dict, read: dict, choice: dict) -> str:
                  "evidence. ")
     else:
         head += "the validators could not classify the incident from this evidence. "
-    head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi Llama; "
-             "TVL drop " + _pct(read["drop_bps"]) + " (bucket "
-             + str(read["bucket"]) + ").")
+    if read["tvl_measured"]:
+        head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi "
+                 "Llama; TVL drop " + _pct(read["drop_bps"]) + " (bucket "
+                 + str(read["bucket"]) + ").")
+    else:
+        head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi "
+                 "Llama; severity could not be measured - DeFi Llama has no TVL "
+                 "data around that date. A covered reading is INCONCLUSIVE until "
+                 "it does; refile then.")
     return _short(head, MAX_REASON)
 
 
@@ -1780,7 +1793,8 @@ EXACT_STR = ("facts_hash", "mode", "content_hash", "digest", "novel",
              "exclusion", "effective", "reason")
 EXACT_INT = ("claim_id", "incident_day", "tvl_before", "tvl_low", "drop_bps",
              "bucket", "sources", "strength_lo", "strength_hi")
-EXACT_BOOL = ("llama_found", "protocol_match", "id_match", "model_called")
+EXACT_BOOL = ("llama_found", "protocol_match", "id_match", "tvl_measured",
+              "model_called")
 EXACT_LIST = ("perils_hit", "exclusions_hit", "allowed_perils",
               "allowed_exclusions", "options")
 
@@ -1895,7 +1909,8 @@ def _pay(who: Address, amount: int) -> None:
 
 
 def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
-             amount: int, table: list, bucket: int, deductible_bps: int) -> tuple:
+             amount: int, table: list, bucket: int, deductible_bps: int,
+             measured: bool = True) -> tuple:
     """(claim status, gross payout wei) from an agreed verdict. PURE, and the
     whole of the deterministic half of a judgement - run by this file on stored
     values after consensus, never by a model.
@@ -1907,6 +1922,9 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
                             the incident simply predates it);
       incident after the cover ended          -> REJECTED_AFTER_COVER_END;
       EXCLUDED            -> DENIED_EXCLUDED;
+      COVERED, severity NOT MEASURABLE (no DeFi Llama TVL data around the
+                          incident) -> INCONCLUSIVE: missing data is not "no
+                          damage", so the claim stays refileable;
       COVERED             -> cover x table[bucket] x (1 - deductible), which is
                             NO_PAYOUT when the severity bucket pays nothing."""
     if eff != COVERED and eff != EXCLUDED:
@@ -1917,6 +1935,8 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
         return (CL_AFTER_END, 0)
     if eff == EXCLUDED:
         return (CL_DENIED, 0)
+    if not measured:
+        return (CL_INCONCLUSIVE, 0)
     b = _clamp(int(bucket), 0, BUCKETS - 1)
     pct = int(table[b]) if b < len(table) else 0
     gross = _gross(int(amount), pct, int(deductible_bps))
@@ -2905,6 +2925,17 @@ class CoverClaim(gl.contract.Contract):
                                 + str(cover.status).lower())
         if now <= 0:
             return self._refuse("the block time was unreadable; retry")
+        waiting_ends = int(cover.start) + int(pool.waiting_days) * DAY
+        if now < waiting_ends:
+            # MECHANICAL, before any evidence is looked at. Every incident that
+            # has happened by now predates the end of the waiting period, so a
+            # claim filed now could only ever be REJECTED_BACKDATED - and it
+            # would spend the cover's ONE claim doing it. Refusing here keeps
+            # the claim for an incident the cover actually covers.
+            return self._refuse("cover waiting period has not ended yet, "
+                                "claimable after " + str(waiting_ends),
+                                {"claimable_after": waiting_ends,
+                                 "seconds_remaining": waiting_ends - now})
         if now > int(cover.claim_deadline):
             return self._refuse("the claim window for cover #" + str(cid)
                                 + " closed " + str(now - int(cover.claim_deadline))
@@ -3115,7 +3146,8 @@ class CoverClaim(gl.contract.Contract):
                                  int(cover.start), int(cover.end),
                                  int(pool.waiting_days) * DAY,
                                  int(cover.amount_wei), self._table(pool),
-                                 int(d["bucket"]), int(pool.deductible_bps))
+                                 int(d["bucket"]), int(pool.deductible_bps),
+                                 bool(d["tvl_measured"]))
         table = self._table(pool)
         claim.table_bps = u32(table[_clamp(int(d["bucket"]), 0, BUCKETS - 1)])
         claim.gross_wei = u256(gross)
@@ -3308,7 +3340,8 @@ class CoverClaim(gl.contract.Contract):
                               int(cover.start), int(cover.end),
                               int(pool.waiting_days) * DAY,
                               int(cover.amount_wei), self._table(pool),
-                              int(d["bucket"]), int(pool.deductible_bps))
+                              int(d["bucket"]), int(pool.deductible_bps),
+                                 bool(d["tvl_measured"]))
         flipped = (new == CL_APPROVED) != (old == CL_APPROVED)
         if not flipped:
             claim.contest_status = CT_UPHELD
@@ -3622,7 +3655,9 @@ class CoverClaim(gl.contract.Contract):
             and now >= start + wait and now <= end,
             "claimable": str(cover.status) == COVER_ACTIVE
             and int(cover.claim_id) == 0 and now > 0
-            and now <= int(cover.claim_deadline),
+            and now >= start + wait and now <= int(cover.claim_deadline),
+            "in_waiting_period": str(cover.status) == COVER_ACTIVE
+            and now > 0 and now < start + wait,
             "claim_id": int(cover.claim_id),
             "settled_at": int(cover.settled_at),
             "refund_wei": str(int(cover.refund_wei)),

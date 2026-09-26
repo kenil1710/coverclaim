@@ -1,7 +1,8 @@
 
 
 def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
-             amount: int, table: list, bucket: int, deductible_bps: int) -> tuple:
+             amount: int, table: list, bucket: int, deductible_bps: int,
+             measured: bool = True) -> tuple:
     """(claim status, gross payout wei) from an agreed verdict. PURE, and the
     whole of the deterministic half of a judgement - run by this file on stored
     values after consensus, never by a model.
@@ -13,6 +14,9 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
                             the incident simply predates it);
       incident after the cover ended          -> REJECTED_AFTER_COVER_END;
       EXCLUDED            -> DENIED_EXCLUDED;
+      COVERED, severity NOT MEASURABLE (no DeFi Llama TVL data around the
+                          incident) -> INCONCLUSIVE: missing data is not "no
+                          damage", so the claim stays refileable;
       COVERED             -> cover x table[bucket] x (1 - deductible), which is
                             NO_PAYOUT when the severity bucket pays nothing."""
     if eff != COVERED and eff != EXCLUDED:
@@ -23,6 +27,8 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
         return (CL_AFTER_END, 0)
     if eff == EXCLUDED:
         return (CL_DENIED, 0)
+    if not measured:
+        return (CL_INCONCLUSIVE, 0)
     b = _clamp(int(bucket), 0, BUCKETS - 1)
     pct = int(table[b]) if b < len(table) else 0
     gross = _gross(int(amount), pct, int(deductible_bps))

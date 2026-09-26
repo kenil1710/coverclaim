@@ -80,6 +80,17 @@
                                 + str(cover.status).lower())
         if now <= 0:
             return self._refuse("the block time was unreadable; retry")
+        waiting_ends = int(cover.start) + int(pool.waiting_days) * DAY
+        if now < waiting_ends:
+            # MECHANICAL, before any evidence is looked at. Every incident that
+            # has happened by now predates the end of the waiting period, so a
+            # claim filed now could only ever be REJECTED_BACKDATED - and it
+            # would spend the cover's ONE claim doing it. Refusing here keeps
+            # the claim for an incident the cover actually covers.
+            return self._refuse("cover waiting period has not ended yet, "
+                                "claimable after " + str(waiting_ends),
+                                {"claimable_after": waiting_ends,
+                                 "seconds_remaining": waiting_ends - now})
         if now > int(cover.claim_deadline):
             return self._refuse("the claim window for cover #" + str(cid)
                                 + " closed " + str(now - int(cover.claim_deadline))
@@ -290,7 +301,8 @@
                                  int(cover.start), int(cover.end),
                                  int(pool.waiting_days) * DAY,
                                  int(cover.amount_wei), self._table(pool),
-                                 int(d["bucket"]), int(pool.deductible_bps))
+                                 int(d["bucket"]), int(pool.deductible_bps),
+                                 bool(d["tvl_measured"]))
         table = self._table(pool)
         claim.table_bps = u32(table[_clamp(int(d["bucket"]), 0, BUCKETS - 1)])
         claim.gross_wei = u256(gross)
@@ -483,7 +495,8 @@
                               int(cover.start), int(cover.end),
                               int(pool.waiting_days) * DAY,
                               int(cover.amount_wei), self._table(pool),
-                              int(d["bucket"]), int(pool.deductible_bps))
+                              int(d["bucket"]), int(pool.deductible_bps),
+                                 bool(d["tvl_measured"]))
         flipped = (new == CL_APPROVED) != (old == CL_APPROVED)
         if not flipped:
             claim.contest_status = CT_UPHELD

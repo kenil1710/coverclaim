@@ -62,6 +62,7 @@ export type Cover = {
   status: string;
   in_force: boolean;
   claimable: boolean;
+  in_waiting_period?: boolean;
   claim_id: number;
   settled_at: number;
   refund_wei: string;

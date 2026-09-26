@@ -1,78 +1,82 @@
 
-=== CANONICAL 0x36F2D1385Bd6fd0Fa22678FD6Cb5A00cc021Cee3
-[canon-euler-pool] create_pool ACCEPTED 10s 0x307a22b47bca1f80a3d8b7ec33d47866e947cde0796735c224306ae50ced0334
+=== CANONICAL 0xeDBB5f6ea3D01289E1D879729C2253058602F145
+GenLayer RPC error (sim_estimateTransactionFees): Server busy: all 8 execution slots occupied, retry later
+  … write fee simulation failed for create_pool (Version of JSON-RPC protocol is not supported.
+
+Details: Server busy: all 8 execution slots occupied)
+[canon-euler-pool] create_pool ACCEPTED 10s 0x014f3f5ee827b187248c23380fdd0ae9d5c71b6d521ca4892435de638f3a24e5
     
-[canon-backdated-cover] buy_cover ACCEPTED 8s 0x1097cb1cfa553f760965104540392dc7b5657dc4162ad8ff29f0940be7000518
-    {"claim_deadline":1795592409,"cover_id":1,"demo_backdated_days":0,"end":1793000409,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"pr
-[canon-backdated-claim] file_claim ACCEPTED 7s 0xcd2c95bc66628190d75b1aeac2d6863814e9b73bd4d8890a1886c21e2b619d49
+[canon-backdated-cover] buy_cover ACCEPTED 21s 0x723dd275207a17ba60724cb8b21bfffa48392f872c776f8ddb96b4610901524e
+    {"claim_deadline":1795597602,"cover_id":1,"demo_backdated_days":0,"end":1793005602,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"pr
+[canon-backdated-claim] file_claim ACCEPTED 15s 0xd2fa06403c9721320a4fdeda1eaf8046b1304c70fc4e37fdd356dff945b3a6fb
     
-[canon-backdated-judge] judge_claim ACCEPTED 19s 0xa8959c25bd600b61440c1a12e1a5a75c078ba29459c4dbdef499bd057db1a1c9
+[canon-backdated-judge] judge_claim ACCEPTED 31s 0x5db7a99808d1587c6c79a1885d5c34850bf63605f5d43bfc199ea6971e35b1ac
     {"batch_id":0,"claim_id":1,"classification":"COVERED","content_hash":"4a9acc9c5131dbe3","drop_bps":9585,"effective":"COVERED","evidence_strength":4,"exclusion":"NONE","gross_payout_wei":"0","incident_date":"2023-03-13","judged":true,"model_called":true,"outcom
-[canon-curve-pool-wait0] create_pool ACCEPTED 7s 0xd048b19a7066c01a25364d25f11def440a1761b91b0bbff61193f4845c46cf72
+[canon-curve-pool-wait0] create_pool ACCEPTED 9s 0x538059a5ab82b284b7414896efddf04eb678ee376cb9a922024996c027af8e4c
     
-[canon-registry-cover] buy_cover ACCEPTED 9s 0x236e7d09f51f30acf233ee6682e0bccca6d37a217585c202fa2866cb30829396
-    {"claim_deadline":1798184453,"cover_id":2,"demo_backdated_days":0,"end":1795592453,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":2,"pre
-[registry-attest] attest ACCEPTED 11s 0x5323df20f8edaaaa1ce32380b8fa60fe05880471b11ce26cf8d98f9155449e10
+[canon-registry-cover] buy_cover ACCEPTED 11s 0x01c54d76f3a202b3dbe1c868b98e2985bf4fb81947ab973c8b395c667565e521
+    {"claim_deadline":1798189671,"cover_id":2,"demo_backdated_days":0,"end":1795597671,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":2,"pre
+[registry-attest] attest ACCEPTED 14s 0x333e9b1082b989c00423daba9054529802cb7ab907d8e9237b559bb886d25c3e
     {"cover_id":2,"covered":true,"index":0,"status":"OK"}
 
-=== DEMO 0xa87Cd248C2667bFc3b79102C56A80E2912DE2A21
-[demo-euler-pool] create_pool ACCEPTED 7s 0x4dc97a98b30f3ab4fa1c4a8a05e98b7591ee0fc5b5b1ea57e9bea281b228725d
+=== DEMO 0xF77087fB487153212c3d3Bc178875f7fBeA52fFa
+[demo-euler-pool] create_pool ACCEPTED 7s 0x9fe68fe069db54ad39295d56692dcd9c9857e198ec21e034347cce7ae6b02654
     
-[demo-curve-pool] create_pool ACCEPTED 8s 0xe718a8dd20471c2cff61ccd71dd0c82f696db7b6cc0a7670eee31b3de1800c57
+[demo-curve-pool] create_pool ACCEPTED 12s 0x07caf1cf3184499bb021532e7beb16d7f086a71e4bd5df43a954def1417a7f72
     
-[demo-multichain-pool] create_pool ACCEPTED 7s 0x68dedc3c134f49870c0079679a7240b47b60be544beb29e0dc1d37e82c92957c
+[demo-multichain-pool] create_pool ACCEPTED 9s 0x8280eb06b749ad438806cd1761ac6648eff2a22126b522558dea9b59bf113fe4
     
-[demo-euler-prorata-pool] create_pool ACCEPTED 9s 0xdfc8e4f36d1ee3f14b61fdf9fb51e924b6b621f474f60938789813f577c4a8a3
+[demo-euler-prorata-pool] create_pool ACCEPTED 12s 0xc7149f75ec73424444f9baf5815e45b2dba77cdd19bed595fa9cf1c7bd59fcce
     
-[demo-tornado-pool] create_pool ACCEPTED 9s 0xde1615f373e7def57548b70d0bc38c9e8e0bc2b8e389f0999e0d9eee805344fd
+[demo-tornado-pool] create_pool ACCEPTED 9s 0xe089b37ed6ab5b01f350bd99ebecec7663bc3b14ec4fa96725f695c07cf49d07
     
-[demo-expired-cover] buy_cover ACCEPTED 11s 0xae8e3867f8aba73a5c3aa3f2d7e6b38e3ac58119fba442a5508080d08bbb2bc5
-    {"claim_deadline":1790411221,"cover_id":1,"demo_backdated_days":1521,"end":1659080521,"lock_wei":"200000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"
-[demo-covered-cover] buy_cover ACCEPTED 7s 0xe4e335408f94c5d8e87fb7cf2b77e329708763ba6229a2f1ad9210f87d1508c1
-    {"claim_deadline":1790411234,"cover_id":2,"demo_backdated_days":1521,"end":1690530134,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,
-[demo-curve-cover] buy_cover ACCEPTED 11s 0x7576ce5081122559bd45e48768f42c54ffb711298ca485d105b5ff4ec2ac6ce9
-    {"claim_deadline":1790411242,"cover_id":3,"demo_backdated_days":1521,"end":1690530142,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":2,
-[demo-multichain-cover] buy_cover ACCEPTED 13s 0xa1198d210aea30809199ff0f91e2e6fc91257046b2199b84ba588709b4ebfbc5
-    {"claim_deadline":1790411254,"cover_id":4,"demo_backdated_days":1521,"end":1690530154,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":3,
-[demo-inconclusive-cover] buy_cover ACCEPTED 11s 0xd194725ae7826cb7fbdaf568b410f7c0896706e8e52fe4f935602f2474c6976a
-    {"claim_deadline":1790411268,"cover_id":5,"demo_backdated_days":1521,"end":1690530168,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"
-[demo-prorata-cover-a] buy_cover ACCEPTED 9s 0xcdbe5d2b86aa90755e21f31619a7ed6cd10a0d94bbc4f0009b8579d59391b533
-    {"claim_deadline":1790411280,"cover_id":6,"demo_backdated_days":1521,"end":1690530180,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":4,"
-[demo-prorata-cover-b] buy_cover ACCEPTED 11s 0x031928db3c947121868543db9d89e3b5f2a50cc23fa25c40d3a41c609891663e
-    {"claim_deadline":1790411291,"cover_id":7,"demo_backdated_days":1521,"end":1690530191,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":4,"
-[demo-stalled-cover] buy_cover ACCEPTED 11s 0x0ced81c0916ba9e39368a1e80c88419beffccabb7e7e86757bdc0a8fccedc4ba
-    {"claim_deadline":1790411303,"cover_id":8,"demo_backdated_days":1521,"end":1690530203,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":5,"
-[demo-covered-claim] file_claim ACCEPTED 7s 0x874c1aca329b351531e7dd64d7228de534764f5e8d714c640a76162bcb521158
+[demo-expired-cover] buy_cover ACCEPTED 10s 0x0ef520c3545acfddf74f5a44b750cb2575cd981cc9aea6a15efa9dd0b282c7de
+    {"claim_deadline":1790416455,"cover_id":1,"demo_backdated_days":1521,"end":1659085755,"lock_wei":"200000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"
+[demo-covered-cover] buy_cover ACCEPTED 10s 0xa9f8e44e5bb559968350e2584f5663cde268ff260eed5f4fb8faa6b863a94409
+    {"claim_deadline":1790416466,"cover_id":2,"demo_backdated_days":1521,"end":1690535366,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,
+[demo-curve-cover] buy_cover ACCEPTED 10s 0x3afee18d3c5ff2800293b9179f3bf14f148787dfca62721858d506e39791bf9e
+    {"claim_deadline":1790416478,"cover_id":3,"demo_backdated_days":1521,"end":1690535378,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":2,
+[demo-multichain-cover] buy_cover ACCEPTED 11s 0x9a4e1b717d5ad0c8660dfa9d99d0cc7eb75f85e173da7996bb53b60cef92f4d0
+    {"claim_deadline":1790416488,"cover_id":4,"demo_backdated_days":1521,"end":1690535388,"lock_wei":"1000000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":3,
+[demo-inconclusive-cover] buy_cover ACCEPTED 11s 0xf8a376e2c414a7bc5b17756cd236c9ccace82e412c7a67e803d5579672bac3a2
+    {"claim_deadline":1790416503,"cover_id":5,"demo_backdated_days":1521,"end":1690535403,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":1,"
+[demo-prorata-cover-a] buy_cover ACCEPTED 10s 0x5e7a80969cdb471e6819c0807cdd22860928589db1feb2fc53fa98bd9edf7e14
+    {"claim_deadline":1790416514,"cover_id":6,"demo_backdated_days":1521,"end":1690535414,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":4,"
+[demo-prorata-cover-b] buy_cover ACCEPTED 15s 0xe4955324d71eb5892c908cdbe9881636307ac90660b32ab23c228085108b3330
+    {"claim_deadline":1790416532,"cover_id":7,"demo_backdated_days":1521,"end":1690535432,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":4,"
+[demo-stalled-cover] buy_cover ACCEPTED 17s 0x920adfbf091f26caefe09854050ba978f6a4a620f6764903c93843040ac106ad
+    {"claim_deadline":1790416549,"cover_id":8,"demo_backdated_days":1521,"end":1690535449,"lock_wei":"500000000000000000","note":"incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()","overpaid_wei":"0","pool_id":5,"
+[demo-covered-claim] file_claim ACCEPTED 13s 0x1d0f8a1cbe00d453415370b233f4de9627ad382bdfc0c7b5b460253d4f4770ab
     
-[demo-curve-claim] file_claim ACCEPTED 7s 0x5016cbdf176ee7f6ba52cc1061d87987b3a16abc102a000292a9a01df3fd9728
+[demo-curve-claim] file_claim ACCEPTED 18s 0xbd2632a3947287099ecedf341a85a4860569fa5a8720deac2c088e0eba1f72d1
     
-[demo-multichain-claim] file_claim ACCEPTED 7s 0x908e494982821230ec20229c48f66baf66708adf4979fa8c3ddc3b911f8f4ea2
+[demo-multichain-claim] file_claim ACCEPTED 10s 0x0d6c78eeb7d1cdcc562f53f5f8c82ccedb33f8903d7366512d679b4eb3867854
     
-[demo-inconclusive-claim] file_claim ACCEPTED 9s 0x85866a6ed61659f9195bc40f270d3e1ffec3a61e0f07879a8bb0a46d80297beb
+[demo-inconclusive-claim] file_claim ACCEPTED 11s 0x72e2f2e1226fd5049b493632af82f3e662510839971df8e037768b19d745a831
     
-[demo-prorata-claim-a] file_claim ACCEPTED 11s 0x822caf0ef2995fc3ac117cfccddc9fcdf67733b15e0791b8634e8c8c2d4682ab
+[demo-prorata-claim-a] file_claim ACCEPTED 14s 0x6e68c1ebfbecdcfa0f30b86c6671fa8a09a3e64fe8672739a4be9801be5a830f
     
-[demo-prorata-claim-b] file_claim ACCEPTED 11s 0x491e4378c8afb9cb40fa5feac57caf990832443057a8e14bd6b933cb738e6e63
+[demo-prorata-claim-b] file_claim ACCEPTED 21s 0x7d63bc39a2f6e18afb21efb993c38fa5e071e493e064bac27a7a97d936945589
     
-[demo-covered-judge] judge_claim ACCEPTED 19s 0xe9c8b5a06d5ab12942c97395322c3c6d7cc16df23336be081c52efe7805f23a6
+[demo-covered-judge] judge_claim ACCEPTED 28s 0xaa97278468cde69db1d9a5456966e743f5f9866ba0bdcb39b30fa3ec7acd0b0b
     {"batch_id":1,"claim_id":1,"classification":"COVERED","content_hash":"4a9acc9c5131dbe3","drop_bps":9585,"effective":"COVERED","evidence_strength":4,"exclusion":"NONE","gross_payout_wei":"900000000000000000","incident_date":"2023-03-13","judged":true,"model_cal
-[demo-contest] contest ACCEPTED 7s 0x450785c844ff942eb5783db27348cbdd42d40c138ff77a1c66e1bfb78606b817
+[demo-contest] contest ACCEPTED 11s 0xd60f97c0de0224ce4cc12048f9550ee05791d77e83b747c102c2e2df2f2efea6
     {"bond_wei":"100000000000000000","claim_id":1,"note":"contest filed; anyone may call judge_contest(1). If the outcome flips the bond comes back; if it holds, the bond goes to the other side.","overpaid_wei":"0","status":"OK"}
-[demo-contest-judge] judge_contest ACCEPTED 23s 0x0838e8417b0b8dcdef80b84ee9af62b9557a2e34b9cc8f28693366b544aa3c05
+[demo-contest-judge] judge_contest ACCEPTED 28s 0xf6e9ff12a657fc7e9f7e9a04ba35dab474b4b18a6909b8938c7d14ce37a77cbb
     {"bond_to":"0xaf0ddCE698cFAe7e851BB32f7C73b205C15cDe05","claim_id":1,"contest":"UPHELD","outcome":"APPROVED","reason":"Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 7/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).","re
-[demo-curve-judge] judge_claim ACCEPTED 51s 0x486d53fca0c73fcbb7b770aaa2479bc8fe063a3e22b293af000e92636400d42a
+[demo-curve-judge] judge_claim ACCEPTED 55s 0x2816656b2e171a1d4c04fb926e5317b1b4f943950741f8a35a8f2c43cd69987b
     {"batch_id":0,"claim_id":2,"classification":"EXCLUDED","content_hash":"ff36629b12a323a1","drop_bps":148,"effective":"EXCLUDED","evidence_strength":4,"exclusion":"FRONTEND_HIJACK","gross_payout_wei":"0","incident_date":"2022-08-09","judged":true,"model_called":
-[demo-multichain-judge] judge_claim ACCEPTED 31s 0x23b78747396e0ca5a9bb2b0729523df15493782e143d4735d6db810737c4e521
+[demo-multichain-judge] judge_claim ACCEPTED 42s 0x61ed8472de732591b899897ff57e6541c26fb15669bf602fbd4fae2e6f345ab3
     {"batch_id":0,"claim_id":3,"classification":"EXCLUDED","content_hash":"b5357357dd59d42a","drop_bps":8979,"effective":"EXCLUDED","evidence_strength":4,"exclusion":"USER_KEY_COMPROMISE","gross_payout_wei":"0","incident_date":"2023-07-07","judged":true,"model_cal
-[demo-inconclusive-judge] judge_claim ACCEPTED 14s 0xa49b38213091092d5715ddfeae946f946a7080020b73cbbbdd9cf8db75846705
+[demo-inconclusive-judge] judge_claim ACCEPTED 33s 0x7848b157a8da8bead18ffc034bf30c06fe2196d2faf7c1393fd65e6657147f35
     {"batch_id":0,"claim_id":4,"classification":"INCONCLUSIVE","content_hash":"b03315447e55fca9","drop_bps":9585,"effective":"INCONCLUSIVE","evidence_strength":0,"exclusion":"NONE","gross_payout_wei":"0","incident_date":"2023-03-13","judged":true,"model_called":fa
-[demo-prorata-judge-a] judge_claim ACCEPTED 30s 0x86e7af4012617708a653a4b1478ca84aa450b5398a9b5cb292bdc9c08a8657ae
+[demo-prorata-judge-a] judge_claim ACCEPTED 30s 0x7105638ff6f36f7a820dc3829ef07667ac06904384e7d7dbde03faa8d4ff27bd
     {"batch_id":2,"claim_id":5,"classification":"COVERED","content_hash":"4a9acc9c5131dbe3","drop_bps":9585,"effective":"COVERED","evidence_strength":4,"exclusion":"NONE","gross_payout_wei":"900000000000000000","incident_date":"2023-03-13","judged":true,"model_cal
-[demo-prorata-judge-b] judge_claim ACCEPTED 26s 0x0fa1292e79c4b4c5aaf88325e9d805396492668c0645d10b761293fbbcd3f920
+[demo-prorata-judge-b] judge_claim ACCEPTED 28s 0xe5726777de33d05437333505fede4b4d0b4cf6f4ba600355d926be77586a7222
     {"batch_id":2,"claim_id":6,"classification":"COVERED","content_hash":"912b860d3c97f56b","drop_bps":9585,"effective":"COVERED","evidence_strength":4,"exclusion":"NONE","gross_payout_wei":"900000000000000000","incident_date":"2023-03-13","judged":true,"model_cal
-[demo-stalled-claim] file_claim ACCEPTED 11s 0xbe3488163bb898a8316dc25fcb4ef62795fed36b80a3cc86fcbc01e4f7cd6900
+[demo-stalled-claim] file_claim ACCEPTED 16s 0xd0b3ec9563bc3b792fea37e886e6bd982bf86fdf332a28e603d26403964de0ba
     
-[demo-pause] set_paused ACCEPTED 9s 0x7d342c059c2d18e01c46edd11d0158f57b46e841be64790985c40d91e0cd0cff
+[demo-pause] set_paused ACCEPTED 9s 0x1b3b430edda68a35ce6e976ee6dab1eacee5bdb363fbbd786e58d646bfe1d78e
     {"note":"claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open","paused":true,"status":"OK"}
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
@@ -80,6 +84,10 @@
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
+GenLayer RPC error (gen_call): Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+  … get_claim attempt 1 hit transient RPC noise, waiting 4s
+  … waiting: stall window on claim 7
+GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
@@ -91,22 +99,58 @@
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
-  … waiting: stall window on claim 7
-[demo-settle-stalled-while-paused] settle_stalled ACCEPTED 14s 0x7e744bc1574327c1f9228283ff9430c4677f964c911923ec827eae083ecc901b
-    {"claim_id":7,"note":"back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790411303","outcome":"FILED","refile_until":1790411303,"settled":"CLAIM","status":"OK"}
-[demo-stalled-judge-while-paused] judge_claim ACCEPTED 19s 0x1dba7fc4af55f9988d6aef12e91c12754f895ad48c08d4e591d57dc2f55495ac
+[demo-settle-stalled-while-paused] settle_stalled ACCEPTED 12s 0x9b958a67c03b175e9b15c2e20154b5528a7df23907d9de51700f883c637a19d3
+    {"claim_id":7,"note":"back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790416549","outcome":"FILED","refile_until":1790416549,"settled":"CLAIM","status":"OK"}
+[demo-stalled-judge-while-paused] judge_claim ACCEPTED 34s 0x9b9f2d9f64eb53f48ec4d5ebc545377ad8ef5aaf359b138ca980249ff490aee3
     {"batch_id":0,"claim_id":7,"classification":"EXCLUDED","content_hash":"3ca5dee94cebdfeb","drop_bps":70,"effective":"EXCLUDED","evidence_strength":4,"exclusion":"GOVERNANCE_ATTACK","gross_payout_wei":"0","incident_date":"2023-05-20","judged":true,"model_called"
-[demo-unpause] set_paused ACCEPTED 10s 0xbe4ba93a7932f3e61618b869710c3e2939992eec8e19bc77ca7aeb041dfdd363
+[demo-unpause] set_paused ACCEPTED 10s 0xebd1672e9f4e2b6e796e3a7247ff9111b90d461d6dfa3e8c8df8c9d9467030f3
     {"note":"claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open","paused":false,"status":"OK"}
-  … waiting: settlement windows
-[demo-finalize-batch-1] finalize_incident ACCEPTED 11s 0xc100d373bb913291a3b03da480cf48bffd08e685e9d3fa79d364240abca20897
+[demo-finalize-batch-1] finalize_incident ACCEPTED 14s 0x5cac57b69c6f4e7102b85ef845761c069709ee1cb089372ed6c3034fb3b5e141
     {"available_wei":"1000000000000000000","batch_id":1,"claim_with":"claim_payout()","claims_paid":1,"dust_to_underwriter_wei":"0","factor_bps":10000,"gross_total_wei":"900000000000000000","paid_total_wei":"900000000000000000","scaled":false,"status":"OK"}
   … waiting: settlement windows
 GenLayer RPC error (gen_call): fetch failed
   … get_batches attempt 1 hit transient RPC noise, waiting 4s
 GenLayer RPC error (gen_call): fetch failed
   … get_batches attempt 2 hit transient RPC noise, waiting 8s
-[demo-finalize-batch-2] finalize_incident ACCEPTED 12s 0xe7b984abdc7a26f42d21bc88d0a1f858f76c807dd3ee6a01b01c9f14ba658b20
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 3 hit transient RPC noise, waiting 12s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 4 hit transient RPC noise, waiting 16s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 5 hit transient RPC noise, waiting 20s
+GenLayer RPC error (gen_call): fetch failed
+  … waiting: settlement windows
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 1 hit transient RPC noise, waiting 4s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 2 hit transient RPC noise, waiting 8s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 3 hit transient RPC noise, waiting 12s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 4 hit transient RPC noise, waiting 16s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 5 hit transient RPC noise, waiting 20s
+GenLayer RPC error (gen_call): fetch failed
+  … waiting: settlement windows
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 1 hit transient RPC noise, waiting 4s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 2 hit transient RPC noise, waiting 8s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 3 hit transient RPC noise, waiting 12s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 4 hit transient RPC noise, waiting 16s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 5 hit transient RPC noise, waiting 20s
+GenLayer RPC error (gen_call): fetch failed
+  … waiting: settlement windows
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 1 hit transient RPC noise, waiting 4s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 2 hit transient RPC noise, waiting 8s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 3 hit transient RPC noise, waiting 12s
+[demo-finalize-batch-2] finalize_incident ACCEPTED 7s 0xa5098f3f8a5de38b53f9ebc752885d166eb3c499a221d4b84f1198d03469b24f
     {"available_wei":"1000000000000000000","batch_id":2,"claim_with":"claim_payout()","claims_paid":2,"dust_to_underwriter_wei":"0","factor_bps":5555,"gross_total_wei":"1800000000000000000","paid_total_wei":"1000000000000000000","scaled":true,"status":"OK"}
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
@@ -127,21 +171,6 @@ GenLayer RPC error (gen_call): fetch failed
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
-GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
-  … waiting: claim window of the expired cover
-GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-  … waiting: claim window of the expired cover
-GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
@@ -153,19 +182,23 @@ GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retr
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
   … waiting: claim window of the expired cover
-[demo-release-expired] release_cover ACCEPTED 11s 0x8e7f10c662685d3248e923a4141e9c0c2f40b653508639f22b1336de56050a8e
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+[demo-release-expired] release_cover ACCEPTED 15s 0x00d6c959909a68a088defe03b8e46c7bcd1a7f4acb2504b38ca63370ff55ca6d
     {"claim_with":"claim_payout()","cover_id":1,"premium_earned_wei":"66666666666667","status":"OK","underwriter":"0xDA75CBccB80CC529e555ecC503c009446f1FA78a","unlocked_wei":"200000000000000000"}
-[demo-payout-buyer1] claim_payout ACCEPTED 14s 0xeda31f753aebb026bc68fc3d1356945a02a5cd95e3f9cd7f5d0f4176968638c8
+[demo-payout-buyer1] claim_payout ACCEPTED 12s 0x01c101461229f944e025252bfd55611861829b642ee840b80f0b9026e59c4174
     {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"1.00","paid_wei":"1000000000000000000","status":"OK"}
-[demo-payout-buyer5] claim_payout ACCEPTED 11s 0x555584aa907f271bedc813eee9744775d63bca7c6c3012621eff7228c7e2a4d8
+[demo-payout-buyer5] claim_payout ACCEPTED 12s 0x2f13bd30a9f6e01e71927e1285568938263271b9c233a94bb0d2865a93df7dab
     {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.50","paid_wei":"500000000000000000","status":"OK"}
-GenLayer RPC error (sim_estimateTransactionFees): Unexpected token '<', "<!DOCTYPE "... is not valid JSON
-  … claim_payout fee attempt 1 hit transient RPC noise, waiting 2s
-[demo-payout-buyer6] claim_payout ACCEPTED 19s 0x360a8230042881bc0769677a3be021207011a92642afefb951459a430d452424
+[demo-payout-buyer6] claim_payout ACCEPTED 6s 0xb56ffe778dc37a11aace980d4ee29f9c94fa345b89b79d279f4f5d17d624d57a
     {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.50","paid_wei":"500000000000000000","status":"OK"}
-[demo-payout-uw1] claim_payout ACCEPTED 9s 0x93d1b409804b611dae66b0de43af90481d792681a6ae228562506442bd19a9d9
+[demo-payout-uw1] claim_payout ACCEPTED 12s 0x8c504c0f961507c777e99fbafe7a695972332e2dc743e7e42549ca687f1d5dc2
     {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.121733333333333334","paid_wei":"121733333333333334","status":"OK"}
-[demo-payout-uw2] claim_payout ACCEPTED 13s 0x02fc6a15bb39351e3128a4b7f2252be2bf907d807493c8aad821c597f8753458
+[demo-payout-uw2] claim_payout ACCEPTED 6s 0x597724907a64b07699acbdb5053a2152baa11e5ca9b2c1be720ed3c1feee8116
     {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.243333333333333334","paid_wei":"243333333333333334","status":"OK"}
 
 seed done

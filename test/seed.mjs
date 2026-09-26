@@ -117,7 +117,10 @@ async function waitUntil(label, fn, everyMs = 30_000, maxMs = 3 * 3600_000) {
 
 if (part === "all" || part === "canonical") {
   console.log("\n=== CANONICAL", CANON);
-  const p = await newPool(CANON, "uw1", "canon-euler-pool", SPEC.euler, 2n * GEN);
+  // Waiting period 0: a claim may not be FILED inside a waiting period (it
+  // could only ever be backdated). The backdating check still bites here: the
+  // 2023 incident predates a cover that starts today.
+  const p = await newPool(CANON, "uw1", "canon-euler-pool", SPEC.euler, 2n * GEN, { wait: 0 });
   const c = await newCover(CANON, "buyer2", "canon-backdated-cover", p, GEN, 30);
   const cl = await newClaim(CANON, "buyer2", "canon-backdated-claim", c, URL_.euler,
     "Euler was exploited through donateToReserves; I hold cover on it.");

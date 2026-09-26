@@ -1,0 +1,54 @@
+{
+  "deployments": {
+    "studiodev": {
+      "network": "studiodev",
+      "chain_id": 61997,
+      "CoverClaimDemo": {
+        "address": "0xa87Cd248C2667bFc3b79102C56A80E2912DE2A21",
+        "deploy_tx": "0x95b9f84a98ef609bb3006790c37e87a0a8ee720386db92657661d69bf7ccc739",
+        "source_bytes": 184178,
+        "source_sha256": "c4eddc1eccd57661fb1d06d608c0e9f56ed9d1445cd40710513eabc2fee918d3",
+        "policy_version": "1.0.0",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "demo": true,
+        "demo_backdate_days": 1521,
+        "claim_window_s": 2700,
+        "settlement_window_s": 900,
+        "contest_window_s": 900,
+        "stall_ttl_s": 600,
+        "buy_cooldown_s": 10,
+        "contest_bond_wei": "100000000000000000",
+        "deployed_at": "2026-09-26T07:36:58.628Z"
+      },
+      "explorer": "https://explorer-studio-dev.genlayer.com/",
+      "CoverClaim": {
+        "address": "0x36F2D1385Bd6fd0Fa22678FD6Cb5A00cc021Cee3",
+        "deploy_tx": "0xdcfe459750fb2a68698afba3e9c8c00c931ef3a1ea2bcebe8bea0ee0b69caaad",
+        "source_bytes": 184178,
+        "source_sha256": "c4eddc1eccd57661fb1d06d608c0e9f56ed9d1445cd40710513eabc2fee918d3",
+        "policy_version": "1.0.0",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "demo": false,
+        "demo_backdate_days": 0,
+        "claim_window_s": 2592000,
+        "settlement_window_s": 259200,
+        "contest_window_s": 172800,
+        "stall_ttl_s": 86400,
+        "buy_cooldown_s": 60,
+        "contest_bond_wei": "100000000000000000",
+        "deployed_at": "2026-09-26T07:36:51.683Z"
+      },
+      "CoverRegistry": {
+        "address": "0x858Dbd7febCc3717f3B35163C1a4528c64D3108F",
+        "deploy_tx": "0x9bd1fe0fcac5ec0ddd132a6dda9fb8918145ec1b044f687f4fa75499da6dec36",
+        "source_bytes": 8239,
+        "source_sha256": "7aa733788f6cff508768c0377bc002059dc1ea178dabfb3a2e9d7773193094b1",
+        "coverclaim": "0x36F2D1385Bd6fd0Fa22678FD6Cb5A00cc021Cee3",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "custody": false,
+        "payable_methods": 0,
+        "deployed_at": "2026-09-26T07:38:57.853Z"
+      }
+    }
+  }
+}

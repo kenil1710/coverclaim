@@ -1920,8 +1920,10 @@ class TestBuyCover(unittest.TestCase):
 
 class TestCancelAndRelease(unittest.TestCase):
     def setUp(self):
+        # waiting 0: these tests file claims at once, and a claim may not be
+        # filed inside a waiting period (TestWaitingPeriodGate).
         self.c = fresh(demo=False)
-        self.pid = make_pool(self.c)
+        self.pid = make_pool(self.c, wait=0)
 
     def test_cancel_prorata(self):
         cid = buy(self.c, self.pid, amount=GEN, days=30)
@@ -2000,6 +2002,165 @@ class TestCancelAndRelease(unittest.TestCase):
         advance(61 * DAY)
         send(self.c, STRANGER, 0, "release_cover", cid)
         buy(self.c, self.pid, amount=5 * GEN, days=1)
+
+
+class TestWaitingPeriodGate(unittest.TestCase):
+    """FIX 1: a claim cannot be FILED before start + waiting period. Any
+    incident that has happened by then predates the waiting period, so such a
+    claim could only be REJECTED_BACKDATED - and would spend the cover's one
+    claim doing it."""
+
+    def setUp(self):
+        self.c = fresh(demo=False)
+        self.pid = make_pool(self.c, wait=7)
+        self.cid = buy(self.c, self.pid, days=30)
+
+    def test_refused_inside_waiting_period(self):
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        self.assertTrue(rejected(out))
+        self.assertEqual(out["reason"], "cover waiting period has not ended yet, "
+                         "claimable after " + str(NOW + 7 * DAY))
+        self.assertEqual(out["claimable_after"], NOW + 7 * DAY)
+
+    def test_refused_before_genlayer_and_claim_not_spent(self):
+        send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        self.assertEqual(len(self.c.claims), 0)
+        self.assertEqual(int(self.c.covers[0].claim_id), 0)
+        self.assertEqual(CALLS, [])
+        self.assertEqual(MODEL.calls, 0)
+
+    def test_one_second_before_is_refused(self):
+        advance(7 * DAY - 1)
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")))
+
+    def test_allowed_exactly_at_waiting_end(self):
+        advance(7 * DAY)
+        self.assertTrue(ok(send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")))
+
+    def test_value_sent_is_returned(self):
+        send(self.c, ALICE, 7, "file_claim", self.cid, R_EULER, "x")
+        self.assertEqual(int(self.c.payout_wei.get(ALICE)), 7)
+
+    def test_refused_while_paused_too_but_only_for_waiting(self):
+        send(self.c, OWNER, 0, "set_paused", True)
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        self.assertIn("waiting period", out["reason"])
+
+    def test_waiting_zero_files_at_once(self):
+        pid = make_pool(self.c, uw=UW2, wait=0)
+        cid = buy(self.c, pid, who=BOB, days=30)
+        self.assertTrue(ok(send(self.c, BOB, 0, "file_claim", cid, R_EULER, "x")))
+
+    def test_demo_waiting_period_already_past(self):
+        c = fresh(demo=True)
+        pid = make_pool(c, wait=7)
+        cid = buy(c, pid)
+        self.assertTrue(ok(send(c, ALICE, 0, "file_claim", cid, R_EULER, "x")))
+
+    def test_view_flags_follow_the_gate(self):
+        v = view(self.c, "get_cover", self.cid)
+        self.assertFalse(v["claimable"])
+        self.assertTrue(v["in_waiting_period"])
+        advance(7 * DAY)
+        v = view(self.c, "get_cover", self.cid)
+        self.assertTrue(v["claimable"])
+        self.assertFalse(v["in_waiting_period"])
+
+    def test_cover_can_still_claim_after_the_wait(self):
+        send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "early")
+        advance(8 * DAY)
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "later")
+        self.assertTrue(ok(out), out)
+
+
+def _tvl_doc(points):
+    return json.dumps({"id": "1183", "name": "Euler V1", "tvl": points})
+
+
+INC = epoch("2023-03-13T00:00:00Z")
+
+
+class TestSeverityMustBeMeasurable(unittest.TestCase):
+    """FIX 2: no TVL data around the incident is MISSING DATA, not "no damage".
+    A COVERED reading then ends INCONCLUSIVE (refileable), never a final
+    NO_PAYOUT."""
+
+    def setUp(self):
+        self.c = fresh()
+        self.pid = make_pool(self.c)
+        self.cid = buy(self.c, self.pid)
+        self.clid = file(self.c, self.cid, R_EULER)
+
+    def judge_with(self, points, *choice):
+        WEB[proto("euler-v1")] = (200, _tvl_doc(points))
+        return judge(self.c, self.clid, *choice) if choice else judge(self.c, self.clid)
+
+    def test_empty_series_is_inconclusive(self):
+        out = self.judge_with([])
+        self.assertEqual(out["classification"], "COVERED")
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertIn("could not be measured", out["reason"])
+
+    def test_points_before_but_none_after(self):
+        out = self.judge_with([{"date": INC - DAY, "totalLiquidityUSD": 2.3e8}])
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+
+    def test_points_after_but_none_before(self):
+        out = self.judge_with([{"date": INC + DAY, "totalLiquidityUSD": 1e7}])
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+
+    def test_zero_tvl_before_is_unmeasurable(self):
+        out = self.judge_with([{"date": INC - DAY, "totalLiquidityUSD": 0},
+                               {"date": INC + DAY, "totalLiquidityUSD": 0}])
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+
+    def test_refileable_and_pays_once_data_exists(self):
+        self.judge_with([])
+        cl = self.c.claims[0]
+        self.assertEqual(str(cl.status), "INCONCLUSIVE")
+        self.assertEqual(int(cl.refile_until), int(self.c.covers[0].claim_deadline))
+        install_web()      # DeFi Llama now has the history
+        self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", self.clid, A_EULER, "again")))
+        self.assertEqual(judge(self.c, self.clid)["outcome"], "APPROVED")
+
+    def test_measured_zero_drop_is_still_no_payout(self):
+        out = self.judge_with([{"date": INC - DAY, "totalLiquidityUSD": 1e8},
+                               {"date": INC + DAY, "totalLiquidityUSD": 1e8}])
+        self.assertEqual(out["outcome"], "NO_PAYOUT")
+
+    def test_excluded_stays_denied_without_tvl(self):
+        pid = make_pool(self.c, uw=UW2, spec=CURVE)
+        cid = buy(self.c, pid, who=BOB)
+        clid = file(self.c, cid, R_CURVE_DNS)
+        WEB[proto("curve-dex")] = (200, json.dumps({"id": "3", "tvl": []}))
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+
+    def test_backdated_stays_backdated_without_tvl(self):
+        c = fresh(demo=False)
+        pid = make_pool(c, wait=0)
+        clid = file(c, buy(c, pid, days=30), R_EULER)
+        WEB[proto("euler-v1")] = (200, _tvl_doc([]))
+        self.assertEqual(judge(c, clid)["outcome"], "REJECTED_BACKDATED")
+
+    def test_measured_flag_is_compared(self):
+        self.assertIn("tvl_measured", C.EXACT_BOOL)
+
+    def test_outcome_unit(self):
+        self.assertEqual(C._outcome("COVERED", S0 + 30 * DAY, S0, S0 + 100 * DAY, 0,
+                                    GEN, TABLE, 0, 1000, False), ("INCONCLUSIVE", 0))
+        self.assertEqual(C._outcome("COVERED", S0 + 30 * DAY, S0, S0 + 100 * DAY, 0,
+                                    GEN, TABLE, 0, 1000, True), ("NO_PAYOUT", 0))
+
+    def test_contest_path_uses_it_too(self):
+        judge(self.c, self.clid)     # APPROVED with real data
+        send(self.c, UW, int(self.c.contest_bond_wei), "contest", self.clid, PM_EULER,
+             TestContest.GROUNDS)
+        WEB[proto("euler-v1")] = (200, _tvl_doc([]))
+        MODEL.serve_raw(_TopStrength("COVERED", "SMART_CONTRACT_BUG", "NONE"))
+        out = send(self.c, STRANGER, 0, "judge_contest", self.clid)
+        self.assertEqual(out["rejudged_as"] if out["contest"] == "UPHELD" else out["outcome"],
+                         "INCONCLUSIVE")
 
 
 class TestFileClaim(unittest.TestCase):
@@ -2630,8 +2791,10 @@ class TestLoophole01_BuyingAfterAnIncidentIsBackdated(unittest.TestCase):
     premium is not refunded: the cover was valid, the incident predates it."""
 
     def setUp(self):
+        # Waiting 0 so the claim can be FILED today; the incident (2023) still
+        # predates the cover's start (today), which is the whole point.
         self.c = fresh(demo=False)
-        self.pid = make_pool(self.c)
+        self.pid = make_pool(self.c, wait=0)
 
     def test_canonical_rejects_historical_incident(self):
         cid = buy(self.c, self.pid, days=30)

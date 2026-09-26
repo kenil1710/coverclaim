@@ -73,7 +73,9 @@
             and now >= start + wait and now <= end,
             "claimable": str(cover.status) == COVER_ACTIVE
             and int(cover.claim_id) == 0 and now > 0
-            and now <= int(cover.claim_deadline),
+            and now >= start + wait and now <= int(cover.claim_deadline),
+            "in_waiting_period": str(cover.status) == COVER_ACTIVE
+            and now > 0 and now < start + wait,
             "claim_id": int(cover.claim_id),
             "settled_at": int(cover.settled_at),
             "refund_wei": str(int(cover.refund_wei)),

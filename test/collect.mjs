@@ -41,6 +41,11 @@ const backdated = cClaims.find((c) => c.claim_id === seed.canonical?.claim_backd
 const expired = J(await demo.view("get_cover", [C.expired]));
 const pBatch = batches.find((b) => b.claim_ids.includes(K.prorataA)) ?? {};
 const att = J(await reg.view("get_attestation", [0]));
+let wg = [];
+try { wg = JSON.parse(readFileSync(new URL("docs/waitgate-evidence.json", root), "utf8")); } catch { wg = []; }
+const wgRefused = wg.find((x) => x.label === "wait7-file-refused");
+const wgCoverId = wg.find((x) => x.label === "cover-after")?.cover_id ?? 0;
+const wgCover = wgCoverId ? J(await canon.view("get_cover", [wgCoverId])) : {};
 
 const scenarios = [
   {
@@ -92,6 +97,11 @@ const scenarios = [
     scenario: "CoverRegistry attests a live canonical cover",
     pass: att.covered === true,
     evidence: `attestation #0 covered=${att.covered} cover #${att.cover_id} ${att.protocol}; tx ${txOf("registry-attest")}`,
+  },
+  {
+    scenario: "WAITING-PERIOD GATE — claim filed inside the waiting period refused mechanically; the one claim is not spent",
+    pass: wgRefused?.returned?.status === "REJECTED" && /waiting period has not ended yet, claimable after \d+/.test(wgRefused?.returned?.reason ?? "") && wgCover.claim_id === 0 && wgCover.in_waiting_period === true,
+    evidence: `canonical cover #${wgCover.cover_id}: "${wgRefused?.returned?.reason}"; claim_id still ${wgCover.claim_id}; tx ${wgRefused?.tx}`,
   },
   {
     scenario: "Ledger identity holds on both instances",

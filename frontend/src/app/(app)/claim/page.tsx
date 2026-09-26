@@ -79,7 +79,7 @@ export default function FileClaimPage() {
               >
                 <div className="row between">
                   <strong>#{c.cover_id} · {c.protocol_name}</strong>
-                  <span className="pill">{c.claim_id ? `claim #${c.claim_id}` : c.claimable ? "claimable" : c.status.toLowerCase()}</span>
+                  <span className="pill">{c.claim_id ? `claim #${c.claim_id}` : c.claimable ? "claimable" : c.in_waiting_period ? `waiting until ${date(c.waiting_ends)}` : c.status.toLowerCase()}</span>
                 </div>
                 <div className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
                   {gen(c.amount_wei)} GEN · covers incidents {date(c.waiting_ends)} → {date(c.end)} · claim by {date(c.claim_deadline)}

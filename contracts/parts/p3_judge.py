@@ -395,6 +395,12 @@ def _reading(facts: dict, raw: dict) -> dict:
     before = _as_int(tvl.get("before"), -1) if tvl_ok else -1
     low = _as_int(tvl.get("low"), -1) if tvl_ok else -1
     drop = _drop(before, low) if id_match else 0
+    # SEVERITY IS MEASURABLE only with a TVL point before the incident (and
+    # a non-zero one - a ratio needs a denominator) and at least one point in
+    # the window from it. Missing data is not "no damage": `_outcome` turns a
+    # COVERED reading with no measurable severity into INCONCLUSIVE, which is
+    # refileable, rather than a final 0% NO_PAYOUT.
+    measured = bool(id_match) and before > 0 and low >= 0
 
     pinned = ""
     if contest and novel == "":
@@ -444,6 +450,7 @@ def _reading(facts: dict, raw: dict) -> dict:
         "tvl_low": low,
         "drop_bps": drop,
         "bucket": _bucket(drop),
+        "tvl_measured": measured,
         "sources": sources,
         "perils_hit": perils_hit,
         "exclusions_hit": excl_hit,
@@ -517,9 +524,15 @@ def _reason(facts: dict, read: dict, choice: dict) -> str:
                  "evidence. ")
     else:
         head += "the validators could not classify the incident from this evidence. "
-    head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi Llama; "
-             "TVL drop " + _pct(read["drop_bps"]) + " (bucket "
-             + str(read["bucket"]) + ").")
+    if read["tvl_measured"]:
+        head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi "
+                 "Llama; TVL drop " + _pct(read["drop_bps"]) + " (bucket "
+                 + str(read["bucket"]) + ").")
+    else:
+        head += ("Incident " + _date_text(read["incident_day"]) + " per DeFi "
+                 "Llama; severity could not be measured - DeFi Llama has no TVL "
+                 "data around that date. A covered reading is INCONCLUSIVE until "
+                 "it does; refile then.")
     return _short(head, MAX_REASON)
 
 
@@ -685,7 +698,8 @@ EXACT_STR = ("facts_hash", "mode", "content_hash", "digest", "novel",
              "exclusion", "effective", "reason")
 EXACT_INT = ("claim_id", "incident_day", "tvl_before", "tvl_low", "drop_bps",
              "bucket", "sources", "strength_lo", "strength_hi")
-EXACT_BOOL = ("llama_found", "protocol_match", "id_match", "model_called")
+EXACT_BOOL = ("llama_found", "protocol_match", "id_match", "tvl_measured",
+              "model_called")
 EXACT_LIST = ("perils_hit", "exclusions_hit", "allowed_perils",
               "allowed_exclusions", "options")
 

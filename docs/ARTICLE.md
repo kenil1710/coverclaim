@@ -89,4 +89,4 @@ On the canonical instance, a cover bought today and claimed with Euler's 2023 ex
 
 - App: https://coverclaim.vercel.app
 - Code, probe, audit and evidence: https://github.com/kenil1710/coverclaim
-- 577 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.
+- 598 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.

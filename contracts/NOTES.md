@@ -150,7 +150,25 @@ not read the evidence must not cost the buyer their claim. A contest pending
 past the stall window is dropped and the bond returned; the verdict under
 contest stands.
 
-## 11. Hazards carried from earlier projects
+## 11. Two fixes made after the first seed (review findings)
+
+- **Filing inside the waiting period is refused mechanically.** Before, a claim
+  filed then was judged and came back REJECTED_BACKDATED — correctly, since any
+  incident that has already happened predates the waiting period's end — but it
+  spent the cover's ONE claim doing so. `file_claim` now refuses with
+  "cover waiting period has not ended yet, claimable after <ts>", before any
+  evidence is read. The canonical backdating demonstration uses a waiting-0
+  pool, where the check still bites: the incident predates the cover's start.
+- **Unmeasurable severity is INCONCLUSIVE, not NO_PAYOUT.** Before, a TVL
+  history with no point before the incident, or none in the seven days after,
+  produced a 0% drop — bucket 0 — and a COVERED claim ended as a final
+  NO_PAYOUT. Missing data is not "no damage". The reading now carries
+  `tvl_measured` (on the compared axis) and `_outcome` turns COVERED +
+  unmeasured into INCONCLUSIVE, which is refileable once DeFi Llama has the
+  data. EXCLUDED and backdated verdicts are unaffected: severity does not
+  change them.
+
+## 12. Hazards carried from earlier projects
 
 - The runner header is exactly two comment lines; a third makes the contract
   undeployable with only `invalid_contract`.

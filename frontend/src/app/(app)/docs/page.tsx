@@ -7,7 +7,7 @@ import { CANONICAL_ADDRESS, DEMO_ADDRESS, REGISTRY_ADDRESS } from "@/lib/genlaye
 import { BUCKET_LABELS, duration, gen, pct } from "@/lib/format";
 
 const LOOPHOLES = [
-  ["Buying cover after an incident is public", "The incident date comes from DeFi Llama's record, never from the claimant. Incident < cover start + waiting period → REJECTED_BACKDATED, and the premium is not refunded."],
+  ["Buying cover after an incident is public", "The incident date comes from DeFi Llama's record, never from the claimant. Incident < cover start + waiting period → REJECTED_BACKDATED, and the premium is not refunded. A claim cannot even be filed until the waiting period has ended, so the one claim is never wasted on an incident the cover could not pay."],
   ["Fake evidence from a random blog", "Every URL must be https on the pool's frozen allowlist (subdomain-exact, no userinfo, no ports). An archive snapshot counts only if the archived page is itself allowlisted. Refused in file_claim before any validator runs."],
   ["Underwriter withdrawing before a claim", "Each cover locks collateral until it expires and its claim window closes. withdraw_capacity can only take the unlocked part; close_pool is refused while any cover is live."],
   ["Same cover claimed twice", "One claim per cover, stored on the cover. An INCONCLUSIVE claim is refiled on the same record — never filed again."],
@@ -45,7 +45,7 @@ export default function DocsPage() {
             <li><strong style={{ color: "var(--ink)" }}>Mechanical rejection first.</strong> Capacity, term, per-buyer cap, exact premium, rate limit, claim window, one claim per cover and the evidence allowlist are checked by code before GenLayer runs.</li>
             <li><strong style={{ color: "var(--ink)" }}>GenLayer last.</strong> Each validator fetches DeFi Llama&apos;s incident list and TVL history and the evidence pages, keeps the salient sentences, and computes the bracket. No indicator phrase, or protocol not named → INCONCLUSIVE with no model call. Otherwise the model chooses inside the bracket.</li>
             <li><strong style={{ color: "var(--ink)" }}>Full vector compared.</strong> Classification, peril, exclusion, incident date, protocol match, severity bucket, TVL figures, bracket and content hash exactly; strength within one step. A leader outside its own bracket is refused by arithmetic.</li>
-            <li><strong style={{ color: "var(--ink)" }}>Deterministic money.</strong> Backdating, cover end, severity payout, deductible and the pro-rata split, in integers.</li>
+            <li><strong style={{ color: "var(--ink)" }}>Deterministic money.</strong> Backdating, cover end, severity payout, deductible and the pro-rata split, in integers. If DeFi Llama has no TVL data around the incident, severity is unmeasurable and a covered reading is INCONCLUSIVE (refile later) — never a final 0%.</li>
           </ol>
         </section>
 

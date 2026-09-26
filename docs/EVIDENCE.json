@@ -1,7 +1,7 @@
 {
-  "collected_at": "2026-09-26T08:29:24.790Z",
+  "collected_at": "2026-09-26T09:55:59.545Z",
   "demo": {
-    "address": "0xa87Cd248C2667bFc3b79102C56A80E2912DE2A21",
+    "address": "0xF77087fB487153212c3d3Bc178875f7fBeA52fFa",
     "config_label": "DEMO - every cover starts 1521 days before it is bought, fixed at deployment, so that real historical incidents can be replayed. Not insurance.",
     "stats": {
       "balance_wei": "7465000000000000002",
@@ -51,14 +51,14 @@
     }
   },
   "canonical": {
-    "address": "0x36F2D1385Bd6fd0Fa22678FD6Cb5A00cc021Cee3",
+    "address": "0xeDBB5f6ea3D01289E1D879729C2253058602F145",
     "stats": {
-      "balance_wei": "4020000000000000000",
+      "balance_wei": "5021000000000000000",
       "batches_finalized": 0,
       "batches_scaled": 0,
       "bonds_wei": "0",
-      "capital_wei": "4000000000000000000",
-      "chain_balance_wei": "4020000000000000000",
+      "capital_wei": "5000000000000000000",
+      "chain_balance_wei": "5021000000000000000",
       "claims": 1,
       "claims_by_status": {
         "APPROVED": 0,
@@ -73,87 +73,92 @@
       },
       "contests": 0,
       "contests_flipped": 0,
-      "covers": 2,
+      "covers": 3,
       "demo": false,
       "held_matches_books": true,
-      "held_wei": "4020000000000000000",
+      "held_wei": "5021000000000000000",
       "identity": "balance_wei == held_wei + payable_wei; held_wei == sum(pool capital + unearned premium) + bonds",
       "judge_attempts": 1,
       "judgements": 1,
       "ledger_balanced": true,
-      "locked_wei": "1500000000000000000",
-      "open_pools": 2,
+      "locked_wei": "1600000000000000000",
+      "open_pools": 3,
       "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
       "paused": false,
       "payable_wei": "0",
-      "pools": 2,
-      "refusals": 0,
+      "pools": 3,
+      "refusals": 1,
       "retries": 0,
-      "total_capacity_deposited_wei": "4000000000000000000",
+      "total_capacity_deposited_wei": "5000000000000000000",
       "total_claimed_wei": "0",
       "total_payouts_wei": "0",
       "total_premiums_earned_wei": "0",
-      "total_premiums_wei": "20000000000000000",
+      "total_premiums_wei": "21000000000000000",
       "total_refunds_wei": "0",
       "undelivered_wei": "0",
-      "unearned_premium_wei": "20000000000000000"
+      "unearned_premium_wei": "21000000000000000"
     }
   },
   "scenarios": [
     {
       "scenario": "COVERED — Euler V1 2023-03-13 paid at its severity bucket",
       "pass": true,
-      "evidence": "claim #1 PAID; SMART_CONTRACT_BUG; bucket 4 (drop 9585 bps); gross 0.900000 GEN, paid 0.900000 GEN; judge tx 0xe9c8b5a06d5ab12942c97395322c3c6d7cc16df23336be081c52efe7805f23a6"
+      "evidence": "claim #1 PAID; SMART_CONTRACT_BUG; bucket 4 (drop 9585 bps); gross 0.900000 GEN, paid 0.900000 GEN; judge tx 0xaa97278468cde69db1d9a5456966e743f5f9866ba0bdcb39b30fa3ec7acd0b0b"
     },
     {
       "scenario": "CONTESTED — underwriter contests with novel evidence, verdict held",
       "pass": true,
-      "evidence": "contest UPHELD; re-read as COVERED strength 7; novel 2367 chars; tx 0x0838e8417b0b8dcdef80b84ee9af62b9557a2e34b9cc8f28693366b544aa3c05"
+      "evidence": "contest UPHELD; re-read as COVERED strength 7; novel 2367 chars; tx 0xf6e9ff12a657fc7e9f7e9a04ba35dab474b4b18a6909b8938c7d14ce37a77cbb"
     },
     {
       "scenario": "EXCLUDED — Curve DNS hijack 2022-08-09",
       "pass": true,
-      "evidence": "claim #2 DENIED_EXCLUDED; FRONTEND_HIJACK; incident 2022-08-09; tx 0x486d53fca0c73fcbb7b770aaa2479bc8fe063a3e22b293af000e92636400d42a"
+      "evidence": "claim #2 DENIED_EXCLUDED; FRONTEND_HIJACK; incident 2022-08-09; tx 0x2816656b2e171a1d4c04fb926e5317b1b4f943950741f8a35a8f2c43cd69987b"
     },
     {
       "scenario": "EXCLUDED — Multichain key compromise 2023-07-07",
       "pass": true,
-      "evidence": "claim #3 DENIED_EXCLUDED; USER_KEY_COMPROMISE; incident 2023-07-07; bucket 3 (not paid: excluded); tx 0x23b78747396e0ca5a9bb2b0729523df15493782e143d4735d6db810737c4e521"
+      "evidence": "claim #3 DENIED_EXCLUDED; USER_KEY_COMPROMISE; incident 2023-07-07; bucket 3 (not paid: excluded); tx 0x61ed8472de732591b899897ff57e6541c26fb15669bf602fbd4fae2e6f345ab3"
     },
     {
       "scenario": "INCONCLUSIVE — evidence that does not classify; refile allowed",
       "pass": true,
-      "evidence": "claim #4 INCONCLUSIVE; model_called false; \"the evidence names no peril and no exclusion; there is nothing to classify\"; refile until 1790411268; tx 0xa49b38213091092d5715ddfeae946f946a7080020b73cbbbdd9cf8db75846705"
+      "evidence": "claim #4 INCONCLUSIVE; model_called false; \"the evidence names no peril and no exclusion; there is nothing to classify\"; refile until 1790416503; tx 0x7848b157a8da8bead18ffc034bf30c06fe2196d2faf7c1393fd65e6657147f35"
     },
     {
       "scenario": "PRO-RATA — two claims on one incident, capacity short, both scaled",
       "pass": true,
-      "evidence": "batch #2 scaled=true; approved 1.800000 vs locked 1.000000 GEN; paid 0.500000 + 0.500000 GEN; dust 0 wei; tx 0xe7b984abdc7a26f42d21bc88d0a1f858f76c807dd3ee6a01b01c9f14ba658b20"
+      "evidence": "batch #2 scaled=true; approved 1.800000 vs locked 1.000000 GEN; paid 0.500000 + 0.500000 GEN; dust 0 wei; tx 0xa5098f3f8a5de38b53f9ebc752885d166eb3c499a221d4b84f1198d03469b24f"
     },
     {
       "scenario": "EXPIRED — cover expires unclaimed, premium to the underwriter",
       "pass": true,
-      "evidence": "cover #1 RELEASED; premium 0.000066 GEN earned; tx 0x8e7f10c662685d3248e923a4141e9c0c2f40b653508639f22b1336de56050a8e"
+      "evidence": "cover #1 RELEASED; premium 0.000066 GEN earned; tx 0x00d6c959909a68a088defe03b8e46c7bcd1a7f4acb2504b38ca63370ff55ca6d"
     },
     {
       "scenario": "STALLED — settled while paused",
       "pass": true,
-      "evidence": "claim #7 stalls=1, then DENIED_EXCLUDED (GOVERNANCE_ATTACK); settle tx 0x7e744bc1574327c1f9228283ff9430c4677f964c911923ec827eae083ecc901b (paused by 0x7d342c059c2d18e01c46edd11d0158f57b46e841be64790985c40d91e0cd0cff)"
+      "evidence": "claim #7 stalls=1, then DENIED_EXCLUDED (GOVERNANCE_ATTACK); settle tx 0x9b958a67c03b175e9b15c2e20154b5528a7df23907d9de51700f883c637a19d3 (paused by 0x1b3b430edda68a35ce6e976ee6dab1eacee5bdb363fbbd786e58d646bfe1d78e)"
     },
     {
       "scenario": "REJECTED_BACKDATED — canonical cover bought after the incident",
       "pass": true,
-      "evidence": "canonical claim #1 REJECTED_BACKDATED; classification COVERED; incident 2023-03-13 < waiting ends 2026-10-03; tx 0xa8959c25bd600b61440c1a12e1a5a75c078ba29459c4dbdef499bd057db1a1c9"
+      "evidence": "canonical claim #1 REJECTED_BACKDATED; classification COVERED; incident 2023-03-13 < waiting ends 2026-09-26; tx 0x5db7a99808d1587c6c79a1885d5c34850bf63605f5d43bfc199ea6971e35b1ac"
     },
     {
       "scenario": "CoverRegistry attests a live canonical cover",
       "pass": true,
-      "evidence": "attestation #0 covered=true cover #2 curve-dex; tx 0x5323df20f8edaaaa1ce32380b8fa60fe05880471b11ce26cf8d98f9155449e10"
+      "evidence": "attestation #0 covered=true cover #2 curve-dex; tx 0x333e9b1082b989c00423daba9054529802cb7ab907d8e9237b559bb886d25c3e"
+    },
+    {
+      "scenario": "WAITING-PERIOD GATE — claim filed inside the waiting period refused mechanically; the one claim is not spent",
+      "pass": true,
+      "evidence": "canonical cover #3: \"cover waiting period has not ended yet, claimable after 1791018816\"; claim_id still 0; tx 0x4d72a84d41178416413755a706ec32ff3531591814f2c0c9e9d54d6d0817682f"
     },
     {
       "scenario": "Ledger identity holds on both instances",
       "pass": true,
-      "evidence": "demo balance 7.465000 = held 7.465000 + payable 0.000000; canonical 4.020000 = 4.020000 + 0.000000"
+      "evidence": "demo balance 7.465000 = held 7.465000 + payable 0.000000; canonical 5.021000 = 5.021000 + 0.000000"
     }
   ],
   "claims": {
@@ -176,21 +181,21 @@
         "contest_novel": "WTF is the donateToReserves function? The cause was identified as a single missing line of code in an obscure code path involving the now famous ‘ donateToReserves’ function inside of Euler. To understand how the attack worked, it’s important to understand the purpose of the donateToReserves function in the first place. Rumours were soon spread that donateToReserves was unaudited code introduced for vanity purposes. The truth is that donateToReserves was introduced in order to fix a much smaller ‘first depositor’ bug in the protocol that had been missed by all previous auditors of Euler. The white hat had identified in their submission that the original version of the Euler protocol was vulnerable to allowing first depositors in new, uninitialised pools to have their deposits stolen by a front-runner. At the time the bug bounty submission came in for the first depositor bug it had not been spotted by prior auditors or been exploited. So a new function — donateToReserves — was included to make sure that the internal exchange rate of those pre-existing markets could be addressed too. On completion of the audit, an upgrade to the smart contracts was proposed to the Euler DAO community, and by July 2022 the first depositor bug was patched. Unfortunately there was a critical issue with the introduction of donateToReserves that no one spotted at the time (or for a prolonged period after). They then self-liquidated themselves to claim a liquidation bonus that was greater than the losses caused by the donation. It might even say ‘congratulations’ to them for finding the vulnerability or highlight their skill. This time it is not to a victim, himself or to Tornado Cash, but, astonishingly, to an address labelled as Ronin Bridge Exploiter . This is the address of an exploiter that carried out an $600M+ attack on a bridge protocol a year earlier. It is from the Ronin Bridge Exploiter to the Euler Finance Exploiter 2 address: “ Decrypt with the private key of 0xb66cd966670d962c227b3eaba30a872dbfb995db (https://github.com/LimelabsTech/eth-ecies). Do not enter your private key anywhere. It has an old version of ellyptic, which has a vulnerability: This results in the potential for the private key used in this implementation to be revealed after a number of ECDH operations are performed.” ” Not a problem I thought, I’ve got the private key.",
         "contest_peril": "SMART_CONTRACT_BUG",
         "contest_reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 7/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "contest_resolved_at": 1790408709,
+        "contest_resolved_at": 1790414001,
         "contest_statement": "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it.",
         "contest_status": "UPHELD",
         "contest_strength": 7,
         "contest_urls": [
           "https://www.euler.finance/blog/war-peace-behind-the-scenes-of-eulers-240m-exploit-recovery"
         ],
-        "contest_window_closes": 1790409580,
+        "contest_window_closes": 1790414862,
         "contestable_by": "",
-        "contested_at": 1790408695,
+        "contested_at": 1790413985,
         "contester": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1690530134,
+        "cover_end": 1690535366,
         "cover_id": 2,
-        "cover_start": 1658994134,
+        "cover_start": 1658999366,
         "deductible_bps": 1000,
         "digest": "Against the backdrop of a banking meltdown and stablecoin crisis, one of DeFi’s most well-established lending protocols, Euler Finance, was struck a ~$200M blow. Euler Labs quickly acknowledged the exploit, stating they were “ working with security professionals and law enforcement ”. A total of $197M in ETH, WBTC, USDC and DAI were taken, placing Euler at number 6 on the leaderboard . Euler’s TVL dropped from $264M to just $10M. Lending on Euler is managed via eTokens (collateral) and dTokens (debt), with liquidations triggered when a user has more dTokens than eTokens. The exploited vulnerability involved the little-used donateToReserves function which was incorporated into Euler via EIP14 last year. donateToReserves allows users to send eTokens to directly to Euler reserves, however does not contain a check on the health of the user’s position. The hacker took advantage of this by using two contracts, one of which would incur bad debt via donateToReserves, and the other would act as liquidator. Using flash-loaned funds and Euler’s leverage system to create a large, underwater position on one contract, the liquidator contract could obtain the inflated eToken collateral at a discount, and withdraw into the underlying assets. Omniscia, one of Euler’s six auditors , published a detailed post-mortem , summing up the issue as follows: The attack ultimately arose from an incorrect donation mechanism and did not account for the donator’s debt health, permitting them to create an unbacked DToken debt that will never be liquidated. Auditors and smart contract insurance protocol Sherlock has taken responsibility for missing the vulnerability in their review of EIP-14 last year, and will pay a claim of $4.5M to Euler. Euler reached out to the attacker’s address via tx input data: We understand that you are responsible for this morning's attack on the Euler platform. Given Euler’s high-profile and stable reputation, many other DeFi organisations had funds tied up in the protocol. The fact that so many other projects chose to integrate with Euler is a testament to just how shocking this exploit has been for the community. And many have reached out in support of the Euler team. In addition to Euler itself (whose token, EUL , fell over 50%), the fallout affected the following projects:",
         "drop_bps": 9585,
@@ -200,12 +205,12 @@
           "https://rekt.news/euler-rekt"
         ],
         "exclusion": "NONE",
-        "filed_at": 1790408614,
+        "filed_at": 1790413861,
         "gross_wei": "900000000000000000",
         "incident_date": "2023-03-13",
         "incident_day": 1678665600,
-        "judged_at": 1790408680,
-        "last_filed_at": 1790408614,
+        "judged_at": 1790413962,
+        "last_filed_at": 1790413861,
         "llama_record": "DeFi Llama incident record: Euler V1, 2023-03-13, classification Token & Share Accounting, technique Donation Attack, amount USD 197000000",
         "model_called": true,
         "payout_wei": "900000000000000000",
@@ -215,7 +220,7 @@
         "protocol_match": true,
         "protocol_name": "Euler",
         "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "refile_until": 1790411234,
+        "refile_until": 1790416466,
         "refiles": 0,
         "severity_bucket": 4,
         "sources": 1,
@@ -231,7 +236,7 @@
         "tvl_before_usd": "232961276",
         "tvl_low_usd": "9660954",
         "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
-        "waiting_ends": 1659598934
+        "waiting_ends": 1659604166
       },
       {
         "attempts": 1,
@@ -256,14 +261,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790409643,
+        "contest_window_closes": 1790414942,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1690530142,
+        "cover_end": 1690535378,
         "cover_id": 3,
-        "cover_start": 1658994142,
+        "cover_start": 1658999378,
         "deductible_bps": 1000,
         "digest": "Curve Finance - DNS hijack - REKT Curve Finance’s principal front end, curve.fi , fell victim to a DNS hijacking yesterday , in which users were prompted to approve a malicious contract. The exploit was not active on curve.exchange , the project's alternate UI, which the team directed users to while the incident was dealt with. The hacker’s mirrored site was taken down quickly, however some nameservers are still to be updated . As with other DNS hijacking events, identification of the exact cause falls to the service provider, and we must rely on their account of events, without being able to corroborate on-chain. So far, iwantmyname is yet to comment on exactly what led to the hijacking, but Curve believes that the underlying nameserver was compromised, rather than a vulnerability at the account level. Curve Founder and CEO Michael Egorov confirmed his team's suspicions with rekt.news: Well for now I can say that dns registrar iwantmyname had their ns compromised we should try to go away from web2 things like dns tbh, that would be the best All Curve users who interacted with the platform should revoke approvals to the malicious contract immediately: Currently, for the vast majority of users, DeFi is only as secure as the centrally-hosted front ends that they interact with. As the battle-tested contracts which secure established protocols’ back end become gradually more robust, exploiters are increasingly targeting the front end. Without real decentralisation at every step, we will continue to see approval-harvesting attacks, such as those that have affected users of BadgerDAO , Mad Meerkat Finance and, most recently, the Namecheap breach which affected front ends of four DeFi protocols. For all the effort put into smart contract security, audits and decentralisation of governance powers, a project’s reputation can get still rekt through the fault of a web2 corporation. The next logical step is protocols hosting their Dapps via IPFS and ENS, cutting reliance on web2 DNS providers. front end security should not be treated as an afterthought.",
         "drop_bps": 148,
@@ -273,12 +278,12 @@
           "https://rekt.news/curve-finance-rekt"
         ],
         "exclusion": "FRONTEND_HIJACK",
-        "filed_at": 1790408623,
+        "filed_at": 1790413881,
         "gross_wei": "0",
         "incident_date": "2022-08-09",
         "incident_day": 1660003200,
-        "judged_at": 1790408743,
-        "last_filed_at": 1790408623,
+        "judged_at": 1790414042,
+        "last_filed_at": 1790413881,
         "llama_record": "DeFi Llama incident record: Curve DEX, 2022-08-09, classification Frontend & Infrastructure, technique DNS Hijack, amount USD 575000",
         "model_called": true,
         "payout_wei": "0",
@@ -288,7 +293,7 @@
         "protocol_match": true,
         "protocol_name": "Curve",
         "reason": "Curve: evidence matches exclusion FRONTEND_HIJACK (strength 4/7). Incident 2022-08-09 per DeFi Llama; TVL drop 1.48% (bucket 0).",
-        "refile_until": 1790411242,
+        "refile_until": 1790416478,
         "refiles": 0,
         "severity_bucket": 0,
         "sources": 1,
@@ -304,7 +309,7 @@
         "tvl_before_usd": "6075356908",
         "tvl_low_usd": "5985269214",
         "underwriter": "0x5e634692175315f1eaD43A133a1De80600f386F1",
-        "waiting_ends": 1659598942
+        "waiting_ends": 1659604178
       },
       {
         "attempts": 1,
@@ -329,14 +334,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790409687,
+        "contest_window_closes": 1790414987,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1690530154,
+        "cover_end": 1690535388,
         "cover_id": 4,
-        "cover_start": 1658994154,
+        "cover_start": 1658999388,
         "deductible_bps": 1000,
         "digest": "At least according to Multichain. Multichain’s CEO, Zhaojun , has been in custody in China since May 21st. ...and he held all the keys. Now, all devices with access to Multichain’s MPC wallets are allegedly in the hands of the Chinese authorities, except a single computer belonging to Zhaojun’s sister (who is now also said to be in custody). Looks like Multichain’s docs weren’t telling the truth: Multichain’s recent troubles have turned Fantom into a ghost town… Suspicions of an insider dumping tokens and an ambiguous translation of a chinese-language tweet led to panic that the entire TVL of Multichain may have been compromised. But with no clarification from Multichain, who explained it away as “ force majeure ”, the panic quickly subsided as the bridges remained operational, with fixes being implemented on the remaining routes. Zhaojun's family only allowed Multichain team engineers physical access to the home computer to fix technical issues with Router2 and Router5. Or perhaps the whole thing is a fantasy, and Multichain is just another rug, albeit with more of a penchant for storytelling than the industry standard . Either way, Multichain is again urging users not to interact with the contracts, and hoping that the front end will be taken down, as they don’t have access to the domain account, either. Fantom uses the regular bridge and router 1. Multichain’s CEO does not have admin control over either. However, they must have known something was wrong, as partnerships with LayerZero (who are now doing victory laps ) and Axelar went live on July 6th, the very same day that $126M went missing from Multichain. If the Fantom Foundation had enough doubts to whip up bridging partnerships with two providers, why would they risk going to bat for Multichain like that? While Multichain’s off-chain security set-up is unforgivable, it’s hard to believe that the project underwent eight audits , none of which covered the security practices behind the contract code. Yearn (and again ), CREAM (and again ), Anyswap (renamed to Multichain ), and many more have all made it to the leaderboard .",
         "drop_bps": 8979,
@@ -346,12 +351,12 @@
           "https://rekt.news/multichain-r3kt"
         ],
         "exclusion": "USER_KEY_COMPROMISE",
-        "filed_at": 1790408631,
+        "filed_at": 1790413893,
         "gross_wei": "0",
         "incident_date": "2023-07-07",
         "incident_day": 1688688000,
-        "judged_at": 1790408787,
-        "last_filed_at": 1790408631,
+        "judged_at": 1790414087,
+        "last_filed_at": 1790413893,
         "llama_record": "DeFi Llama incident record: Multichain, 2023-07-07, classification Key Compromise, technique Validator Key Compromised, amount USD 126000000",
         "model_called": true,
         "payout_wei": "0",
@@ -361,7 +366,7 @@
         "protocol_match": true,
         "protocol_name": "Multichain",
         "reason": "Multichain: evidence matches exclusion USER_KEY_COMPROMISE (strength 4/7). Incident 2023-07-07 per DeFi Llama; TVL drop 89.79% (bucket 3).",
-        "refile_until": 1790411254,
+        "refile_until": 1790416488,
         "refiles": 0,
         "severity_bucket": 3,
         "sources": 1,
@@ -377,7 +382,7 @@
         "tvl_before_usd": "1311920330",
         "tvl_low_usd": "133822250",
         "underwriter": "0xc8E3659467074fCEFd0caA524C6170a04B4CFbfa",
-        "waiting_ends": 1659598954
+        "waiting_ends": 1659604188
       },
       {
         "attempts": 1,
@@ -402,14 +407,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790409710,
+        "contest_window_closes": 1790415033,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "500000000000000000",
-        "cover_end": 1690530168,
+        "cover_end": 1690535403,
         "cover_id": 5,
-        "cover_start": 1658994168,
+        "cover_start": 1658999403,
         "deductible_bps": 1000,
         "digest": "Seamlessly swap in and out of any vault in the Euler universe. Euler is a modular lending platform featuring the Euler Vault Kit (EVK) for creating custom lending vaults and the Ethereum Vault Connector (EVC), which allows vaults to be used as collateral for other vaults. using the Euler Vault Kit (EVK) 2026 Euler © All Rights Reserved",
         "drop_bps": 9585,
@@ -419,12 +424,12 @@
           "https://www.euler.finance/"
         ],
         "exclusion": "NONE",
-        "filed_at": 1790408639,
+        "filed_at": 1790413904,
         "gross_wei": "0",
         "incident_date": "2023-03-13",
         "incident_day": 1678665600,
-        "judged_at": 1790408810,
-        "last_filed_at": 1790408639,
+        "judged_at": 1790414133,
+        "last_filed_at": 1790413904,
         "llama_record": "DeFi Llama incident record: Euler V1, 2023-03-13, classification Token & Share Accounting, technique Donation Attack, amount USD 197000000",
         "model_called": false,
         "payout_wei": "0",
@@ -434,7 +439,7 @@
         "protocol_match": true,
         "protocol_name": "Euler",
         "reason": "INCONCLUSIVE without a model call: the evidence names no peril and no exclusion; there is nothing to classify. Nothing was lost; the claim can be refiled with new evidence.",
-        "refile_until": 1790411268,
+        "refile_until": 1790416503,
         "refiles": 0,
         "severity_bucket": 4,
         "sources": 0,
@@ -450,7 +455,7 @@
         "tvl_before_usd": "232961276",
         "tvl_low_usd": "9660954",
         "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
-        "waiting_ends": 1659598968
+        "waiting_ends": 1659604203
       },
       {
         "attempts": 1,
@@ -475,14 +480,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790409727,
+        "contest_window_closes": 1790415063,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1690530180,
+        "cover_end": 1690535414,
         "cover_id": 6,
-        "cover_start": 1658994180,
+        "cover_start": 1658999414,
         "deductible_bps": 1000,
         "digest": "Against the backdrop of a banking meltdown and stablecoin crisis, one of DeFi’s most well-established lending protocols, Euler Finance, was struck a ~$200M blow. Euler Labs quickly acknowledged the exploit, stating they were “ working with security professionals and law enforcement ”. A total of $197M in ETH, WBTC, USDC and DAI were taken, placing Euler at number 6 on the leaderboard . Euler’s TVL dropped from $264M to just $10M. Lending on Euler is managed via eTokens (collateral) and dTokens (debt), with liquidations triggered when a user has more dTokens than eTokens. The exploited vulnerability involved the little-used donateToReserves function which was incorporated into Euler via EIP14 last year. donateToReserves allows users to send eTokens to directly to Euler reserves, however does not contain a check on the health of the user’s position. The hacker took advantage of this by using two contracts, one of which would incur bad debt via donateToReserves, and the other would act as liquidator. Using flash-loaned funds and Euler’s leverage system to create a large, underwater position on one contract, the liquidator contract could obtain the inflated eToken collateral at a discount, and withdraw into the underlying assets. Omniscia, one of Euler’s six auditors , published a detailed post-mortem , summing up the issue as follows: The attack ultimately arose from an incorrect donation mechanism and did not account for the donator’s debt health, permitting them to create an unbacked DToken debt that will never be liquidated. Auditors and smart contract insurance protocol Sherlock has taken responsibility for missing the vulnerability in their review of EIP-14 last year, and will pay a claim of $4.5M to Euler. Euler reached out to the attacker’s address via tx input data: We understand that you are responsible for this morning's attack on the Euler platform. Given Euler’s high-profile and stable reputation, many other DeFi organisations had funds tied up in the protocol. The fact that so many other projects chose to integrate with Euler is a testament to just how shocking this exploit has been for the community. And many have reached out in support of the Euler team. In addition to Euler itself (whose token, EUL , fell over 50%), the fallout affected the following projects:",
         "drop_bps": 9585,
@@ -492,12 +497,12 @@
           "https://rekt.news/euler-rekt"
         ],
         "exclusion": "NONE",
-        "filed_at": 1790408650,
+        "filed_at": 1790413916,
         "gross_wei": "900000000000000000",
         "incident_date": "2023-03-13",
         "incident_day": 1678665600,
-        "judged_at": 1790408827,
-        "last_filed_at": 1790408650,
+        "judged_at": 1790414163,
+        "last_filed_at": 1790413916,
         "llama_record": "DeFi Llama incident record: Euler V1, 2023-03-13, classification Token & Share Accounting, technique Donation Attack, amount USD 197000000",
         "model_called": true,
         "payout_wei": "500000000000000000",
@@ -507,7 +512,7 @@
         "protocol_match": true,
         "protocol_name": "Euler",
         "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "refile_until": 1790411280,
+        "refile_until": 1790416514,
         "refiles": 0,
         "severity_bucket": 4,
         "sources": 1,
@@ -523,7 +528,7 @@
         "tvl_before_usd": "232961276",
         "tvl_low_usd": "9660954",
         "underwriter": "0x5e634692175315f1eaD43A133a1De80600f386F1",
-        "waiting_ends": 1659598980
+        "waiting_ends": 1659604214
       },
       {
         "attempts": 1,
@@ -548,14 +553,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790409757,
+        "contest_window_closes": 1790415090,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1690530191,
+        "cover_end": 1690535432,
         "cover_id": 7,
-        "cover_start": 1658994191,
+        "cover_start": 1658999432,
         "deductible_bps": 1000,
         "digest": "Against the backdrop of a banking meltdown and stablecoin crisis, one of DeFi’s most well-established lending protocols, Euler Finance, was struck a ~$200M blow. Euler Labs quickly acknowledged the exploit, stating they were “ working with security professionals and law enforcement ”. A total of $197M in ETH, WBTC, USDC and DAI were taken, placing Euler at number 6 on the leaderboard . Euler’s TVL dropped from $264M to just $10M. Lending on Euler is managed via eTokens (collateral) and dTokens (debt), with liquidations triggered when a user has more dTokens than eTokens. The exploited vulnerability involved the little-used donateToReserves function which was incorporated into Euler via EIP14 last year. donateToReserves allows users to send eTokens to directly to Euler reserves, however does not contain a check on the health of the user’s position. The hacker took advantage of this by using two contracts, one of which would incur bad debt via donateToReserves, and the other would act as liquidator. Using flash-loaned funds and Euler’s leverage system to create a large, underwater position on one contract, the liquidator contract could obtain the inflated eToken collateral at a discount, and withdraw into the underlying assets. Omniscia, one of Euler’s six auditors , published a detailed post-mortem , summing up the issue as follows: The attack ultimately arose from an incorrect donation mechanism and did not account for the donator’s debt health, permitting them to create an unbacked DToken debt that will never be liquidated. Auditors and smart contract insurance protocol Sherlock has taken responsibility for missing the vulnerability in their review of EIP-14 last year, and will pay a claim of $4.5M to Euler. Euler reached out to the attacker’s address via tx input data: We understand that you are responsible for this morning's attack on the Euler platform. Given Euler’s high-profile and stable reputation, many other DeFi organisations had funds tied up in the protocol. The fact that so many other projects chose to integrate with Euler is a testament to just how shocking this exploit has been for the community. And many have reached out in support of the Euler team. Today, another $99M went missing as HECO Bridge and HTX (again) were hacked in short succession.",
         "drop_bps": 9585,
@@ -565,12 +570,12 @@
           "https://web.archive.org/web/20231217192546/https://rekt.news/euler-rekt/"
         ],
         "exclusion": "NONE",
-        "filed_at": 1790408662,
+        "filed_at": 1790413943,
         "gross_wei": "900000000000000000",
         "incident_date": "2023-03-13",
         "incident_day": 1678665600,
-        "judged_at": 1790408857,
-        "last_filed_at": 1790408662,
+        "judged_at": 1790414190,
+        "last_filed_at": 1790413943,
         "llama_record": "DeFi Llama incident record: Euler V1, 2023-03-13, classification Token & Share Accounting, technique Donation Attack, amount USD 197000000",
         "model_called": true,
         "payout_wei": "500000000000000000",
@@ -580,7 +585,7 @@
         "protocol_match": true,
         "protocol_name": "Euler",
         "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "refile_until": 1790411291,
+        "refile_until": 1790416532,
         "refiles": 0,
         "severity_bucket": 4,
         "sources": 1,
@@ -596,7 +601,7 @@
         "tvl_before_usd": "232961276",
         "tvl_low_usd": "9660954",
         "underwriter": "0x5e634692175315f1eaD43A133a1De80600f386F1",
-        "waiting_ends": 1659598991
+        "waiting_ends": 1659604232
       },
       {
         "attempts": 1,
@@ -621,14 +626,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790410430,
+        "contest_window_closes": 1790415781,
         "contestable_by": "",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "500000000000000000",
-        "cover_end": 1690530203,
+        "cover_end": 1690535449,
         "cover_id": 8,
-        "cover_start": 1658994203,
+        "cover_start": 1658999449,
         "deductible_bps": 1000,
         "digest": "Rekt - Tornado Cash Governance - REKT In a whirlwind of events, Tornado Cash's governance has been taken hostage via a trojan horse proposal, effectively granting control of the DAO to a single address. While the contracts do not allow for draining of the ~$275M in the privacy pools themselves, the exploiter gained control of the TORN governance token, the power to modify the router to reroute deposits/withdrawals, and admin status over Nova, the Gnosis chain deployment. As long as there are no nasty surprises this time, this could be a bullet dodged for the Tornado Cash community. Last week there were worries that someone was attempting to exploit Tornado’s governance system, creating multiple addresses and locking 0 TORN to the governance vault. The successful attack was smuggled in under cover of a proposal to penalise certain ‘cheating’ relayers . By combining CREATE and CREATE2 opcodes, the attacker could take advantage of their deterministic deployment to deploy new code into the address approved by governance. Option I: Use CREATE2 opcode to create a malicious proposal contract. Option II: Use CREATE2 to create the deployer contract (0x7dc8), which further deploys the malicious proposal contract (0xc503) using CREATE. The malicious proposal then assigned 10,000 TORN to all addresses created in last week’s ( presumed ) failed exploit. These were unlocked and withdrawn from the vault, granting the exploiter 1.2M votes (against 700k legitimate votes) and full control of Tornado governance. In unexpected turn of events, the exploiter later published a proposal to revert the effects of their hostile takeover, handing back control to the DAO as before. Either they're giga trolling or it will end up being an expensive but not disastrous lesson in Governance security.",
         "drop_bps": 70,
@@ -638,12 +643,12 @@
           "https://rekt.news/tornado-gov-rekt"
         ],
         "exclusion": "GOVERNANCE_ATTACK",
-        "filed_at": 1790408877,
+        "filed_at": 1790414213,
         "gross_wei": "0",
         "incident_date": "2023-05-20",
         "incident_day": 1684540800,
-        "judged_at": 1790409530,
-        "last_filed_at": 1790409513,
+        "judged_at": 1790414881,
+        "last_filed_at": 1790414851,
         "llama_record": "DeFi Llama incident record: Tornado Cash, 2023-05-20, classification Governance, technique Malicious Proposal, amount USD 2173500",
         "model_called": true,
         "payout_wei": "0",
@@ -653,7 +658,7 @@
         "protocol_match": true,
         "protocol_name": "Tornado Cash",
         "reason": "Tornado Cash: evidence matches exclusion GOVERNANCE_ATTACK (strength 4/7). Incident 2023-05-20 per DeFi Llama; TVL drop 0.70% (bucket 0).",
-        "refile_until": 1790411303,
+        "refile_until": 1790416549,
         "refiles": 0,
         "severity_bucket": 0,
         "sources": 1,
@@ -669,7 +674,7 @@
         "tvl_before_usd": "277526404",
         "tvl_low_usd": "275558958",
         "underwriter": "0xc8E3659467074fCEFd0caA524C6170a04B4CFbfa",
-        "waiting_ends": 1659599003
+        "waiting_ends": 1659604249
       }
     ],
     "canonical": [
@@ -696,14 +701,14 @@
         "contest_status": "",
         "contest_strength": 0,
         "contest_urls": [],
-        "contest_window_closes": 1790581230,
+        "contest_window_closes": 1790586442,
         "contestable_by": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
         "contested_at": 0,
         "contester": "",
         "cover_amount_wei": "1000000000000000000",
-        "cover_end": 1793000409,
+        "cover_end": 1793005602,
         "cover_id": 1,
-        "cover_start": 1790408409,
+        "cover_start": 1790413602,
         "deductible_bps": 1000,
         "digest": "Against the backdrop of a banking meltdown and stablecoin crisis, one of DeFi’s most well-established lending protocols, Euler Finance, was struck a ~$200M blow. Euler Labs quickly acknowledged the exploit, stating they were “ working with security professionals and law enforcement ”. A total of $197M in ETH, WBTC, USDC and DAI were taken, placing Euler at number 6 on the leaderboard . Euler’s TVL dropped from $264M to just $10M. Lending on Euler is managed via eTokens (collateral) and dTokens (debt), with liquidations triggered when a user has more dTokens than eTokens. The exploited vulnerability involved the little-used donateToReserves function which was incorporated into Euler via EIP14 last year. donateToReserves allows users to send eTokens to directly to Euler reserves, however does not contain a check on the health of the user’s position. The hacker took advantage of this by using two contracts, one of which would incur bad debt via donateToReserves, and the other would act as liquidator. Using flash-loaned funds and Euler’s leverage system to create a large, underwater position on one contract, the liquidator contract could obtain the inflated eToken collateral at a discount, and withdraw into the underlying assets. Omniscia, one of Euler’s six auditors , published a detailed post-mortem , summing up the issue as follows: The attack ultimately arose from an incorrect donation mechanism and did not account for the donator’s debt health, permitting them to create an unbacked DToken debt that will never be liquidated. Auditors and smart contract insurance protocol Sherlock has taken responsibility for missing the vulnerability in their review of EIP-14 last year, and will pay a claim of $4.5M to Euler. Euler reached out to the attacker’s address via tx input data: We understand that you are responsible for this morning's attack on the Euler platform. Given Euler’s high-profile and stable reputation, many other DeFi organisations had funds tied up in the protocol. The fact that so many other projects chose to integrate with Euler is a testament to just how shocking this exploit has been for the community. And many have reached out in support of the Euler team. In addition to Euler itself (whose token, EUL , fell over 50%), the fallout affected the following projects:",
         "drop_bps": 9585,
@@ -713,12 +718,12 @@
           "https://rekt.news/euler-rekt"
         ],
         "exclusion": "NONE",
-        "filed_at": 1790408416,
+        "filed_at": 1790413614,
         "gross_wei": "0",
         "incident_date": "2023-03-13",
         "incident_day": 1678665600,
-        "judged_at": 1790408430,
-        "last_filed_at": 1790408416,
+        "judged_at": 1790413642,
+        "last_filed_at": 1790413614,
         "llama_record": "DeFi Llama incident record: Euler V1, 2023-03-13, classification Token & Share Accounting, technique Donation Attack, amount USD 197000000",
         "model_called": true,
         "payout_wei": "0",
@@ -728,7 +733,7 @@
         "protocol_match": true,
         "protocol_name": "Euler",
         "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "refile_until": 1795592409,
+        "refile_until": 1795597602,
         "refiles": 0,
         "severity_bucket": 4,
         "sources": 1,
@@ -744,7 +749,7 @@
         "tvl_before_usd": "232961276",
         "tvl_low_usd": "9660954",
         "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
-        "waiting_ends": 1791013209
+        "waiting_ends": 1790413602
       }
     ]
   },
@@ -755,15 +760,15 @@
       "claim_ids": [
         1
       ],
-      "closes_at": 1790409580,
+      "closes_at": 1790414862,
       "dust_wei": "0",
       "finalizable": false,
-      "finalized_at": 1790409602,
+      "finalized_at": 1790414911,
       "gross_total_wei": "900000000000000000",
       "incident_date": "2023-03-13",
       "incident_day": 1678665600,
       "members": 1,
-      "opened_at": 1790408680,
+      "opened_at": 1790413962,
       "paid_members": 1,
       "paid_total_wei": "900000000000000000",
       "pool_id": 1,
@@ -777,15 +782,15 @@
         5,
         6
       ],
-      "closes_at": 1790409727,
+      "closes_at": 1790415063,
       "dust_wei": "0",
       "finalizable": false,
-      "finalized_at": 1790409786,
+      "finalized_at": 1790415268,
       "gross_total_wei": "1800000000000000000",
       "incident_date": "2023-03-13",
       "incident_day": 1678665600,
       "members": 2,
-      "opened_at": 1790408827,
+      "opened_at": 1790414163,
       "paid_members": 2,
       "paid_total_wei": "1000000000000000000",
       "pool_id": 4,
