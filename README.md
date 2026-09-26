@@ -65,6 +65,8 @@ Real hacks are in the past, and the canonical instance rejects a claim on any in
 | REJECTED_BACKDATED | canonical | Euler, cover bought 2026-09-26 | REJECTED_BACKDATED; classification COVERED, date predates cover |
 | REGISTRY | canonical | waiting-0 cover on Curve | `CoverRegistry.attest` → covered = true |
 
+**Measured delivery gap.** Five `claim_payout` calls on the demo instance withdrew 2.365 GEN (payouts, the returned contest bond, earned premium). Each transaction reached FINALIZED and the contract's books dropped by exactly that amount — but its real chain balance did not: `get_stats` reports `undelivered_wei = 2365066666666666668`. Studio Dev posted the transfers and did not execute them, as measured on earlier projects. The contract's books and the ledger identity are correct; the network's delivery is the gap, and it is published rather than hidden.
+
 Every transaction hash and return value: [docs/EVIDENCE.md](docs/EVIDENCE.md) (derived by reading the chain, `node test/collect.mjs`).
 
 ## Loopholes, and the test that closes each

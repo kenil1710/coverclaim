@@ -1008,6 +1008,256 @@
         "status": "OK"
       },
       "at": "2026-09-26T07:48:15.194Z"
+    },
+    {
+      "label": "demo-settle-stalled-while-paused",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "settle_stalled",
+      "args": [
+        "7"
+      ],
+      "value": "0",
+      "tx": "0x7e744bc1574327c1f9228283ff9430c4677f964c911923ec827eae083ecc901b",
+      "status": "ACCEPTED",
+      "seconds": 14,
+      "returned": {
+        "claim_id": 7,
+        "note": "back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790411303",
+        "outcome": "FILED",
+        "refile_until": 1790411303,
+        "settled": "CLAIM",
+        "status": "OK"
+      },
+      "at": "2026-09-26T07:58:42.968Z"
+    },
+    {
+      "label": "demo-stalled-judge-while-paused",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "7"
+      ],
+      "value": "0",
+      "tx": "0x1dba7fc4af55f9988d6aef12e91c12754f895ad48c08d4e591d57dc2f55495ac",
+      "status": "ACCEPTED",
+      "seconds": 19,
+      "returned": {
+        "batch_id": 0,
+        "claim_id": 7,
+        "classification": "EXCLUDED",
+        "content_hash": "3ca5dee94cebdfeb",
+        "drop_bps": 70,
+        "effective": "EXCLUDED",
+        "evidence_strength": 4,
+        "exclusion": "GOVERNANCE_ATTACK",
+        "gross_payout_wei": "0",
+        "incident_date": "2023-05-20",
+        "judged": true,
+        "model_called": true,
+        "outcome": "DENIED_EXCLUDED",
+        "peril": "NONE",
+        "protocol_match": true,
+        "reason": "Tornado Cash: evidence matches exclusion GOVERNANCE_ATTACK (strength 4/7). Incident 2023-05-20 per DeFi Llama; TVL drop 0.70% (bucket 0).",
+        "severity_bucket": 0,
+        "status": "OK"
+      },
+      "at": "2026-09-26T07:59:02.111Z"
+    },
+    {
+      "label": "demo-unpause",
+      "contract": "demo",
+      "role": "client",
+      "from": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+      "method": "set_paused",
+      "args": [
+        "false"
+      ],
+      "value": "0",
+      "tx": "0xbe4ba93a7932f3e61618b869710c3e2939992eec8e19bc77ca7aeb041dfdd363",
+      "status": "ACCEPTED",
+      "seconds": 10,
+      "returned": {
+        "note": "claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open",
+        "paused": false,
+        "status": "OK"
+      },
+      "at": "2026-09-26T07:59:12.088Z"
+    },
+    {
+      "label": "demo-finalize-batch-1",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "finalize_incident",
+      "args": [
+        "1"
+      ],
+      "value": "0",
+      "tx": "0xc100d373bb913291a3b03da480cf48bffd08e685e9d3fa79d364240abca20897",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": {
+        "available_wei": "1000000000000000000",
+        "batch_id": 1,
+        "claim_with": "claim_payout()",
+        "claims_paid": 1,
+        "dust_to_underwriter_wei": "0",
+        "factor_bps": 10000,
+        "gross_total_wei": "900000000000000000",
+        "paid_total_wei": "900000000000000000",
+        "scaled": false,
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:00:08.646Z"
+    },
+    {
+      "label": "demo-finalize-batch-2",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "finalize_incident",
+      "args": [
+        "2"
+      ],
+      "value": "0",
+      "tx": "0xe7b984abdc7a26f42d21bc88d0a1f858f76c807dd3ee6a01b01c9f14ba658b20",
+      "status": "ACCEPTED",
+      "seconds": 12,
+      "returned": {
+        "available_wei": "1000000000000000000",
+        "batch_id": 2,
+        "claim_with": "claim_payout()",
+        "claims_paid": 2,
+        "dust_to_underwriter_wei": "0",
+        "factor_bps": 5555,
+        "gross_total_wei": "1800000000000000000",
+        "paid_total_wei": "1000000000000000000",
+        "scaled": true,
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:03:14.341Z"
+    },
+    {
+      "label": "demo-release-expired",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "release_cover",
+      "args": [
+        "1"
+      ],
+      "value": "0",
+      "tx": "0x8e7f10c662685d3248e923a4141e9c0c2f40b653508639f22b1336de56050a8e",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": {
+        "claim_with": "claim_payout()",
+        "cover_id": 1,
+        "premium_earned_wei": "66666666666667",
+        "status": "OK",
+        "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
+        "unlocked_wei": "200000000000000000"
+      },
+      "at": "2026-09-26T08:27:36.093Z"
+    },
+    {
+      "label": "demo-payout-buyer1",
+      "contract": "demo",
+      "role": "buyer1",
+      "from": "0xaf0ddCE698cFAe7e851BB32f7C73b205C15cDe05",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0xeda31f753aebb026bc68fc3d1356945a02a5cd95e3f9cd7f5d0f4176968638c8",
+      "status": "ACCEPTED",
+      "seconds": 14,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "1.00",
+        "paid_wei": "1000000000000000000",
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:27:51.578Z"
+    },
+    {
+      "label": "demo-payout-buyer5",
+      "contract": "demo",
+      "role": "buyer5",
+      "from": "0x7d727D1cA0481a9d6335D5A4e24b187eae3ca048",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0x555584aa907f271bedc813eee9744775d63bca7c6c3012621eff7228c7e2a4d8",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "0.50",
+        "paid_wei": "500000000000000000",
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:28:03.936Z"
+    },
+    {
+      "label": "demo-payout-buyer6",
+      "contract": "demo",
+      "role": "buyer6",
+      "from": "0x25f6Ce26323EDB040fe3f3a5e55F4E6958053D12",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0x360a8230042881bc0769677a3be021207011a92642afefb951459a430d452424",
+      "status": "ACCEPTED",
+      "seconds": 19,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "0.50",
+        "paid_wei": "500000000000000000",
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:28:24.180Z"
+    },
+    {
+      "label": "demo-payout-uw1",
+      "contract": "demo",
+      "role": "uw1",
+      "from": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0x93d1b409804b611dae66b0de43af90481d792681a6ae228562506442bd19a9d9",
+      "status": "ACCEPTED",
+      "seconds": 9,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "0.121733333333333334",
+        "paid_wei": "121733333333333334",
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:28:34.689Z"
+    },
+    {
+      "label": "demo-payout-uw2",
+      "contract": "demo",
+      "role": "uw2",
+      "from": "0x5e634692175315f1eaD43A133a1De80600f386F1",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0x02fc6a15bb39351e3128a4b7f2252be2bf907d807493c8aad821c597f8753458",
+      "status": "ACCEPTED",
+      "seconds": 13,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "0.243333333333333334",
+        "paid_wei": "243333333333333334",
+        "status": "OK"
+      },
+      "at": "2026-09-26T08:28:48.313Z"
     }
   ],
   "canonical": {

@@ -85,3 +85,87 @@
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
   … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+  … waiting: stall window on claim 7
+[demo-settle-stalled-while-paused] settle_stalled ACCEPTED 14s 0x7e744bc1574327c1f9228283ff9430c4677f964c911923ec827eae083ecc901b
+    {"claim_id":7,"note":"back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790411303","outcome":"FILED","refile_until":1790411303,"settled":"CLAIM","status":"OK"}
+[demo-stalled-judge-while-paused] judge_claim ACCEPTED 19s 0x1dba7fc4af55f9988d6aef12e91c12754f895ad48c08d4e591d57dc2f55495ac
+    {"batch_id":0,"claim_id":7,"classification":"EXCLUDED","content_hash":"3ca5dee94cebdfeb","drop_bps":70,"effective":"EXCLUDED","evidence_strength":4,"exclusion":"GOVERNANCE_ATTACK","gross_payout_wei":"0","incident_date":"2023-05-20","judged":true,"model_called"
+[demo-unpause] set_paused ACCEPTED 10s 0xbe4ba93a7932f3e61618b869710c3e2939992eec8e19bc77ca7aeb041dfdd363
+    {"note":"claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open","paused":false,"status":"OK"}
+  … waiting: settlement windows
+[demo-finalize-batch-1] finalize_incident ACCEPTED 11s 0xc100d373bb913291a3b03da480cf48bffd08e685e9d3fa79d364240abca20897
+    {"available_wei":"1000000000000000000","batch_id":1,"claim_with":"claim_payout()","claims_paid":1,"dust_to_underwriter_wei":"0","factor_bps":10000,"gross_total_wei":"900000000000000000","paid_total_wei":"900000000000000000","scaled":false,"status":"OK"}
+  … waiting: settlement windows
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 1 hit transient RPC noise, waiting 4s
+GenLayer RPC error (gen_call): fetch failed
+  … get_batches attempt 2 hit transient RPC noise, waiting 8s
+[demo-finalize-batch-2] finalize_incident ACCEPTED 12s 0xe7b984abdc7a26f42d21bc88d0a1f858f76c807dd3ee6a01b01c9f14ba658b20
+    {"available_wei":"1000000000000000000","batch_id":2,"claim_with":"claim_payout()","claims_paid":2,"dust_to_underwriter_wei":"0","factor_bps":5555,"gross_total_wei":"1800000000000000000","paid_total_wei":"1000000000000000000","scaled":true,"status":"OK"}
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
+  … waiting: claim window of the expired cover
+GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+GenLayer RPC error (gen_call): Server busy: all 8 execution slots occupied, retry later
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+  … waiting: claim window of the expired cover
+[demo-release-expired] release_cover ACCEPTED 11s 0x8e7f10c662685d3248e923a4141e9c0c2f40b653508639f22b1336de56050a8e
+    {"claim_with":"claim_payout()","cover_id":1,"premium_earned_wei":"66666666666667","status":"OK","underwriter":"0xDA75CBccB80CC529e555ecC503c009446f1FA78a","unlocked_wei":"200000000000000000"}
+[demo-payout-buyer1] claim_payout ACCEPTED 14s 0xeda31f753aebb026bc68fc3d1356945a02a5cd95e3f9cd7f5d0f4176968638c8
+    {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"1.00","paid_wei":"1000000000000000000","status":"OK"}
+[demo-payout-buyer5] claim_payout ACCEPTED 11s 0x555584aa907f271bedc813eee9744775d63bca7c6c3012621eff7228c7e2a4d8
+    {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.50","paid_wei":"500000000000000000","status":"OK"}
+GenLayer RPC error (sim_estimateTransactionFees): Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+  … claim_payout fee attempt 1 hit transient RPC noise, waiting 2s
+[demo-payout-buyer6] claim_payout ACCEPTED 19s 0x360a8230042881bc0769677a3be021207011a92642afefb951459a430d452424
+    {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.50","paid_wei":"500000000000000000","status":"OK"}
+[demo-payout-uw1] claim_payout ACCEPTED 9s 0x93d1b409804b611dae66b0de43af90481d792681a6ae228562506442bd19a9d9
+    {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.121733333333333334","paid_wei":"121733333333333334","status":"OK"}
+[demo-payout-uw2] claim_payout ACCEPTED 13s 0x02fc6a15bb39351e3128a4b7f2252be2bf907d807493c8aad821c597f8753458
+    {"note":"the transfer is posted on finalisation of this transaction","paid_gen":"0.243333333333333334","paid_wei":"243333333333333334","status":"OK"}
+
+seed done
