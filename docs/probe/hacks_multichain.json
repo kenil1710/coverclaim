@@ -1,0 +1,73 @@
+{
+  "key": "hacks_multichain",
+  "url": "https://api.llama.fi/hacks",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x457bE4729841EEE64E186e91c3471C170C931e47",
+  "tx": "0xe2a0d3e4442b9bdb8be94eb77ca6731ff54aea6fd85904d0a11ebaa1bee3b81c",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 10,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hacks": {
+      "hits": [
+        {
+          "amount": 1400000,
+          "chain": "['Ethereum']",
+          "classification": "Input Validation",
+          "date": 1642464000,
+          "name": "Multichain",
+          "source": "",
+          "technique": "Missing Input Validation"
+        },
+        {
+          "amount": 126000000,
+          "chain": "['Moonriver', 'BSC', 'Fantom']",
+          "classification": "Key Compromise",
+          "date": 1688688000,
+          "name": "Multichain",
+          "source": "",
+          "technique": "Validator Key Compromised"
+        },
+        {
+          "amount": 7900000,
+          "chain": "['Ethereum', 'BSC', 'Fantom']",
+          "classification": "Key Compromise",
+          "date": 1625875200,
+          "name": "Multichain",
+          "source": "",
+          "technique": "Weak Key Generation"
+        },
+        {
+          "amount": 130000,
+          "chain": "['Ethereum']",
+          "classification": "Input Validation",
+          "date": 1676419200,
+          "name": "Multichain",
+          "source": "",
+          "technique": "Signature Verification Flaw"
+        }
+      ],
+      "keys": [
+        "amount",
+        "bridgeHack",
+        "chain",
+        "classification",
+        "date",
+        "defillamaId",
+        "language",
+        "name",
+        "returnedFunds",
+        "source",
+        "targetType",
+        "technique"
+      ],
+      "rows": 1288
+    },
+    "len": 350622,
+    "status": 200
+  }
+}

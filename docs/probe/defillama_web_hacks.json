@@ -1,0 +1,23 @@
+{
+  "key": "defillama_web_hacks",
+  "url": "https://defillama.com/hacks",
+  "kind": "render",
+  "strict": false,
+  "probe_contract": "0x20F728ce0803D6B32ca1F3915f8Fb977A90a7D7C",
+  "tx": "0x96f134e8a097b685a9b611e7328842eefa3d28b1f00c9ae5a70ae050a0a213ed",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 26,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "WEBPAGE_LOAD_FAILED",
+    "hash": "cbf29ce484222325",
+    "head": "",
+    "len": 0,
+    "norm_len": 0,
+    "ok": false,
+    "tail": ""
+  },
+  "read_from": "0x20F728ce0803D6B32ca1F3915f8Fb977A90a7D7C"
+}

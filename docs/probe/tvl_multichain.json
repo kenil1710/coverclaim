@@ -1,0 +1,30 @@
+{
+  "key": "tvl_multichain",
+  "url": "https://api.llama.fi/protocol/multichain",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0xb5df7356a8df6ec6bd3fffb0c07282e20329cef3ab3594fb7585929c958811f5",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 32,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "len": 35333541,
+    "status": 200,
+    "tvl": {
+      "after_points": 8,
+      "before": 1311920330,
+      "before_at": 1688601600,
+      "drop_bps": 8979,
+      "id": "591",
+      "low": 133822250,
+      "low_at": 1689206400,
+      "name": "Multichain",
+      "points": 1505,
+      "url": ""
+    }
+  }
+}

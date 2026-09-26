@@ -1,0 +1,22 @@
+{
+  "key": "medium_balancer",
+  "url": "https://medium.com/balancer-protocol/balancer-frontend-incident-post-mortem-8e6de0c4d2e3",
+  "kind": "render",
+  "strict": false,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0x33403bac951be5c7c17a676c82d191881bbe772864abf98a89f230028b3f7c88",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 33,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "WEBPAGE_LOAD_FAILED",
+    "hash": "cbf29ce484222325",
+    "head": "",
+    "len": 0,
+    "norm_len": 0,
+    "ok": false,
+    "tail": ""
+  }
+}

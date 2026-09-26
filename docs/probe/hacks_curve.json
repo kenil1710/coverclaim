@@ -1,0 +1,55 @@
+{
+  "key": "hacks_curve",
+  "url": "https://api.llama.fi/hacks",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e",
+  "tx": "0x65caec07fa78845fd49a374735e6d270efce36872b587c93dd7f0ce011676dd6",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 73,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hacks": {
+      "hits": [
+        {
+          "amount": 575000,
+          "chain": "['Ethereum']",
+          "classification": "Frontend & Infrastructure",
+          "date": 1660003200,
+          "name": "Curve DEX",
+          "source": "",
+          "technique": "DNS Hijack"
+        },
+        {
+          "amount": 61700000,
+          "chain": "['Ethereum']",
+          "classification": "Reentrancy",
+          "date": 1690675200,
+          "name": "Curve DEX",
+          "source": "",
+          "technique": "Vyper Compiler Bug"
+        }
+      ],
+      "keys": [
+        "amount",
+        "bridgeHack",
+        "chain",
+        "classification",
+        "date",
+        "defillamaId",
+        "language",
+        "name",
+        "returnedFunds",
+        "source",
+        "targetType",
+        "technique"
+      ],
+      "rows": 1288
+    },
+    "len": 350622,
+    "status": 200
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "key": "home_euler_render",
+  "url": "https://www.euler.finance/",
+  "kind": "render",
+  "strict": true,
+  "probe_contract": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e",
+  "tx": "0xcf9b79f828e40d1db4760fb70c5a44705e0ece59065e8af857ac185a003d694f",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 41,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "30720c1fab7b18e0",
+    "head": "Governance\nDevelopers\nCommunity\nExplore\nBlog\nLaunch App\nThe Credit Layer For Programmable Finance\nLend, borrow and swap without limits.\nStart building\nLaunch App\nUnparalleled capital efficiency\nLend and borrow anything\nUse any asset as collateral and tailor your risk level with multiple parameters.\nLaunch App\nCreate and customize your own vaults\nCreate and deploy your own lending protocols and markets within minutes.\nChat with us on Discord\nSwap tokens and vaults\nSeamlessly swap in and out of any vault in the Euler universe.\nComing soon\nBuilt for builders\nEmpowering DeFi developers\nEuler is a modular lending platform featuring the Euler Vault Kit (EVK) for creating custom lending vaults and the Ethereum Vault Connector (EVC), which allows vaults to be used as collateral for other vaults.\nGithub\nStart building\nHow to build on the Ethereum Vault Connector (EVC)\nHow to build custom vaults\nusing the Euler Vault Kit (EVK)\nAudited and verified by the best in the world\nReport bugs and get rewarded\n$7,500,000\nLearn more\nBacked by the best\n\n2026 Euler © All Rights Reserved\n\nTerms of Use\n\nPrivacy Policy\n\nRisk Disclosures\n\nMiCA Whitepaper\n\nDevelopers\n\nDocs\n\nGithub\n\nGovernance\n\nForum\n\nSnapshot\n\nTally\n\nResources\n\nBrand Assets\n\nv1 Redeemer\n\nLite Paper\n\nEVK White Paper\n\nEVC White Paper",
+    "len": 1291,
+    "norm_len": 1255,
+    "ok": true,
+    "tail": ""
+  },
+  "read_from": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e"
+}

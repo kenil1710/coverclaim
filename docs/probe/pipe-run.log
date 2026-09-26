@@ -1,0 +1,9 @@
+  fee        0.100000 GEN (estimated)
+  tx         0xaf6b2bdcd80bfb5a89b2d9971b653f02770cb1083811c14bf65f98c495354a63
+pipe 0x30346a94858c47531d0AAD11098E7d556802BfD1
+stage 1 ACCEPTED 9s 0xab8449af00d9854932749109cd33f611d40b0ab20fc7f1c0704a7d669abf2d1e
+    {"llama": {"amount": 197000000, "classification": "Token & Share Accounting", "date": 1678665600, "found": true, "name": "Euler V1", "rows": 1, "technique": "Donation Attack"}, "upto": 1}
+stage 2 ACCEPTED 19s 0x988b91b13bda33e825120213ffb54306d864d65167201258bc2d49b34beaeaed
+    {"llama": {"amount": 197000000, "classification": "Token & Share Accounting", "date": 1678665600, "found": true, "name": "Euler V1", "rows": 1, "technique": "Donation Attack"}, "tvl": {"after_points": 8, "before": 232961276, "doc_id": "1183", "low": 9660954, "ok": true}, "upto": 2}
+stage 3 UNSETTLED 1515s 0xbb528f5797b64d023afe641b89d457df24c85a4774fb8bdfa225290aecb614d1
+    

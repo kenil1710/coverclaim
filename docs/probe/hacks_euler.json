@@ -1,0 +1,46 @@
+{
+  "key": "hacks_euler",
+  "url": "https://api.llama.fi/hacks",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x457bE4729841EEE64E186e91c3471C170C931e47",
+  "tx": "0xc9101649cb2fdb065c41ec675d96d6edfa38a28b7564fa50307f12a1c13b2673",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 11,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hacks": {
+      "hits": [
+        {
+          "amount": 197000000,
+          "chain": "['Ethereum']",
+          "classification": "Token & Share Accounting",
+          "date": 1678665600,
+          "name": "Euler V1",
+          "source": "",
+          "technique": "Donation Attack"
+        }
+      ],
+      "keys": [
+        "amount",
+        "bridgeHack",
+        "chain",
+        "classification",
+        "date",
+        "defillamaId",
+        "language",
+        "name",
+        "returnedFunds",
+        "source",
+        "targetType",
+        "technique"
+      ],
+      "rows": 1288
+    },
+    "len": 350622,
+    "status": 200
+  }
+}

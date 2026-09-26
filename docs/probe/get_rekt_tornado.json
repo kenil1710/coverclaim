@@ -1,0 +1,21 @@
+{
+  "key": "get_rekt_tornado",
+  "url": "https://rekt.news/tornado-gov-rekt",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0x3a326711e73f3f48c71bd910bc2d2a92e100b263be58c23e9ef461a0f4b49a9d",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 17,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "ddfa567e91fc9f22",
+    "head": "Rekt - Tornado Cash Governance - REKT > > > > > > > > > > > > > > > > > > > > > > > > > > > t&amp;c videos leaderboard research tools log in log in Tornado Cash Governance - REKT Monday, May 22, 2023 Tornado Cash - Governance - REKT read this article also in : Cypherpunks strive to become ungovernable… …but not like this. In a whirlwind of events, Tornado Cash&#x27;s governance has been taken hostage via a trojan horse proposal, effectively granting control of the DAO to a single address. While the contracts do not allow for draining of the ~$275M in the privacy pools themselves, the exploiter gained control of the TORN governance token, the power to modify the router to reroute deposits/withdrawals, and admin status over Nova, the Gnosis chain deployment. However, it seems not all is lost. Yesterday, just before midday UTC, the exploiter published another proposal to revert the changes. As long as there are no nasty surprises this time, this could be a bullet dodged for the Tornado Cash community. Repentant grey-hat? Lazarus intern ? Or maybe the hacker is just looking to pump and dump their remaining TORN? Credit: samczsun , SlowMist , BlockSec , Apoorv Lathey It’s been a tough year for DeFi’s go-to crypto mixer. From the OFAC sanctions levelled in August, and the jailing of core developer, Alexey Pertsev, now released pending trial. Last week there were worries that someone was attempting to exploit Tornado’s governance system, creating multiple addresses and locking 0 TORN to the governance vault. Given that nothing immediately came of it, it was dismissed as a failed attempt. Was it a decoy, perhaps? Or a preparatory move? Exploiter address 1: 0x092123663804f8801b9b086b03b98d706f77bd59 Exploiter address 2: 0x592340957ebc9e4afb0e9af221d06fdddf789de9 The successful attack was smuggled in under cover of a proposal to penalise certain ‘cheating’ relayers . While the code purportedly used the same logic as a previous proposal , the attacker had added an extra function which allowed them to selfDestruct the contract. The proposal contract itself was published via a deployer contract. By combining CREATE and CREATE2 opcodes, the attacker could take advantage of their deterministic deployment to deploy new code into the address approved by governance. Using selfDestruct , the hacker was then able to erase the approved code, simultaneously resetting their nonce, and allowing for a redeployment of the malicious contract at the same address. BlockSec’s Yajin Zhou explains : Option I: Use CREATE2 opcode to create a malicious proposal contract. This will raise a flag since CREATE2 and self-destruct are used together. Option II: Use CREATE2 to create the deployer contract (0x7dc8), which further deploys the malicious proposal contract (0xc503) using CREATE. Then the deployer contract is self-destructed (to reset the nonce), and it can create a new proposal at the same address (0xc503). 4/ That&#x27;s because the address of the deployed contract using CREA",
+    "len": 42760,
+    "status": 200,
+    "text_len": 5706
+  }
+}

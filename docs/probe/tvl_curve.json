@@ -1,0 +1,30 @@
+{
+  "key": "tvl_curve",
+  "url": "https://api.llama.fi/protocol/curve-dex",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0xd40ba8e826e88bfc374bf51f8749d636831829c794c68170bf9e4c9ff725e3b5",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 82,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "len": 68978497,
+    "status": 200,
+    "tvl": {
+      "after_points": 8,
+      "before": 6075356908,
+      "before_at": 1659916800,
+      "drop_bps": 148,
+      "id": "3",
+      "low": 5985269214,
+      "low_at": 1660089600,
+      "name": "Curve DEX",
+      "points": 2416,
+      "url": "https://curve.finance"
+    }
+  }
+}

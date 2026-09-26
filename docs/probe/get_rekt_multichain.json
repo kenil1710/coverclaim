@@ -1,0 +1,21 @@
+{
+  "key": "get_rekt_multichain",
+  "url": "https://rekt.news/multichain-r3kt",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e",
+  "tx": "0xb4c02110869a76a797b59f19753ffac4fa34f2deb37cadf18690685ae8eb9335",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 14,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "e6f34784d8b17a88",
+    "head": "Rekt - Multichain - R3KT > > > > > > > > > > > > > > > > > > > > > > > > > > > t&amp;c videos leaderboard research tools log in log in Multichain - R3KT Friday, July 14, 2023 Multichain - Fantom - R3KT read this article also in : So the rumours were true. At least according to Multichain. Multichain’s CEO, Zhaojun , has been in custody in China since May 21st. ...and he held all the keys. Now, all devices with access to Multichain’s MPC wallets are allegedly in the hands of the Chinese authorities, except a single computer belonging to Zhaojun’s sister (who is now also said to be in custody). Looks like Multichain’s docs weren’t telling the truth: The SMPC nodes are run by different organisations, institutions and individuals Not to mention being a beyond-embarrassing OPSEC disaster, such an irresponsible level of centralisation has completely paralysed a major piece of DeFi infrastructure. The Fantom ecosystem depended heavily on multiAssets (for non-native USDC, USDT, DAI, wETH and wBTC), all of which have since depegged as the situation worsened. Multichain’s recent troubles have turned Fantom into a ghost town… How did we get here? The rumours began on May 23rd, when a delayed upgrade resulted in the loss of functionality on certain bridging routes. Suspicions of an insider dumping tokens and an ambiguous translation of a chinese-language tweet led to panic that the entire TVL of Multichain may have been compromised. But with no clarification from Multichain, who explained it away as “ force majeure ”, the panic quickly subsided as the bridges remained operational, with fixes being implemented on the remaining routes. However, as described in today’s statement : Zhaojun&#x27;s family only allowed Multichain team engineers physical access to the home computer to fix technical issues with Router2 and Router5. But access was never handed over to other team members, who were told that: Zhaojun would be released soon and [were] asked to continue maintaining the system and await further updates. But then came the 9-figure wake-up call . And then another , a few days later. Something was clearly very wrong. The two withdrawals of $126M on the 6th (~$65M since frozen) and $103M on the 10th of July were, if the team is to be believed, first a hack (“ from an IP address in Kunming ”) and then a rescue operation. However, with the depegging of Fantom-based assets (down 80-90%), the $103M is worth just $69M at the time of writing. Another wallet also containing funds claimed to have been rescued by Zhaojun’s sister holds approx $75M. Today’s bombshell breaks the radio silence maintained by the team since July 7th, when the previous incident was left unexplained. Or perhaps the whole thing is a fantasy, and Multichain is just another rug, albeit with more of a penchant for storytelling than the industry standard . Either way, Multichain is again urging users not to interact with the contracts, and hoping that the front end will be taken down, as they don’",
+    "len": 42905,
+    "status": 200,
+    "text_len": 6609
+  }
+}

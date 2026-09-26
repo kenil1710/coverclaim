@@ -1,0 +1,46 @@
+{
+  "key": "hacks_tornado",
+  "url": "https://api.llama.fi/hacks",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e",
+  "tx": "0xc7f336e0d765d25b365c9329e4b6753599d72ca86b063b11438cd70021a5f58f",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 12,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hacks": {
+      "hits": [
+        {
+          "amount": 2173500,
+          "chain": "['Ethereum']",
+          "classification": "Governance",
+          "date": 1684540800,
+          "name": "Tornado Cash",
+          "source": "",
+          "technique": "Malicious Proposal"
+        }
+      ],
+      "keys": [
+        "amount",
+        "bridgeHack",
+        "chain",
+        "classification",
+        "date",
+        "defillamaId",
+        "language",
+        "name",
+        "returnedFunds",
+        "source",
+        "targetType",
+        "technique"
+      ],
+      "rows": 1288
+    },
+    "len": 350622,
+    "status": 200
+  }
+}

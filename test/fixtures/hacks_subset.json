@@ -1,0 +1,312 @@
+[
+{
+"date": 1693094400,
+"name": "Balancer V2",
+"classification": "Oracle Manipulation",
+"technique": "Spot Price Manipulation",
+"amount": 800000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "2611",
+"parentProtocolId": "parent#balancer",
+"language": "Solidity"
+},
+{
+"date": 1684540800,
+"name": "Tornado Cash",
+"classification": "Governance",
+"technique": "Malicious Proposal",
+"amount": 2173500,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DAO",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "148",
+"language": "Solidity"
+},
+{
+"date": 1642464000,
+"name": "Multichain",
+"classification": "Input Validation",
+"technique": "Missing Input Validation",
+"amount": 1400000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "591",
+"language": "Solidity"
+},
+{
+"date": 1660003200,
+"name": "Curve DEX",
+"classification": "Frontend & Infrastructure",
+"technique": "DNS Hijack",
+"amount": 575000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": 575000,
+"defillamaId": "3",
+"parentProtocolId": "parent#curve-finance",
+"language": null
+},
+{
+"date": 1762128000,
+"name": "Balancer V2",
+"classification": "Token & Share Accounting",
+"technique": "Rounding Error",
+"amount": 128000000,
+"chain": [
+"Ethereum",
+"Arbitrum",
+"Base",
+"Polygon",
+"Sonic",
+"Optimism"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "2611",
+"parentProtocolId": "parent#balancer",
+"language": "Solidity"
+},
+{
+"date": 1688688000,
+"name": "Multichain",
+"classification": "Key Compromise",
+"technique": "Validator Key Compromised",
+"amount": 126000000,
+"chain": [
+"Moonriver",
+"BSC",
+"Fantom"
+],
+"bridgeHack": true,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "591",
+"language": null
+},
+{
+"date": 1625875200,
+"name": "Multichain",
+"classification": "Key Compromise",
+"technique": "Weak Key Generation",
+"amount": 7900000,
+"chain": [
+"Ethereum",
+"BSC",
+"Fantom"
+],
+"bridgeHack": true,
+"targetType": "CEX",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "591",
+"language": "Solidity"
+},
+{
+"date": 1676419200,
+"name": "Multichain",
+"classification": "Input Validation",
+"technique": "Signature Verification Flaw",
+"amount": 130000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": true,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "591",
+"language": "Solidity"
+},
+{
+"date": 1678665600,
+"name": "Euler V1",
+"classification": "Token & Share Accounting",
+"technique": "Donation Attack",
+"amount": 197000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": 240000000,
+"defillamaId": "1183",
+"parentProtocolId": "parent#euler",
+"language": "Solidity"
+},
+{
+"date": 1700611200,
+"name": "KyberSwap Elastic",
+"classification": "Token & Share Accounting",
+"technique": "Rounding Error",
+"amount": 48000000,
+"chain": [
+"Ethereum",
+"Base",
+"Polygon",
+"Optimism",
+"Arbitrum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "2615",
+"parentProtocolId": "parent#kyberswap",
+"language": "Solidity"
+},
+{
+"date": 1695081600,
+"name": "Balancer V2",
+"classification": "Frontend & Infrastructure",
+"technique": "Frontend Compromise",
+"amount": 238000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "2611",
+"parentProtocolId": "parent#balancer",
+"language": null
+},
+{
+"date": 1690675200,
+"name": "Curve DEX",
+"classification": "Reentrancy",
+"technique": "Vyper Compiler Bug",
+"amount": 61700000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "3",
+"parentProtocolId": "parent#curve-finance",
+"language": "Vyper"
+},
+{
+"date": 1665446400,
+"name": "Mango Markets V3",
+"classification": "Oracle Manipulation",
+"technique": "Spot Price Manipulation",
+"amount": 115000000,
+"chain": [
+"Solana"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "286",
+"parentProtocolId": "parent#mango-markets",
+"language": "Rust"
+},
+{
+"date": 1650153600,
+"name": "Beanstalk",
+"classification": "Governance",
+"technique": "Flashloan Governance Attack",
+"amount": 181000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "631",
+"parentProtocolId": "parent#beanstalk",
+"language": "Solidity"
+},
+{
+"date": 1740096000,
+"name": "Bybit",
+"classification": "Social Engineering",
+"technique": "Signer Phishing",
+"amount": 1400000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": false,
+"targetType": "CEX",
+"source": "",
+"returnedFunds": 1400000000,
+"defillamaId": "2286",
+"language": "Solidity"
+},
+{
+"date": 1647993600,
+"name": "Ronin Bridge",
+"classification": "Key Compromise",
+"technique": "Validator Key Compromised",
+"amount": 624000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": true,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "4440",
+"language": null
+},
+{
+"date": 1659312000,
+"name": "Nomad",
+"classification": "Bridge & Cross-Chain",
+"technique": "Forged Proof",
+"amount": 190000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": true,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "1682",
+"language": "Solidity"
+},
+{
+"date": 1722902400,
+"name": "Ronin Bridge",
+"classification": "Access Control",
+"technique": "Uninitialized Proxy",
+"amount": 12000000,
+"chain": [
+"Ethereum"
+],
+"bridgeHack": true,
+"targetType": "DeFi Protocol",
+"source": "",
+"returnedFunds": null,
+"defillamaId": "4440",
+"language": "Solidity"
+}
+]

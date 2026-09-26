@@ -1,0 +1,21 @@
+{
+  "key": "get_pm_euler",
+  "url": "https://www.euler.finance/blog/war-peace-behind-the-scenes-of-eulers-240m-exploit-recovery",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x2fC4A549C682F29E4FFb08D80125E11EF182bD1e",
+  "tx": "0x0866e924363d8938104de48dcc7d3d044bec828e3710935b6b83d7cd4f70c644",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 13,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "91d17bce5a9f0b4f",
+    "head": "War &amp; Peace: Behind the Scenes of Euler’s $240M Exploit Recovery - Euler Finance > > > > > > > > > > > > > > > > > > > > Euler Finance > > Euler Finance > > > > Governance > Developers Community Explore Blog > Launch App Launch App > > > > War &amp; Peace: Behind the Scenes of Euler’s $240M Exploit Recovery > > > > > > Editor’s note: &nbsp;This article tells the story of the March 2023 Euler V1 exploit and recovery. It is preserved for historical context. Since then, Euler has been rebuilt from the ground up as Euler V2, a new modular codebase built around the Euler Vault Kit and Ethereum Vault Connector. Following the exploit, 100% of the stolen funds were recovered after negotiations with the exploiter. Euler V2 is one of the most audited protocols in DeFi history, with 50+ to date. TL;DR: In March 2023, the Euler Protocol was exploited for ~$197 million in assets. Over the course of the following three weeks, the Euler Labs team engaged in a highly strategic recovery effort that led to the return of ~$240 million in the stolen assets. During the operation, multiple twists and turns threatened to throw things off course. These included the intervention of the notorious Lazarus Group, multiple red herrings, an unpredictable attacker and frontrunning bots. The team that pulled off this exceptional feat is the same Euler Labs team that has been hard at work over the past year building a stronger, more powerful and modular V2 of the Euler platform which we’re excited to help rollout over the coming weeks and months. Introduction As we enter 2024, I want to give you an update on what the Euler Labs team has been up to. While 2023 was not the year we had hoped for, we are more bullish than ever that 2024 will be a huge year for DeFi, and Euler especially. The brand refresh being unveiled today is just the beginning of a series of announcements we have planned over the coming months. The Euler team has been working on some transformative projects that will bring us ever closer to our mission of creating a truly modular DeFi trading ecosystem. But before we talk about the future let’s reflect on the series of events that took place this past year. 2023 — A look back There’s no other way to put this: 2023 was a bit of a shit year. I can’t think of a better way to say goodbye to it than by telling the story of how it played out. The tale starts very positively, for me at least, with the birth of my son, but then very quickly takes a dark turn with a devastating $200M attack on the Euler protocol and its users, before picking back up with an unprecedented $240M recovery story. So strap in for a tale of babies, bank runs, exploits, MEV bots, sleuthing, trolling, counter hacks, North Korea, negotiations, heart attacks, Laurence Day, recoveries, and much more. It is my hope that by telling the story of the Euler exploit we can set the record straight and move onto the next chapter of the Euler story. As with many big news cycles, there was a lot of misin",
+    "len": 294576,
+    "status": 200,
+    "text_len": 81194
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "key": "tvl_tornado",
+  "url": "https://api.llama.fi/protocol/tornado-cash",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x457bE4729841EEE64E186e91c3471C170C931e47",
+  "tx": "0xa2890f43dded2ea0e6d62a746ca6b4dd3d90d0c98d41b0c075347960d5f97a3d",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 11,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "len": 2927034,
+    "status": 200,
+    "tvl": {
+      "after_points": 8,
+      "before": 277526404,
+      "before_at": 1684454400,
+      "drop_bps": 70,
+      "id": "148",
+      "low": 275558958,
+      "low_at": 1684713600,
+      "name": "Tornado Cash",
+      "points": 2477,
+      "url": ""
+    }
+  }
+}

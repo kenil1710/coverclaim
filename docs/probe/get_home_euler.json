@@ -1,0 +1,21 @@
+{
+  "key": "get_home_euler",
+  "url": "https://www.euler.finance/",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0x9eddade96c155cccd1cf5eef3a57698eaf59dab39067fc8991d284c501ae9930",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 12,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "c3f6333edde165bb",
+    "head": "Home - Euler Finance > > > > > > > > > > > > > > > > > > > > > > > > > Euler Finance > > Euler Finance > > > > Governance > Developers Community Explore Blog > Launch App Launch App > > > > > > > The Credit Layer For Programmable Finance > > Lend, borrow and swap without limits. > Start building Launch App > > > > > > > > Unparalleled capital efficiency > > > > > > Lend and borrow anything > > Use any asset as collateral and tailor your risk level with multiple parameters. > Launch App > Create and customize your own vaults Create and deploy your own lending protocols and markets within minutes. Chat with us on Discord > Swap tokens and vaults Seamlessly swap in and out of any vault in the Euler universe. Coming soon > > Built for builders > > Empowering DeFi developers > Euler is a modular lending platform featuring the Euler Vault Kit (EVK) for creating custom lending vaults and the Ethereum Vault Connector (EVC), which allows vaults to be used as collateral for other vaults. > > Github Start building > > How to build on the Ethereum Vault Connector (EVC) How to build custom vaults using the Euler Vault Kit (EVK) > > > Audited and verified by the best in the world > > Report bugs and get rewarded $7,500,000 > Learn more > > > Backed by the best > > > > > > > Euler Finance > 2026 Euler © All Rights Reserved > > Terms of Use Privacy Policy Risk Disclosures MiCA Whitepaper > > > > Developers > > Docs Github Governance Forum Snapshot Tally Resources Brand Assets v1 Redeemer Lite Paper EVK White Paper EVC White Paper >",
+    "len": 218851,
+    "status": 200,
+    "text_len": 1541
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "key": "tvl_euler",
+  "url": "https://api.llama.fi/protocol/euler-v1",
+  "kind": "http",
+  "strict": null,
+  "probe_contract": "0x3A9B25c58F4f60041937520cBbFea888e494E843",
+  "tx": "0xd2c3ed4c81a4bbe5eac1be0c2629ff5ca7cf0c49e103a71aa81e95313eda9286",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 18,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "len": 9415215,
+    "status": 200,
+    "tvl": {
+      "after_points": 8,
+      "before": 232961276,
+      "before_at": 1678579200,
+      "drop_bps": 9585,
+      "id": "1183",
+      "low": 9660954,
+      "low_at": 1678924800,
+      "name": "Euler V1",
+      "points": 1743,
+      "url": "https://www.euler.finance"
+    }
+  }
+}

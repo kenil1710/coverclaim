@@ -1,0 +1,22 @@
+{
+  "key": "rekt_euler_get",
+  "url": "https://rekt.news/euler-rekt",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A",
+  "tx": "0xbbddbac7197b5de9f9ffdd44bedb124474068aafe47d8d0d2a6637572e8dbe52",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 10,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "785085d3f3d557d2",
+    "head": "Rekt - Euler Finance - REKT > > > > > > > > > > > > > > > > > > > > > > > > > > > t&amp;c videos leaderboard research tools log in log in Euler Finance - REKT Tuesday, March 14, 2023 Euler Finance - REKT read this article also in : zh Just as things were looking up… Against the backdrop of a banking meltdown and stablecoin crisis, one of DeFi’s most well-established lending protocols, Euler Finance, was struck a ~$200M blow. As USDC was creeping back towards its peg, Peckshield raised the alarm . Euler Labs quickly acknowledged the exploit, stating they were “ working with security professionals and law enforcement ”. As the situation developed , the losses began to mount. A total of $197M in ETH, WBTC, USDC and DAI were taken, placing Euler at number 6 on the leaderboard . Euler’s TVL dropped from $264M to just $10M. Any hopes of a whitehat were quickly put to bed ; an associated address had previously been used to exploit BSC-based EPMAX before depositing the proceeds to Tornado Cash. How did it go so wrong? Credit: _ FrankResearcher , Omniscia , Lending on Euler is managed via eTokens (collateral) and dTokens (debt), with liquidations triggered when a user has more dTokens than eTokens. The exploited vulnerability involved the little-used donateToReserves function which was incorporated into Euler via EIP14 last year. donateToReserves allows users to send eTokens to directly to Euler reserves, however does not contain a check on the health of the user’s position. The hacker took advantage of this by using two contracts, one of which would incur bad debt via donateToReserves, and the other would act as liquidator. Using flash-loaned funds and Euler’s leverage system to create a large, underwater position on one contract, the liquidator contract could obtain the inflated eToken collateral at a discount, and withdraw into the underlying assets. Omniscia, one of Euler’s six auditors , published a detailed post-mortem , summing up the issue as follows: The attack ultimately arose from an incorrect donation mechanism and did not account for the donator’s debt health, permitting them to create an unbacked DToken debt that will never be liquidated. Attacker’s address (where funds remain): 0xb66cd966670d962c227b3eaba30a872dbfb995db Example tx (DAI): 0xc310a0af… SlowMist provided a summary of the addresses and transactions involved: total losses comprised 86k in ETH derivatives ($134.6M), 849 WBTC ($18.6M), 34M USDC, 8.9M DAI. Auditors and smart contract insurance protocol Sherlock has taken responsibility for missing the vulnerability in their review of EIP-14 last year, and will pay a claim of $4.5M to Euler. Euler reached out to the attacker’s address via tx input data: We understand that you are responsible for this morning&#x27;s attack on the Euler platform. We are writing to see whether you would be open to speaking with us about any potential next steps. But with some funds having been sent to Tornado via a pass-through address in what seems lik",
+    "len": 40558,
+    "status": 200,
+    "text_len": 5383
+  },
+  "read_from": "0x4f64442A81a8EeF83F74C2FA0e20e34DFd89CA4A"
+}

@@ -1,0 +1,9 @@
+  fee        0.100000 GEN (estimated)
+  tx         0x7a5d5f365c0f8d7a662328e2ba02fafb217eb409f7f94c6024b9852e637a07a9
+pipe 0x2E78Bc6E7FC0DF7a8f96bf52e216611D7b0b191b
+stage 3 ACCEPTED 12s 0xdb663f6ef30ea84bcbc4fe8779e620fa839c9c5816510caa3eaa5d462c7c1aff
+    {"llama": {"amount": 197000000, "classification": "Token & Share Accounting", "date": 1678665600, "found": true, "name": "Euler V1", "rows": 1, "technique": "Donation Attack"}, "render_len": 5310, "tvl": {"after_points": 8, "before": 232961276, "doc_id": "1183", "low": 9660954, "ok": true}, "upto": 3}
+stage 6 ACCEPTED 18s 0x1245181006a9d65178b1663bbfc418b314c0beb1146ff95cae2cdeefe21fde84
+    {"choice": {"choice": {"classification": "COVERED", "exclusion": "NONE", "peril": "SMART_CONTRACT_BUG", "strength": 4}, "ok": true}, "digest_len": 2313, "llama": {"amount": 197000000, "classification": "Token & Share Accounting", "date": 1678665600, "found": true, "name": "Euler V1", "rows": 1, "technique": "Donation Attack"}, "lo_hi": [3, 4], "options": ["COVERED", "INCONCLUSIVE"], "render_len": 5310, "tvl": {"after_points": 8, "before": 232961276, "doc_id": "1183", "low": 9660954, "ok": true}, "upto": 6}
+stage 7 ACCEPTED 31s 0xa05034969427da183c42c95c767a9458a9994932b7475c0d66979d32ea6d7020
+    {"choice": {"choice": {"classification": "COVERED", "exclusion": "NONE", "peril": "SMART_CONTRACT_BUG", "strength": 4}, "ok": true}, "collect_keys": 36, "collect_ok": true, "digest_len": 2313, "llama": {"amount": 197000000, "classification": "Token & Share Accounting", "date": 1678665600, "found": true, "name": "Euler V1", "rows": 1, "technique": "Donation Attack"}, "lo_hi": [3, 4], "options": ["COVERED", "INCONCLUSIVE"], "render_len": 5310, "tvl": {"after_points": 8, "before": 232961276, "doc_id": "1183", "low": 9660954, "ok": true}, "upto": 7}

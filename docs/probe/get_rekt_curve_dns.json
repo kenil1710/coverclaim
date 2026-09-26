@@ -1,0 +1,21 @@
+{
+  "key": "get_rekt_curve_dns",
+  "url": "https://rekt.news/curve-finance-rekt",
+  "kind": "gettext",
+  "strict": true,
+  "probe_contract": "0x457bE4729841EEE64E186e91c3471C170C931e47",
+  "tx": "0x766e0a00d73f2331545bb1e3745044e86187a35a2d86711f420a534fbab1309d",
+  "status": "ACCEPTED",
+  "ok": true,
+  "seconds": 13,
+  "failure": null,
+  "stderr_tail": "",
+  "result": {
+    "err": "",
+    "hash": "dc29053f5ea104fa",
+    "head": "Rekt - Curve Finance - REKT > > > > > > > > > > > > > > > > > > > > > > > > > > > t&amp;c videos leaderboard research tools log in log in Curve Finance - REKT Wednesday, August 10, 2022 Curve Finance - DNS hijack - REKT read this article also in : zh Curve Finance’s principal front end, curve.fi , fell victim to a DNS hijacking yesterday , in which users were prompted to approve a malicious contract. Approximately $575k was stolen from users who approved, with proceeds being sent to CEXs and Tornado Cash. It seems OFAC’s sanctions don’t scare those who are already breaking the law… The exploit was not active on curve.exchange , the project&#x27;s alternate UI, which the team directed users to while the incident was dealt with. The hacker’s mirrored site was taken down quickly, however some nameservers are still to be updated . This episode, and others like it, serve as stark reminders that web3 still runs on web2. When even the backbone of DeFi is reliant on legacy infrastructure… …how decentralised can we claim to be? As with other DNS hijacking events, identification of the exact cause falls to the service provider, and we must rely on their account of events, without being able to corroborate on-chain. So far, iwantmyname is yet to comment on exactly what led to the hijacking, but Curve believes that the underlying nameserver was compromised, rather than a vulnerability at the account level. Curve Founder and CEO Michael Egorov confirmed his team&#x27;s suspicions with rekt.news: Well for now I can say that dns registrar iwantmyname had their ns compromised No account hack Switched the ns Besides a good bunch of hacked money frozen by centralized services What could be done better.. we should try to go away from web2 things like dns tbh, that would be the best Further details provided here . All Curve users who interacted with the platform should revoke approvals to the malicious contract immediately: 0x9eb5f8e83359bb5013f3d8eee60bdce5654e8881 . Attacker’s address: 0x50f9202e0f1c1577822bd67193960b213cd2f331 The stolen funds (340 ETH, or ~$575k, in total) have been deposited to CEXs FixedFloat (292 ETH of which 112 ETH have been frozen ) and Binance (20 ETH) as well as Tornado Cash (27.7 ETH) Currently, for the vast majority of users, DeFi is only as secure as the centrally-hosted front ends that they interact with. As the battle-tested contracts which secure established protocols’ back end become gradually more robust, exploiters are increasingly targeting the front end. This vector leverages users’ trust in the project’s contracts whilst overlooking the security behind the UI. Without real decentralisation at every step, we will continue to see approval-harvesting attacks, such as those that have affected users of BadgerDAO , Mad Meerkat Finance and, most recently, the Namecheap breach which affected front ends of four DeFi protocols. For all the effort put into smart contract security, audits and decentralisation of governance powers, a proj",
+    "len": 37024,
+    "status": 200,
+    "text_len": 4610
+  }
+}
