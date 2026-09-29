@@ -155,7 +155,7 @@ MULTI = dict(name="Multichain", slug="multichain", lid="591", chain="Fantom",
              domains="")
 TORNADO = dict(name="Tornado Cash", slug="tornado-cash", lid="148",
                chain="Ethereum", domains="")
-KYBER = dict(name="KyberSwap", slug="kyberswap-elastic", lid="2615",
+KYBER = dict(name="KyberSwap Elastic", slug="kyberswap-elastic", lid="2615",
              chain="Arbitrum", domains="kyberswap.com")
 
 
@@ -2266,9 +2266,19 @@ class TestSeverityMustBeMeasurable(unittest.TestCase):
         self.assertEqual(judge(self.c, self.clid)["outcome"], "APPROVED")
 
     def test_measured_zero_drop_is_still_no_payout(self):
+        # a FULL window (a point on day 7) with no drop: measured, bucket 0
         out = self.judge_with([{"date": INC - DAY, "totalLiquidityUSD": 1e8},
-                               {"date": INC + DAY, "totalLiquidityUSD": 1e8}])
+                               {"date": INC + DAY, "totalLiquidityUSD": 1e8},
+                               {"date": INC + 7 * DAY, "totalLiquidityUSD": 1e8}])
         self.assertEqual(out["outcome"], "NO_PAYOUT")
+
+    def test_partial_window_is_inconclusive_never_a_lower_bucket(self):
+        # DeFi Llama has published only days 0-2 of the window
+        out = self.judge_with([{"date": INC - DAY, "totalLiquidityUSD": 1e8},
+                               {"date": INC + DAY, "totalLiquidityUSD": 7e7},
+                               {"date": INC + 2 * DAY, "totalLiquidityUSD": 6e7}])
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertEqual(int(self.c.claims[self.clid - 1].gross_wei), 0)
 
     def test_excluded_stays_denied_without_tvl(self):
         pid = make_pool(self.c, uw=UW2, spec=CURVE)
@@ -2999,6 +3009,8 @@ class TestLoophole01_BuyingAfterAnIncidentIsBackdated(unittest.TestCase):
         cid = buy(self.c, self.pid, days=30)
         advance(DAY)
         clid = file(self.c, cid, R_EULER, key=live_key("1183"))
+        self.assertTrue(rejected(judge(self.c, clid)))       # window not ended
+        advance(C.JUDGE_AFTER_DAYS * DAY)
         out = judge(self.c, clid)
         self.assertEqual(out["outcome"], "INCONCLUSIVE")
         self.assertFalse(out["model_called"])
@@ -3592,7 +3604,7 @@ class TestOneEventBindsEverything(unittest.TestCase):
         self.assertEqual(judge(self.c, clid)["outcome"], "EVIDENCE_MISMATCH")
         out = send(self.c, ALICE, 0, "refile_claim", clid, "", R_VYPER, "the Vyper report")
         self.assertTrue(ok(out), out)
-        self.assertEqual(out["mismatch_refiles_left"], 1)
+        self.assertEqual(out["refiles_left"], 1)
         out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
         self.assertEqual(out["outcome"], "APPROVED")
         self.assertEqual(out["severity_bucket"], 2)
@@ -3611,7 +3623,7 @@ class TestOneEventBindsEverything(unittest.TestCase):
         judge(self.c, clid)
         out = send(self.c, ALICE, 0, "refile_claim", clid, "", R_CURVE_DNS, "again")
         self.assertTrue(rejected(out))
-        self.assertIn("corrected incident key", out["reason"])
+        self.assertIn("same source", out["reason"])
 
     def test_g_mismatch_refiles_are_limited(self):
         clid = self.claim(K_VYPER, R_CURVE_DNS)

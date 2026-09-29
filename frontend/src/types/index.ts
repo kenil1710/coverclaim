@@ -18,6 +18,7 @@ export type Pool = {
   verify_verdict: string;
   verify_reason: string;
   llama_name: string;
+  core_name: string;
   llama_website: string;
   payout_table_bps: number[];
   rate_bps: number;
@@ -99,8 +100,8 @@ export type Claim = {
   statement: string;
   status: string;
   refiles: number;
-  mismatch_refiles: number;
-  mismatch_refiles_left: number;
+  refiles_left: number;
+  judgeable_at: number;
   refile_until: number;
   attempts: number;
   stalls: number;

@@ -286,9 +286,17 @@ PAGE_UNREAD = "UNREAD"
 MAX_PAGE_DATES = 40
 MAX_KEY = 120
 MAX_KEY_NAME = 80
-# How many times a claim may come back from EVIDENCE_MISMATCH with new
-# evidence or a corrected key. INCONCLUSIVE refiles are not counted here.
-MAX_MISMATCH_REFILES = 2
+# How many times a claim may be refiled, FOR ANY REASON COMBINED - after
+# INCONCLUSIVE, after EVIDENCE_MISMATCH, or after a stall. Each refile must
+# also bring a source or an incident that is genuinely new (see `_url_key`,
+# `_same_incident`): the same page re-spelled is not new evidence.
+MAX_REFILES = 2
+# Generic words DeFi Llama appends to a protocol's name ("Curve DEX", "Euler
+# V1"). Articles write "Curve Finance", "Euler Finance". The CORE name - the
+# record's name with these trailing words removed - is what evidence must
+# name, whatever the underwriter typed.
+GENERIC_NAME_WORDS = ("dex", "v1", "v2", "v3", "v4", "v5", "finance",
+                      "protocol", "labs", "exchange")
 MONTHS = {"jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3,
           "march": 3, "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
           "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9,
@@ -302,6 +310,10 @@ MONTHS = {"jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3,
 # here and published by `get_config`; a pool chooses only the PAYOUT per bucket.
 SEVERITY_EDGES_BPS = (1000, 3000, 6000, 9000)      # 10%, 30%, 60%, 90%
 SEVERITY_WINDOW_DAYS = 7
+# A claim (or contest) is judged only once the whole window has ended: the
+# incident day plus SEVERITY_WINDOW_DAYS, plus one day for that last point to
+# be published. Judging earlier would fix severity from a partial window.
+JUDGE_AFTER_DAYS = SEVERITY_WINDOW_DAYS + 1
 # Window points written into the TVL line (and so into the content hash). A
 # daily series has at most eight in the window.
 MAX_TVL_POINTS = 24
@@ -405,7 +417,7 @@ CL_AFTER_END = "REJECTED_AFTER_COVER_END"
 CL_PAID = "PAID"
 # The evidence is not about the selected incident. Pays nothing, moves
 # nothing, and - like INCONCLUSIVE - is refiled rather than contested, at most
-# MAX_MISMATCH_REFILES times.
+# MAX_REFILES times in all (every refile reason counts).
 CL_MISMATCH = "EVIDENCE_MISMATCH"
 CLAIM_STATUSES = (CL_FILED, CL_JUDGING, CL_INCONCLUSIVE, CL_MISMATCH,
                   CL_APPROVED, CL_NO_PAYOUT, CL_DENIED, CL_BACKDATED,
@@ -945,14 +957,40 @@ def _split_urls(text: typing.Any) -> list:
 
 
 def _url_key(url: str) -> str:
-    """A URL's identity for the one-URL-once rule: lower-cased, scheme and
-    trailing slash dropped, so `https://rekt.news/x/` and `https://REKT.news/x`
-    are the same evidence."""
-    t = str(url).strip().lower()
-    if t.startswith("https://"):
-        t = t[8:]
+    """A URL's IDENTITY as a source, for "a refile or contest must bring a new
+    source". Two spellings of one page are one source:
+      - lower-cased; scheme dropped (http and https alike);
+      - the #fragment dropped - it is never even sent to the server;
+      - trailing slashes dropped;
+      - query parameters in canonical (sorted) order, an empty query dropped;
+      - a web.archive.org snapshot is "archive:" + the archived page's key,
+        whatever its timestamp: /web/2023.../X and /web/2024.../X are one
+        archived source (the archive redirects any timestamp to a capture).
+    So re-submitting the same article cannot re-roll the same reading."""
+    t = str(url).strip()
+    inner = _archived_target(t)
+    if inner != "" and "web.archive.org/web/" in t.lower():
+        return "archive:" + _url_key(inner)
+    t = t.lower()
+    for scheme in ("https://", "http://"):
+        if t.startswith(scheme):
+            t = t[len(scheme):]
+    k = t.find("#")
+    if k >= 0:
+        t = t[:k]
+    query = ""
+    k = t.find("?")
+    if k >= 0:
+        query = t[k + 1:]
+        t = t[:k]
     while t.endswith("/"):
         t = t[:-1]
+    parts = []
+    for q in query.split("&"):
+        if q != "":
+            parts.append(q)
+    if len(parts) > 0:
+        t = t + "?" + "&".join(sorted(parts))
     return t
 
 
@@ -1382,10 +1420,11 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     VERIFIED requires ALL of:
       - /protocol/<slug> exists (a 400 "Protocol not found" is an answer);
       - its `id` is the pool's DeFi Llama id (slug and id are one protocol);
-      - the pool's name names DeFi Llama's protocol - word-aligned, and on
-        the same first word ("Euler" for "Euler V1") - because the evidence
-        must name the pool's protocol, and a pool named for another protocol
-        could never be paid;
+      - the pool's name has the same CORE name as DeFi Llama's record
+        (`_core_name`: "Curve" / "Curve DEX" / "Curve Finance" are all
+        "Curve"). The core name - DeFi Llama's, stored at verification - is
+        what evidence must name, so no spelling of the pool name can make
+        every claim unpayable;
       - a declared domain, if any, IS the website DeFi Llama lists.
     The protocol domain on the allowlist is then DeFi Llama's website domain
     (or none). The underwriter's text never adds a domain."""
@@ -1394,7 +1433,7 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     name = str(facts.get("protocol_name", ""))
     declared = str(facts.get("declared_domain", ""))
     status = _as_int(raw.get("status"), 0)
-    out = {"verdict": V_FAILED, "domain": "", "reason": "",
+    out = {"verdict": V_FAILED, "domain": "", "reason": "", "core_name": "",
            "llama_name": _clean(raw.get("name", ""), 80),
            "website": _clean(raw.get("url", ""), 200),
            "doc_id": _clean(raw.get("doc_id", ""), 40)}
@@ -1407,14 +1446,14 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
                          + ", not " + want_id + ": slug and id are different "
                          "protocols")
         return out
-    ln = _norm(out["llama_name"])
-    pn = _norm(name)
-    if pn == "" or not _names_protocol(ln, name) or ln.split(" ")[0] != pn.split(" ")[0]:
+    core = _core_name(out["llama_name"])
+    if _norm(core) == "" or _norm(_core_name(name)) != _norm(core):
         out["reason"] = ("the pool is named " + _short(name, 60) + " but DeFi "
                          "Llama id " + want_id + " is " + out["llama_name"]
-                         + "; evidence naming the pool's protocol could never "
-                         "be about this one")
+                         + " (core name " + core + "); evidence naming the "
+                         "pool's protocol could never be about this one")
         return out
+    out["core_name"] = core
     domain = _website_domain(out["website"])
     if declared != "" and declared != domain:
         out["reason"] = ("declared domain " + declared + " is not the website "
@@ -1425,10 +1464,44 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     out["verdict"] = V_VERIFIED
     out["domain"] = domain
     out["reason"] = ("slug " + slug + ", id " + want_id + " and name agree with "
-                     "DeFi Llama (" + out["llama_name"] + "); protocol domain: "
+                     "DeFi Llama (" + out["llama_name"] + ", core name " + core
+                     + "); protocol domain: "
                      + (domain if domain else "none - only rekt.news and DeFi "
                         "Llama count"))
     return out
+
+
+def _core_name(name: typing.Any) -> str:
+    """A protocol's CORE name: its name with trailing generic words removed
+    ("Curve DEX" -> "Curve", "Euler V1" -> "Euler", "Balancer V2" ->
+    "Balancer"; "Tornado Cash" and "KyberSwap Elastic" are unchanged). Case
+    is kept for display; comparisons go through `_norm`. If every word is
+    generic, the whole name is its own core."""
+    words = _flat(_clean(name, 120)).split(" ")
+    while len(words) > 1 and _norm(words[-1]) in GENERIC_NAME_WORDS:
+        words = words[:-1]
+    out = " ".join(words).strip()
+    return out if _norm(out) != "" else _clean(name, 120)
+
+
+def _same_incident(old_key: str, old_incident_id: str, new_key: str) -> bool:
+    """Does `new_key` name the same incident as the claim's current one? By
+    CANONICAL identity, not spelling: the same id and day, and - when the old
+    key resolved to a record - no name, or that record's own name. A key that
+    has not resolved yet (unknown, or ambiguous without a name) compares as
+    id:day:normalised name, so adding the name to an ambiguous key is a real
+    correction."""
+    ok_, oid, oday, oname, why1 = _parse_key(old_key)
+    nk, nid, nday, nname, why2 = _parse_key(new_key)
+    if why1 or why2:
+        return False
+    if oid != nid or oday != nday:
+        return False
+    if old_incident_id != "":
+        k = old_incident_id.find(":", old_incident_id.find(":") + 1)
+        record_name = old_incident_id[k + 1:] if k >= 0 else ""
+        return nname == "" or _norm(nname) == record_name
+    return _norm(oname) == _norm(nname)
 
 
 # --- what every node fetches ------------------------------------------------------
@@ -1721,11 +1794,15 @@ def _tvl(facts: dict, day: int) -> dict:
             window.append([d, v])
             if low < 0 or v < low:
                 low = v
+    last_at = 0
+    for p in window:
+        if p[0] > last_at:
+            last_at = p[0]
     window = sorted(window)[:MAX_TVL_POINTS]
     return {"ok": True, "doc_id": _clean(doc.get("id", ""), 40),
             "anchor": int(day), "before_at": before_at if before >= 0 else 0,
             "before": before, "low": low, "after_points": after_points,
-            "window": window}
+            "last_at": last_at, "window": window}
 
 
 def _verify_collect(facts: dict) -> dict:
@@ -1761,7 +1838,7 @@ def _verify_collect(facts: dict) -> dict:
 
 
 VERIFY_FIELDS = ("question", "verdict", "domain", "reason", "llama_name",
-                 "website", "doc_id")
+                 "website", "doc_id", "core_name")
 
 
 def _verify_agrees(lead: typing.Any, mine: typing.Any, facts: dict) -> bool:
@@ -1848,7 +1925,8 @@ def _tvl_line(tvl: dict) -> str:
                if before >= 0 else "-=-1")
             + " window " + (";".join(pts) if pts else "-")
             + " low " + str(_as_int(tvl.get("low"), -1)) + " points "
-            + str(_as_int(tvl.get("after_points"), 0)))
+            + str(_as_int(tvl.get("after_points"), 0)) + " last "
+            + (_date_text(_as_int(tvl.get("last_at"), 0)) or "-"))
 
 
 def _bind(pages: list, record_day: int, found: bool) -> tuple:
@@ -1983,7 +2061,12 @@ def _reading(facts: dict, raw: dict) -> dict:
     # the window from it. Missing data is not "no damage": `_outcome` turns a
     # COVERED reading with no measurable severity into INCONCLUSIVE, which is
     # refileable, rather than a final 0% NO_PAYOUT.
-    measured = bool(id_match) and before > 0 and low >= 0
+    # ...and only over the WHOLE window: DeFi Llama must have published the
+    # point on the window's last day. A partial window is never a (lower)
+    # bucket - it is unmeasured, so COVERED becomes INCONCLUSIVE, refileable.
+    full = tvl_ok and _as_int(tvl.get("last_at"), 0) >= \
+        _as_int(llama.get("date"), 0) + SEVERITY_WINDOW_DAYS * DAY
+    measured = bool(id_match) and before > 0 and low >= 0 and bool(full)
 
     pinned = ""
     pinned_as = INCONCLUSIVE
@@ -2588,6 +2671,7 @@ class Pool:
     verified_at: u64
     verify_verdict: str
     verify_attempts: u32
+    core_name: str
     protocol_domain: str
     llama_name: str
     llama_website: str
@@ -2648,7 +2732,6 @@ class Claim:
     # The ONE DeFi Llama incident record this claim is about, by key. Set at
     # filing; changed only by a refile.
     incident_key: str
-    mismatch_refiles: u32
     urls: str
     used_urls: str
     statement: str
@@ -3092,6 +3175,7 @@ class CoverClaim(gl.contract.Contract):
         pool.verify_verdict = str(v["verdict"])
         if str(v["verdict"]) == V_VERIFIED:
             pool.protocol_domain = str(v["domain"])
+            pool.core_name = str(v["core_name"])
             pool.status = POOL_OPEN
         else:
             pool.status = POOL_FAILED
@@ -3534,9 +3618,8 @@ class CoverClaim(gl.contract.Contract):
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " on this cover is " + st.lower()
                                         + " and must settle first")
-                refileable = st == CL_INCONCLUSIVE or (
-                    st == CL_MISMATCH
-                    and int(claim.mismatch_refiles) < MAX_MISMATCH_REFILES)
+                refileable = (st == CL_INCONCLUSIVE or st == CL_MISMATCH) \
+                    and int(claim.refiles) < MAX_REFILES
                 if refileable and int(claim.refile_until) >= now:
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " may still be refiled")
@@ -3572,7 +3655,10 @@ class CoverClaim(gl.contract.Contract):
             "key_id": lid,
             "key_day": day,
             "key_name": name,
-            "protocol_name": str(pool.protocol_name),
+            # THE CORE NAME DeFi Llama gave at verification - what evidence
+            # must name - never the underwriter's spelling of the pool name.
+            "protocol_name": str(pool.core_name) if str(pool.core_name) != ""
+            else _core_name(pool.protocol_name),
             "llama_slug": str(pool.llama_slug),
             "llama_id": str(pool.llama_id),
             "perils": _split_csv(pool.perils_csv),
@@ -3587,6 +3673,15 @@ class CoverClaim(gl.contract.Contract):
             else False,
             "prior_bound": int(claim.bound) if mode == "contest" else 0,
         }
+
+    def _judgeable_at(self, claim: Claim) -> int:
+        """When this claim's incident's whole severity window has ended: the
+        key's day + JUDGE_AFTER_DAYS. The key's day IS the record's day
+        (records are selected by exact day)."""
+        _, _, day, _, why = _parse_key(str(claim.incident_key))
+        if why or day <= 0:
+            return 0
+        return day + JUDGE_AFTER_DAYS * DAY
 
     def _key_check(self, cover: Cover, pool: Pool, text: typing.Any,
                    now: int) -> tuple:
@@ -3738,7 +3833,7 @@ class CoverClaim(gl.contract.Contract):
         Something must change: at least one URL this claim has never used, or
         a different incident key. Nothing is lost by either verdict and nothing
         is gained by resubmitting it. A claim comes back from EVIDENCE_MISMATCH
-        at most MAX_MISMATCH_REFILES times."""
+        at most MAX_REFILES times in all, whatever the reason."""
         self._bank()
         sender = gl.message.sender_address
         now = self._now()
@@ -3757,10 +3852,10 @@ class CoverClaim(gl.contract.Contract):
             return self._refuse("claim #" + str(clid) + " is " + st.lower()
                                 + "; only an INCONCLUSIVE, EVIDENCE_MISMATCH or "
                                 "stalled claim is refiled")
-        if st == CL_MISMATCH and int(claim.mismatch_refiles) >= MAX_MISMATCH_REFILES:
+        if int(claim.refiles) >= MAX_REFILES:
             return self._refuse("claim #" + str(clid) + " has used all "
-                                + str(MAX_MISMATCH_REFILES) + " refiles after "
-                                "EVIDENCE_MISMATCH")
+                                + str(MAX_REFILES) + " refiles (every reason "
+                                "counts: inconclusive, mismatch, stall)")
         cover = self._cover(claim.cover_id)
         if cover is None:
             return self._refuse("the claim's cover is missing")
@@ -3774,6 +3869,9 @@ class CoverClaim(gl.contract.Contract):
             key, why = self._key_check(cover, pool, incident_key, now)
             if why:
                 return self._refuse("incident refused before judging: " + why)
+        # The same incident, however the key is spelled, is not a correction.
+        new_incident = not _same_incident(str(claim.incident_key),
+                                          str(claim.incident_id), key)
         given = evidence_urls if _split_urls(evidence_urls) else claim.urls
         urls, why = _parse_urls(given, self._allowlist(pool))
         if why:
@@ -3783,12 +3881,11 @@ class CoverClaim(gl.contract.Contract):
         for u in urls:
             if _url_key(u) not in used:
                 fresh += 1
-        if fresh == 0 and key == str(claim.incident_key):
-            return self._refuse("every one of these URLs was already judged on "
-                                "this claim for this incident; bring at least "
-                                "one new source or a corrected incident key")
-        if st == CL_MISMATCH:
-            claim.mismatch_refiles = u32(int(claim.mismatch_refiles) + 1)
+        if fresh == 0 and not new_incident:
+            return self._refuse("every one of these sources was already judged on "
+                                "this claim for this incident (a re-spelled URL "
+                                "or key is the same source); bring at least one "
+                                "new source or a different incident")
         # NOTHING OF THE REJECTED ATTEMPT CARRIES OVER. The next judgement is
         # asked from scratch (mode "claim": no prior digest, no prior sources,
         # no prior binding); settlement fields return to zero; and a contest
@@ -3816,8 +3913,7 @@ class CoverClaim(gl.contract.Contract):
         self._set_status(claim, CL_FILED)
         return {"status": "OK", "claim_id": clid, "refiles": int(claim.refiles),
                 "incident_key": key,
-                "mismatch_refiles_left": MAX_MISMATCH_REFILES
-                - int(claim.mismatch_refiles),
+                "refiles_left": MAX_REFILES - int(claim.refiles),
                 "note": "refiled; call judge_claim(" + str(clid) + ")"}
 
     def _join_batch(self, pool: Pool, claim: Claim, now: int) -> int:
@@ -3831,7 +3927,11 @@ class CoverClaim(gl.contract.Contract):
         key = str(int(pool.pool_id)) + ":" + str(claim.incident_id)
         bid = int(self.open_batch.get(key) or 0)
         batch = self._batch(bid) if bid > 0 else None
-        if batch is None or str(batch.status) != B_OPEN:
+        # MEMBERSHIP IS FINAL WHEN THE WINDOW CLOSES. A claim approved after
+        # that - however it got there - opens (or joins) a NEW batch, which
+        # settles separately against its own covers' locks. Nothing approved
+        # later can hold an earlier, closed window open.
+        if batch is None or str(batch.status) != B_OPEN or now >= int(batch.closes_at):
             bid = len(self.batches) + 1
             batch = self.batches.append_new_get()
             batch.batch_id = u32(bid)
@@ -3935,6 +4035,16 @@ class CoverClaim(gl.contract.Contract):
                                 + (" - refile it with new evidence" if
                                    st == CL_INCONCLUSIVE else "")
                                 + "; nothing to judge")
+        ready = self._judgeable_at(claim)
+        if now < ready:
+            # SEVERITY IS NEVER FIXED FROM A PARTIAL WINDOW. Before the
+            # incident's 7-day TVL window has ended, nobody - buyer or
+            # underwriter - can have the claim judged.
+            return self._refuse("the 7-day TVL window of incident "
+                                + str(claim.incident_key) + " has not ended; "
+                                "claim #" + str(clid) + " can be judged from "
+                                + str(ready), {"judgeable_at": ready,
+                                               "seconds_remaining": ready - now})
         facts = self._claim_facts(claim, cover, pool, "claim")
 
         # Rule 3's documented exception: ATTEMPTS, a statistic about the path.
@@ -4113,6 +4223,12 @@ class CoverClaim(gl.contract.Contract):
                                 + " is already in flight")
         if ct != CT_PENDING and ct != CT_JUDGING:
             return self._refuse("claim #" + str(clid) + " has no pending contest")
+        ready = self._judgeable_at(claim)
+        if now < ready:
+            return self._refuse("the 7-day TVL window of incident "
+                                + str(claim.incident_key) + " has not ended; "
+                                "the contest can be judged from " + str(ready),
+                                {"judgeable_at": ready})
         facts = self._claim_facts(claim, cover, pool, "contest")
         claim.contest_status = CT_JUDGING
         claim.contest_judging_since = u64(now)
@@ -4448,6 +4564,7 @@ class CoverClaim(gl.contract.Contract):
             "verify_attempts": int(pool.verify_attempts),
             "verify_reason": str(pool.verify_reason),
             "llama_name": str(pool.llama_name),
+            "core_name": str(pool.core_name),
             "llama_website": str(pool.llama_website),
             "payout_table_bps": [_as_int(x, 0) for x in _split_csv(pool.payout_table_csv)],
             "rate_bps": int(pool.rate_bps),
@@ -4546,9 +4663,8 @@ class CoverClaim(gl.contract.Contract):
             "statement": str(claim.statement),
             "status": str(claim.status),
             "refiles": int(claim.refiles),
-            "mismatch_refiles": int(claim.mismatch_refiles),
-            "mismatch_refiles_left": MAX_MISMATCH_REFILES
-            - int(claim.mismatch_refiles),
+            "refiles_left": MAX_REFILES - int(claim.refiles),
+            "judgeable_at": self._judgeable_at(claim),
             "refile_until": int(claim.refile_until),
             "attempts": int(claim.attempts),
             "stalls": int(claim.stalls),
@@ -4827,7 +4943,9 @@ class CoverClaim(gl.contract.Contract):
         if pool is None:
             return {"ok": False, "reason": "the cover's pool is missing"}
         key, why = self._key_check(cover, pool, incident_key, self._now())
+        _, _, kday, _, _ = _parse_key(key)
         return {"ok": why == "", "incident_key": key, "reason": why,
+                "judgeable_at": kday + JUDGE_AFTER_DAYS * DAY if kday > 0 else 0,
                 "llama_id": str(pool.llama_id),
                 "window": [_date_text(_day_of(int(cover.start)
                                               + int(pool.waiting_days) * DAY)),
@@ -5067,7 +5185,9 @@ class CoverClaim(gl.contract.Contract):
             "incident_key_format": "<DeFi Llama id>:<YYYY-MM-DD>[:<record name>]",
             "bind_window_days": BIND_WINDOW_DAYS,
             "event_matches": list(EVENT_MATCHES),
-            "max_mismatch_refiles": MAX_MISMATCH_REFILES,
+            "max_refiles": MAX_REFILES,
+            "judge_after_days": JUDGE_AFTER_DAYS,
+            "generic_name_words": list(GENERIC_NAME_WORDS),
             "default_payout_table_bps": list(DEFAULT_PAYOUT_TABLE),
             "min_covered_strength": MIN_COVERED_STRENGTH,
             "strength_tolerance": STRENGTH_TOLERANCE,

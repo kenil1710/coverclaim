@@ -69,3 +69,15 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] bug found by the chain collector and fixed: failed-then-closed pool read "verified" (view derived from status) → stored verify_verdict; redeployed
 - [x] 667 offline tests; README / ARTICLE / NOTES / app docs re-checked
 - [x] redeployed all three, byte-for-byte; 24/24 chain scenarios; drained to 0; audit 64/0; Vercel; pushed
+
+## Independent review (test/test_attacks.py)
+- [x] 1 pool name / evidence: core name from DeFi Llama stored at verification; evidence matched on it; "Curve" ≡ "Curve DEX"
+- [x] 2 partial severity window: judge_claim / judge_contest refused before day + 8; unpublished window → INCONCLUSIVE
+- [x] 3 batch held open: membership final at close; late approvals → new batch
+- [x] 4 refile re-roll: URL source identity + canonical incident identity; one combined refile limit (2)
+- [x] test_attacks.py: 21/21 (reviewer's 7 + 14 fix tests); Finding 2/3 preconditions updated to the fixed behaviour; test_logic.py 668/668
+- [x] live TVL windows of every seeded incident are complete (8 daily points)
+- [x] redeployed all three (canonical 0x039BCD3b…, demo 0x33e464eb…, registry 0x045C4C2B…), byte-for-byte vs repo
+- [x] Vercel production env + deploy; live bundle only new addresses
+- [x] README / ARTICLE / NOTES / in-app docs
+- [x] reseeded (27/27 on chain incl. Curve proof on a "Curve DEX" pool, late-approval batch, fragment refile refused); drained to 0; audit 69/0; RESUBMISSION; pushed; GitHub bytes verified

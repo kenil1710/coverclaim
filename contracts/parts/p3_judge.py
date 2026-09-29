@@ -290,11 +290,15 @@ def _tvl(facts: dict, day: int) -> dict:
             window.append([d, v])
             if low < 0 or v < low:
                 low = v
+    last_at = 0
+    for p in window:
+        if p[0] > last_at:
+            last_at = p[0]
     window = sorted(window)[:MAX_TVL_POINTS]
     return {"ok": True, "doc_id": _clean(doc.get("id", ""), 40),
             "anchor": int(day), "before_at": before_at if before >= 0 else 0,
             "before": before, "low": low, "after_points": after_points,
-            "window": window}
+            "last_at": last_at, "window": window}
 
 
 def _verify_collect(facts: dict) -> dict:
@@ -330,7 +334,7 @@ def _verify_collect(facts: dict) -> dict:
 
 
 VERIFY_FIELDS = ("question", "verdict", "domain", "reason", "llama_name",
-                 "website", "doc_id")
+                 "website", "doc_id", "core_name")
 
 
 def _verify_agrees(lead: typing.Any, mine: typing.Any, facts: dict) -> bool:
@@ -417,7 +421,8 @@ def _tvl_line(tvl: dict) -> str:
                if before >= 0 else "-=-1")
             + " window " + (";".join(pts) if pts else "-")
             + " low " + str(_as_int(tvl.get("low"), -1)) + " points "
-            + str(_as_int(tvl.get("after_points"), 0)))
+            + str(_as_int(tvl.get("after_points"), 0)) + " last "
+            + (_date_text(_as_int(tvl.get("last_at"), 0)) or "-"))
 
 
 def _bind(pages: list, record_day: int, found: bool) -> tuple:
@@ -552,7 +557,12 @@ def _reading(facts: dict, raw: dict) -> dict:
     # the window from it. Missing data is not "no damage": `_outcome` turns a
     # COVERED reading with no measurable severity into INCONCLUSIVE, which is
     # refileable, rather than a final 0% NO_PAYOUT.
-    measured = bool(id_match) and before > 0 and low >= 0
+    # ...and only over the WHOLE window: DeFi Llama must have published the
+    # point on the window's last day. A partial window is never a (lower)
+    # bucket - it is unmeasured, so COVERED becomes INCONCLUSIVE, refileable.
+    full = tvl_ok and _as_int(tvl.get("last_at"), 0) >= \
+        _as_int(llama.get("date"), 0) + SEVERITY_WINDOW_DAYS * DAY
+    measured = bool(id_match) and before > 0 and low >= 0 and bool(full)
 
     pinned = ""
     pinned_as = INCONCLUSIVE

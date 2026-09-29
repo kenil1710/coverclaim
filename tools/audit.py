@@ -63,6 +63,17 @@ def is_payable(m):
     return any(ast.unparse(d) == "gl.public.write.payable" for d in m.decorator_list)
 
 
+def run_attacks() -> tuple[bool, str]:
+    """The independent review's regression file, test/test_attacks.py, whole."""
+    import test_attacks  # noqa: E402
+    suite = unittest.TestLoader().loadTestsFromModule(test_attacks)
+    stream = io.StringIO()
+    res = unittest.TextTestRunner(stream=stream, verbosity=0).run(suite)
+    ok = res.wasSuccessful() and res.testsRun > 0
+    return ok, f"{res.testsRun} tests in test/test_attacks.py: " + (
+        "all pass" if ok else f"{len(res.failures)} failures, {len(res.errors)} errors")
+
+
 def run_tests(*names: str) -> tuple[bool, str]:
     import test_logic  # noqa: E402  (installs the runtime stub)
     loader = unittest.TestLoader()
@@ -218,6 +229,17 @@ def main() -> int:
     check("patterns", "pool verified before sale: buy_cover sells only OPEN (verified) pools; a pool whose slug, id, "
           "name and domain are not one DeFi Llama protocol can only be closed",
           "pool.status) != POOL_OPEN" in bc and "verify_pool" in CC and t_ok, t_ev)
+
+    t_ok, t_ev = run_attacks()
+    check("patterns", "independent review regressions (test/test_attacks.py): core-name evidence matching; "
+          "severity only from a complete 7-day window; closed settlement batches are final; refiles "
+          "cannot re-roll the same source or record; one combined refile limit", t_ok, t_ev)
+    jc = ast.unparse(CC["judge_claim"])
+    check("patterns", "judging is gated on the incident's full severity window (judge_claim and judge_contest)",
+          "_judgeable_at" in jc and "_judgeable_at" in ast.unparse(CC["judge_contest"])
+          and "now >= int(batch.closes_at)" in ast.unparse(CC["_join_batch"]),
+          "judge_claim / judge_contest refuse before day + JUDGE_AFTER_DAYS; _join_batch opens a new batch "
+          "once a window has closed")
 
     t_ok, t_ev = run_tests("TestBindingAudit6")
     check("patterns", "other bindings: registry matches frozen DeFi Llama identity only; archive metadata never "

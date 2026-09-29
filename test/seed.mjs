@@ -216,7 +216,9 @@ if (part === "all" || part === "demo") {
   console.log("\n=== DEMO", DEMO);
   const P = {};
   P.euler = await newPool(DEMO, "uw1", "demo-euler-pool", SPEC.euler, 3n * GEN);
-  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 4n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
+  // Named with DeFi Llama's OWN name, "Curve DEX": verification reduces it to
+  // the core name "Curve", which is what the evidence must name (review fix 1).
+  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, name: "Curve DEX", wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 4n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
   P.multichain = await newPool(DEMO, "uw3", "demo-multichain-pool", SPEC.multichain, 2n * GEN);
   P.prorata = await newPool(DEMO, "uw2", "demo-euler-prorata-pool", { ...SPEC.euler, wording: "Thin pool: 50% collateral. Claims on one incident beyond capital are paid pro-rata." }, GEN, { coll: 5000, max: GEN });
   P.tornado = await newPool(DEMO, "uw3", "demo-tornado-pool", SPEC.tornado, GEN);
@@ -271,6 +273,9 @@ if (part === "all" || part === "demo") {
   save();
   // M5 first: a mismatch, then a refile inside the claim window.
   await step("multi-m5-judge-mismatch", DEMO, "trigger", "judge_claim", [M.m5]);
+  // The same DNS page with a #fragment is not a new source (review fix 4).
+  await step("multi-m5-refile-same-page-refused", DEMO, "buyer6", "refile_claim", [M.m5, "", URL_.curveDns + "#again",
+    "The same article, re-spelled."]);
   await step("multi-m5-refile", DEMO, "buyer6", "refile_claim", [M.m5, "", URL_.curveVyper,
     "Refiled with the rekt.news report of the Vyper incident itself."]);
   await step("multi-m1-judge", DEMO, "trigger", "judge_claim", [M.m1]);
@@ -339,6 +344,24 @@ if (part === "all" || part === "demo") {
   await step("demo-settle-stalled-while-paused", DEMO, "trigger", "settle_stalled", [K.stalled]);
   await step("demo-stalled-judge-while-paused", DEMO, "trigger", "judge_claim", [K.stalled]);
   await step("demo-unpause", DEMO, "client", "set_paused", [false]);
+
+  // LATE APPROVAL (review fix 3): once the COVERED Euler claim's settlement
+  // window has closed, another approval on the same incident opens a NEW
+  // batch instead of holding the first one open.
+  const firstBatch = (await view(DEMO, "get_claim", [K.covered])).batch_id;
+  await waitUntil("settlement window of batch " + firstBatch, async () => {
+    const b = await view(DEMO, "get_batch", [firstBatch]);
+    const cfg = await view(DEMO, "get_config");
+    return cfg.now >= b.closes_at + 5;
+  });
+  C.late = await newCover(DEMO, "buyer5", "demo-late-cover", P.euler, GEN / 2n, 365);
+  K.late = await newClaim(DEMO, "buyer5", "demo-late-claim", C.late, KEY.euler, URL_.euler,
+    "Euler V1 exploit; filed after the first claim's settlement window closed.");
+  await step("demo-late-judge", DEMO, "trigger", "judge_claim", [K.late]);
+  EV.demo.covers = C;
+  EV.demo.claims = K;
+  EV.demo.late_first_batch = firstBatch;
+  save();
 
   // Settlement: every open batch, once its window and its members' contest
   // windows have closed.

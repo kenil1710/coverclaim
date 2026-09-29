@@ -513,14 +513,40 @@ def _split_urls(text: typing.Any) -> list:
 
 
 def _url_key(url: str) -> str:
-    """A URL's identity for the one-URL-once rule: lower-cased, scheme and
-    trailing slash dropped, so `https://rekt.news/x/` and `https://REKT.news/x`
-    are the same evidence."""
-    t = str(url).strip().lower()
-    if t.startswith("https://"):
-        t = t[8:]
+    """A URL's IDENTITY as a source, for "a refile or contest must bring a new
+    source". Two spellings of one page are one source:
+      - lower-cased; scheme dropped (http and https alike);
+      - the #fragment dropped - it is never even sent to the server;
+      - trailing slashes dropped;
+      - query parameters in canonical (sorted) order, an empty query dropped;
+      - a web.archive.org snapshot is "archive:" + the archived page's key,
+        whatever its timestamp: /web/2023.../X and /web/2024.../X are one
+        archived source (the archive redirects any timestamp to a capture).
+    So re-submitting the same article cannot re-roll the same reading."""
+    t = str(url).strip()
+    inner = _archived_target(t)
+    if inner != "" and "web.archive.org/web/" in t.lower():
+        return "archive:" + _url_key(inner)
+    t = t.lower()
+    for scheme in ("https://", "http://"):
+        if t.startswith(scheme):
+            t = t[len(scheme):]
+    k = t.find("#")
+    if k >= 0:
+        t = t[:k]
+    query = ""
+    k = t.find("?")
+    if k >= 0:
+        query = t[k + 1:]
+        t = t[:k]
     while t.endswith("/"):
         t = t[:-1]
+    parts = []
+    for q in query.split("&"):
+        if q != "":
+            parts.append(q)
+    if len(parts) > 0:
+        t = t + "?" + "&".join(sorted(parts))
     return t
 
 
@@ -950,10 +976,11 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     VERIFIED requires ALL of:
       - /protocol/<slug> exists (a 400 "Protocol not found" is an answer);
       - its `id` is the pool's DeFi Llama id (slug and id are one protocol);
-      - the pool's name names DeFi Llama's protocol - word-aligned, and on
-        the same first word ("Euler" for "Euler V1") - because the evidence
-        must name the pool's protocol, and a pool named for another protocol
-        could never be paid;
+      - the pool's name has the same CORE name as DeFi Llama's record
+        (`_core_name`: "Curve" / "Curve DEX" / "Curve Finance" are all
+        "Curve"). The core name - DeFi Llama's, stored at verification - is
+        what evidence must name, so no spelling of the pool name can make
+        every claim unpayable;
       - a declared domain, if any, IS the website DeFi Llama lists.
     The protocol domain on the allowlist is then DeFi Llama's website domain
     (or none). The underwriter's text never adds a domain."""
@@ -962,7 +989,7 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     name = str(facts.get("protocol_name", ""))
     declared = str(facts.get("declared_domain", ""))
     status = _as_int(raw.get("status"), 0)
-    out = {"verdict": V_FAILED, "domain": "", "reason": "",
+    out = {"verdict": V_FAILED, "domain": "", "reason": "", "core_name": "",
            "llama_name": _clean(raw.get("name", ""), 80),
            "website": _clean(raw.get("url", ""), 200),
            "doc_id": _clean(raw.get("doc_id", ""), 40)}
@@ -975,14 +1002,14 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
                          + ", not " + want_id + ": slug and id are different "
                          "protocols")
         return out
-    ln = _norm(out["llama_name"])
-    pn = _norm(name)
-    if pn == "" or not _names_protocol(ln, name) or ln.split(" ")[0] != pn.split(" ")[0]:
+    core = _core_name(out["llama_name"])
+    if _norm(core) == "" or _norm(_core_name(name)) != _norm(core):
         out["reason"] = ("the pool is named " + _short(name, 60) + " but DeFi "
                          "Llama id " + want_id + " is " + out["llama_name"]
-                         + "; evidence naming the pool's protocol could never "
-                         "be about this one")
+                         + " (core name " + core + "); evidence naming the "
+                         "pool's protocol could never be about this one")
         return out
+    out["core_name"] = core
     domain = _website_domain(out["website"])
     if declared != "" and declared != domain:
         out["reason"] = ("declared domain " + declared + " is not the website "
@@ -993,7 +1020,41 @@ def _verify_verdict(facts: dict, raw: dict) -> dict:
     out["verdict"] = V_VERIFIED
     out["domain"] = domain
     out["reason"] = ("slug " + slug + ", id " + want_id + " and name agree with "
-                     "DeFi Llama (" + out["llama_name"] + "); protocol domain: "
+                     "DeFi Llama (" + out["llama_name"] + ", core name " + core
+                     + "); protocol domain: "
                      + (domain if domain else "none - only rekt.news and DeFi "
                         "Llama count"))
     return out
+
+
+def _core_name(name: typing.Any) -> str:
+    """A protocol's CORE name: its name with trailing generic words removed
+    ("Curve DEX" -> "Curve", "Euler V1" -> "Euler", "Balancer V2" ->
+    "Balancer"; "Tornado Cash" and "KyberSwap Elastic" are unchanged). Case
+    is kept for display; comparisons go through `_norm`. If every word is
+    generic, the whole name is its own core."""
+    words = _flat(_clean(name, 120)).split(" ")
+    while len(words) > 1 and _norm(words[-1]) in GENERIC_NAME_WORDS:
+        words = words[:-1]
+    out = " ".join(words).strip()
+    return out if _norm(out) != "" else _clean(name, 120)
+
+
+def _same_incident(old_key: str, old_incident_id: str, new_key: str) -> bool:
+    """Does `new_key` name the same incident as the claim's current one? By
+    CANONICAL identity, not spelling: the same id and day, and - when the old
+    key resolved to a record - no name, or that record's own name. A key that
+    has not resolved yet (unknown, or ambiguous without a name) compares as
+    id:day:normalised name, so adding the name to an ambiguous key is a real
+    correction."""
+    ok_, oid, oday, oname, why1 = _parse_key(old_key)
+    nk, nid, nday, nname, why2 = _parse_key(new_key)
+    if why1 or why2:
+        return False
+    if oid != nid or oday != nday:
+        return False
+    if old_incident_id != "":
+        k = old_incident_id.find(":", old_incident_id.find(":") + 1)
+        record_name = old_incident_id[k + 1:] if k >= 0 else ""
+        return nname == "" or _norm(nname) == record_name
+    return _norm(oname) == _norm(nname)

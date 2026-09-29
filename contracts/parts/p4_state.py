@@ -102,6 +102,7 @@ class Pool:
     verified_at: u64
     verify_verdict: str
     verify_attempts: u32
+    core_name: str
     protocol_domain: str
     llama_name: str
     llama_website: str
@@ -162,7 +163,6 @@ class Claim:
     # The ONE DeFi Llama incident record this claim is about, by key. Set at
     # filing; changed only by a refile.
     incident_key: str
-    mismatch_refiles: u32
     urls: str
     used_urls: str
     statement: str
@@ -606,6 +606,7 @@ class CoverClaim(gl.contract.Contract):
         pool.verify_verdict = str(v["verdict"])
         if str(v["verdict"]) == V_VERIFIED:
             pool.protocol_domain = str(v["domain"])
+            pool.core_name = str(v["core_name"])
             pool.status = POOL_OPEN
         else:
             pool.status = POOL_FAILED
@@ -1048,9 +1049,8 @@ class CoverClaim(gl.contract.Contract):
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " on this cover is " + st.lower()
                                         + " and must settle first")
-                refileable = st == CL_INCONCLUSIVE or (
-                    st == CL_MISMATCH
-                    and int(claim.mismatch_refiles) < MAX_MISMATCH_REFILES)
+                refileable = (st == CL_INCONCLUSIVE or st == CL_MISMATCH) \
+                    and int(claim.refiles) < MAX_REFILES
                 if refileable and int(claim.refile_until) >= now:
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " may still be refiled")

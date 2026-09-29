@@ -104,9 +104,10 @@ export default function ClaimPage() {
   const cover = toBig(c.cover_amount_wei);
   const afterDed = (BigInt(c.table_bps) * BigInt(10000 - c.deductible_bps)) / 10000n;
   const canContest = me && c.contestable_by && c.contestable_by.toLowerCase() === me;
-  const canRefile = me && c.claimant.toLowerCase() === me && (c.status === "INCONCLUSIVE"
-    || (c.status === "EVIDENCE_MISMATCH" && c.mismatch_refiles_left > 0) || (c.status === "FILED" && c.stalls > 0));
+  const canRefile = me && c.claimant.toLowerCase() === me && c.refiles_left > 0 && (c.status === "INCONCLUSIVE"
+    || c.status === "EVIDENCE_MISMATCH" || (c.status === "FILED" && c.stalls > 0));
   const now = cfg.data?.now ?? mounted;
+  const tooEarly = c.judgeable_at > 0 && now < c.judgeable_at;
 
   return (
     <div className="wrap">
@@ -257,7 +258,10 @@ export default function ClaimPage() {
             <h3>Actions</h3>
             <p className="dim" style={{ fontSize: "0.78rem" }}>Judging, settling and unsticking are permissionless and work while the contract is paused.</p>
             {(c.status === "FILED" || c.status === "JUDGING") && (
-              <TxButton label="Trigger judgement" icon={<ShieldCheck size={16} />} send={(a) => judgeClaim(contract!, a, c.claim_id)} onDone={refresh} />
+              <>
+                <TxButton label={tooEarly ? `Judgeable from ${dateTime(c.judgeable_at)}` : "Trigger judgement"} icon={<ShieldCheck size={16} />} disabled={tooEarly} send={(a) => judgeClaim(contract!, a, c.claim_id)} onDone={refresh} />
+                {tooEarly && <span className="dim" style={{ fontSize: "0.76rem" }}>Severity is measured over the incident&apos;s full 7-day TVL window, so nobody can have the claim judged before it has ended.</span>}
+              </>
             )}
             {(c.status === "FILED" || c.status === "JUDGING" || c.contest_status === "PENDING") && (
               <TxButton className="btn btn-ghost" label="Settle stalled" icon={<Clock size={16} />} send={(a) => settleStalled(contract!, a, c.claim_id)} onDone={refresh} />
@@ -277,7 +281,7 @@ export default function ClaimPage() {
                 <input className="input mono" placeholder={`Incident key — blank keeps ${c.incident_key}`} value={refileKey} onChange={(e) => setRefileKey(e.target.value)} aria-label="Corrected incident key" />
                 <textarea className="textarea mono" placeholder="New evidence URL(s) — blank keeps the current evidence (with a corrected key)" value={urls} onChange={(e) => setUrls(e.target.value)} />
                 <TxButton label="Refile" icon={<RefreshCw size={16} />} disabled={!urls.trim() && !refileKey.trim()} send={(a) => refileClaim(contract!, a, c.claim_id, refileKey.trim(), urls.trim(), c.statement)} onDone={refresh} />
-                <span className="dim" style={{ fontSize: "0.76rem" }}>Refile open until {dateTime(c.refile_until)}.{c.status === "EVIDENCE_MISMATCH" ? ` ${c.mismatch_refiles_left} refile(s) after a mismatch left.` : ""}</span>
+                <span className="dim" style={{ fontSize: "0.76rem" }}>Refile open until {dateTime(c.refile_until)}. {c.refiles_left} of 2 refiles left (every reason counts; the same page or record re-spelled is not new).</span>
               </>
             )}
             {payout.data && toBig(payout.data.owed_wei) > 0n && (

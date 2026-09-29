@@ -65,14 +65,45 @@ Undated text is used for exactly one decision, and never reaches the model: whet
 
 **On chain:** claims 6 and 7 below. Each claim's stored, hashed digest contains no text from the unmatched article.
 
+## Independent review: four findings, each with a failing test (`test/test_attacks.py`)
+
+All four were real. `python3 test/test_attacks.py` now passes 21/21: the reviewer's 7 tests plus 14 for the fixes. The file stays in the suite, and the audit runs it.
+
+| # | finding | fix (`contracts/CoverClaim.py`) | tests |
+|---|---|---|---|
+| 1 | **A pool name no evidence contains.** Verification accepted "Curve DEX" / "Euler V1" (DeFi Llama's own names), but binding needed the pool name word-for-word, and articles say "Curve Finance". | `_core_name` drops trailing generic words (DEX, V1–V5, Finance, Protocol, Labs, Exchange) from DeFi Llama's name. The pool name must reduce to the same core (`_verify_verdict`). The core is stored once as `pool.core_name` by `verify_pool`, and the judging facts use it (`_claim_facts`), so evidence is matched on the core name whatever the pool is called | Finding1 (3 reviewer tests); `Fix1_CoreName`: "Curve", "Curve DEX", "Curve Finance", "curve", "CURVE  DEX" give byte-identical verdicts (outcome, bucket, content hash, digest, bracket, binding, reason); core derivation; "Aave" / "Curve Lending" / "V1" still fail |
+| 2 | **Severity locked in before the 7-day window exists.** `judge_claim` could run on day 1 and fix a partial-window bucket that the buyer couldn't contest | `judge_claim` and `judge_contest` are refused before incident day + `JUDGE_AFTER_DAYS` (8), `_judgeable_at`, with no fetch and no state change. `_tvl` records the window's last point, and severity is measured only if a point exists on day 7; otherwise COVERED becomes INCONCLUSIVE (refileable), never a lower bucket | Finding2 (the reviewer's scenario: refused at 2023-03-14 18:00 and one second before 03-21; at the full window: APPROVED at bucket 4); `Fix2_FullSeverityWindow` |
+| 3 | **Late approvals hold a batch open** (one approval every 47 h) | `_join_batch` opens a new batch once the open one's `closes_at` has passed, so membership is final at close. Each batch settles against its own covers' locks | Finding3 (the reviewer's 8-griefer scenario: Alice paid 16 days in, late claims in their own batches, all paid, Σ payouts ≤ Σ locks); `Fix3_ClosedBatchesAreFinal` (including randomized) |
+| 4 | **Refile re-rolls identical evidence** (`#fragment`, re-spelled key) | `_url_key`: scheme, fragment and trailing slash dropped, query sorted, every Wayback timestamp of a page one archived source. `_same_incident`: keys compared as the record they name. One combined `MAX_REFILES = 2` for every reason (inconclusive, mismatch, stall) | Finding4 (2 reviewer tests); `Fix4_RefileIdentity`: query order, archive timestamps, combined limit across reasons, stalls count |
+
+**Test changes, stated plainly.** In `test_attacks.py`, two of the reviewer's tests asserted the vulnerable behaviour as a *precondition*, so they could not pass under the specified fixes:
+- **Finding 2** asserted that the early judgement returns APPROVED. It now asserts that the early judgement is refused and that the judgement after the window pays bucket 4. The reviewer's synthetic TVL series stopped at day 4, so it is extended through day 7 at the same drained level, so the window "exists" as the test intends.
+- **Finding 3** asserted that every late griefer claim joins Alice's batch. It now asserts that only approvals inside her window do. It also settles the late batches and checks payouts ≤ locked capacity.
+
+Each finding's property is unchanged.
+
+In `test_logic.py`:
+- the KyberSwap fixture pool is named "KyberSwap Elastic" (DeFi Llama's core; "Elastic" is a product word, not a generic suffix);
+- a partial TVL window test now expects INCONCLUSIVE;
+- a canonical claim test waits out the window;
+- two assertions follow the renamed refile fields and message.
+
+**Live check before deploying.** Every seeded incident's live DeFi Llama window is complete (8 daily points through day 7) and gives the same buckets as before. Every seeded pool's core name matches its name.
+
+**On chain (demo):**
+- **Finding 1:** the Curve proof now runs on a pool named **"Curve DEX"**. Verification stored the core name "Curve" (`0xee05328ace5783f60c99880e4ffedabf6a16900587e0d0e208b048c101eaab41`), and all seven Curve outcomes are as before.
+- **Finding 3:** a late Euler approval after batch #2's window closed went into a new batch and was paid separately (`0x2558c1207ee84db42871ffdfcee16a9616a3c80c003c775bbd96a8cbbd1fed8c`).
+- **Finding 4:** a refile with the same DNS page plus `#again` was refused as the same source (`0xf69a2e854131305bb719949ccd2206d0ed2a80333b34d1658b3413b9bea41c3a`).
+- **Finding 2** cannot be shown on chain with real data today. It needs an incident less than 8 days old inside a cover window. It is proven offline.
+
 ## Protocol-domain binding and pool verification
 
 Lens: nothing a single party controls may decide money. Line numbers are in the deployed `contracts/CoverClaim.py`.
 
 | # | item | before | fix (code) | tests |
 |---|---|---|---|---|
-| 1 | **Protocol domain binding** | **FAIL.** `create_pool` put up to 3 underwriter-chosen "official domains" straight onto the evidence allowlist. An underwriter owning `euler-postmortem.xyz` could publish a "post-mortem" there and contest a COVERED claim with it | The underwriter may only *declare* one domain (`MAX_OFFICIAL_DOMAINS = 1`, L333). A new pool's allowlist is the base only (L3196). The only other domain ever added is `pool.protocol_domain` (`_allowlist`, L3023), written once by `verify_pool` (L3094) from the website DeFi Llama lists, with `www.` stripped (`_website_domain`, L1360). It is none if DeFi Llama lists none, or lists a shared publishing host (`SHARED_HOSTS`, L337: medium.com, github.com, x.com, …). A declared domain that isn't DeFi Llama's website fails the pool (L1419). Filing, refiling, contesting and `check_evidence` all read `self._allowlist(pool)` (file_claim L3697, refile_claim L3778, contest L4053, check_evidence L4807), so a contest page on any other domain is refused before GenLayer | `TestPoolVerification`: `test_declared_domain_must_be_defillamas_website`, `test_matching_domain_is_the_only_protocol_domain`, `test_no_website_listed_means_no_protocol_domain`, `test_shared_publishing_host_is_never_a_protocol_domain`, **`test_contest_from_unverified_domain_refused_before_model`** (own domain, look-alike, archive of own domain; and `multichain.org`, which DeFi Llama doesn't list: all refused, model never called, bond returned), `test_allowlist_has_one_source_of_protocol_domain` (AST) |
-| 2 | **Pool verification before sale** | **FAIL.** A pool was OPEN at creation, so a pool whose slug, id or name weren't one protocol sold cover that could never pay: `id_match` pins every claim INCONCLUSIVE, and evidence never names a mis-named pool | Pools are created `UNVERIFIED` (L3227). **`verify_pool`** (L3048) is permissionless: one consensus round (`_verify_consensus` L3032, `_verify_collect` L1731) reads `api.llama.fi/protocol/<slug>`. The verdict is **re-derived** from the agreed raw fields (`_verify_verdict` L1377), and validators refuse a leader whose verdict its own raw fields don't produce (`_verify_agrees` L1767). VERIFIED requires: the record exists; its id is the pool's id (L1405); the pool's name names it (same first word, word-aligned: "Euler" ↔ "Euler V1"); a declared domain is its website. A 5xx is RETRY, and nothing changes. `buy_cover` sells only VERIFIED pools (L3373, `_not_selling` L2531). FAILED pools refuse capacity and cover; `close_pool` works on any non-closed pool and returns the capital (L3323) | **`test_buy_before_verification_refused`** (premium refunded, no cover), **`test_mismatched_slug_id_fails_and_cannot_sell`**, `test_unknown_slug_fails`, `test_wrong_protocol_name_fails`, **`test_verified_pool_works_as_before`**, **`test_nobody_can_pay_a_premium_into_a_pool_that_can_never_pay`** (6 bad pool shapes, before and after verification: no premium held, no cover, closes), `test_transient_source_is_retry_and_changes_nothing`, `test_verification_works_while_paused`, `test_forged_verdict_refused_by_validators`, `test_verification_fields_written_only_by_verify_pool` (AST) |
+| 1 | **Protocol domain binding** | **FAIL.** `create_pool` put up to 3 underwriter-chosen "official domains" straight onto the evidence allowlist. An underwriter owning `euler-postmortem.xyz` could publish a "post-mortem" there and contest a COVERED claim with it | The underwriter may only *declare* one domain (`MAX_OFFICIAL_DOMAINS = 1`, L345). A new pool's allowlist is the base only (L3280). The only other domain ever added is `pool.protocol_domain` (`_allowlist`, L3106), written once by `verify_pool` (L3177) from the website DeFi Llama lists, with `www.` stripped (`_website_domain`, L1398). It is none if DeFi Llama lists none, or lists a shared publishing host (`SHARED_HOSTS`, L349: medium.com, github.com, x.com, …). A declared domain that isn't DeFi Llama's website fails the pool (L1458). Filing, refiling, contesting and `check_evidence` all read `self._allowlist(pool)` (file_claim L3792, refile_claim L3876, contest L4163, check_evidence L4923), so a contest page on any other domain is refused before GenLayer | `TestPoolVerification`: `test_declared_domain_must_be_defillamas_website`, `test_matching_domain_is_the_only_protocol_domain`, `test_no_website_listed_means_no_protocol_domain`, `test_shared_publishing_host_is_never_a_protocol_domain`, **`test_contest_from_unverified_domain_refused_before_model`** (own domain, look-alike, archive of own domain; and `multichain.org`, which DeFi Llama doesn't list: all refused, model never called, bond returned), `test_allowlist_has_one_source_of_protocol_domain` (AST) |
+| 2 | **Pool verification before sale** | **FAIL.** A pool was OPEN at creation, so a pool whose slug, id or name weren't one protocol sold cover that could never pay: `id_match` pins every claim INCONCLUSIVE, and evidence never names a mis-named pool | Pools are created `UNVERIFIED` (L3311). **`verify_pool`** (L3131) is permissionless: one consensus round (`_verify_consensus` L3115, `_verify_collect` L1808) reads `api.llama.fi/protocol/<slug>`. The verdict is **re-derived** from the agreed raw fields (`_verify_verdict` L1415), and validators refuse a leader whose verdict its own raw fields don't produce (`_verify_agrees` L1844). VERIFIED requires: the record exists; its id is the pool's id (L1444); the pool's name names it (same first word, word-aligned: "Euler" ↔ "Euler V1"); a declared domain is its website. A 5xx is RETRY, and nothing changes. `buy_cover` sells only VERIFIED pools (L3457, `_not_selling` L2614). FAILED pools refuse capacity and cover; `close_pool` works on any non-closed pool and returns the capital (L3407) | **`test_buy_before_verification_refused`** (premium refunded, no cover), **`test_mismatched_slug_id_fails_and_cannot_sell`**, `test_unknown_slug_fails`, `test_wrong_protocol_name_fails`, **`test_verified_pool_works_as_before`**, **`test_nobody_can_pay_a_premium_into_a_pool_that_can_never_pay`** (6 bad pool shapes, before and after verification: no premium held, no cover, closes), `test_transient_source_is_retry_and_changes_nothing`, `test_verification_works_while_paused`, `test_forged_verdict_refused_by_validators`, `test_verification_fields_written_only_by_verify_pool` (AST) |
 
 **Live DeFi Llama records** (2026-09-29, the same document judging already reads):
 
@@ -89,13 +120,13 @@ On chain, `verify_pool` took 17 s for Euler (9 MB record) and 40–54 s for Curv
 
 | scenario | result | tx |
 |---|---|---|
-| Euler pool (declared `euler.finance`) | VERIFIED; allowlist `rekt.news, web.archive.org, euler.finance` | `0xa326ac96b5b1519921c15fcabaa6b81845295edc137d3b7d07ee418245052377` |
-| Curve pool (declared `curve.finance`, 69 MB record) | VERIFIED; `curve.finance` | `0x6d111909110407cc438c40b2a8299e74f195d3caca787b4028fc12528b496a03` |
-| Multichain pool (no declaration; DeFi Llama lists none) | VERIFIED with **no** protocol domain: rekt.news only | `0xd17a6eaf8fe703433a3c5b5da13f2518d059fdb1cf587b688dc2c7290ea62d83` |
-| Euler slug + id, declaring `euler-postmortem.xyz` | **FAILED_VERIFICATION**: "declared domain euler-postmortem.xyz is not the website DeFi Llama lists for Euler V1"; a premium sent to it came straight back; closed with the capital returned | verify `0x74e2aa945dc30c32c69ae9236ff3b43f448288d7769c6c11754adaed754d259e`, buy refused `0x637b5fc275870c1a4f979ad18f0741cf95df70ffe977e2f75fa8d503572c12c0`, close `0xf4dd0b93cdd9828ae57b27d4c4f410441928af599adf299a687206a856ff8775` |
-| slug `curve-dex` + id 1183 | **FAILED_VERIFICATION**: "slug curve-dex is DeFi Llama id 3, not 1183"; buy refused; closed | verify `0x1029699762bacb6bfaa701b38b48177e1e22d7d342ad8d47460be038cb6f8a07`, buy refused `0x31f4c63db9a64d0ed82d8a4b7382f49c36438aa8caa8cecb6da9919078237404`, close `0x3fcc8c6f12012ca16c46cac62e19dcca7351d330edc9c4acdf04534b52006244` |
-| underwriter contests the COVERED Euler claim with `euler-postmortem.xyz/official-post-mortem` | **refused before GenLayer** ("not on this pool's frozen evidence allowlist"); bond refunded; the verdict stands | `0x496b7b1c30d963739e5d95baac30d8ff9d2d57296d9a389ef6257955f934aa8f` |
-| buyer contests the Multichain denial with `multichain.org` (not listed by DeFi Llama) | **refused before GenLayer**; bond refunded | `0x9fe3aaf6ac25acd5fc1dac6124a9f773e6c2118cbc43af4a1122276037f893be` |
+| Euler pool (declared `euler.finance`) | VERIFIED; allowlist `rekt.news, web.archive.org, euler.finance` | `0x922291e254713aee3667a3b723e3fc404d9388e4b8540f27cf47bf7c518abad2` |
+| Curve pool (declared `curve.finance`, 69 MB record) | VERIFIED; `curve.finance` | `0xee05328ace5783f60c99880e4ffedabf6a16900587e0d0e208b048c101eaab41` |
+| Multichain pool (no declaration; DeFi Llama lists none) | VERIFIED with **no** protocol domain: rekt.news only | `0x775ade34c0d50f28c0e95b2833553bff4902161c3feef906b2ce4dff66c9f8d7` |
+| Euler slug + id, declaring `euler-postmortem.xyz` | **FAILED_VERIFICATION**: "declared domain euler-postmortem.xyz is not the website DeFi Llama lists for Euler V1"; a premium sent to it came straight back; closed with the capital returned | verify `0xcf29456e73ef9f793bce062b19268e75e8f3487b9e4768cf32d499fdee9f6bdf`, buy refused `0x3561e2f441223ab3df3c76a4aee130366c69e2d25dbf11f9c9f3c6951f9b21f4`, close `0xd47ea5e2a2c6c44dfe9648b7ae0ea022e5969f16aae0cf9f7165b8e968f2822b` |
+| slug `curve-dex` + id 1183 | **FAILED_VERIFICATION**: "slug curve-dex is DeFi Llama id 3, not 1183"; buy refused; closed | verify `0xdcfd9973eb815b7f49f5f3a3e4ecb933187e1dca189fd7a6a74d39752768e703`, buy refused `0x0559b38eb4901f2952ad4ebdf17841aed9208f468c23b35f2bc1759908d76400`, close `0xa047dfbab80016807c3cfa09708c3168dd7ffbb0f52061c0b86d3edf454978e5` |
+| underwriter contests the COVERED Euler claim with `euler-postmortem.xyz/official-post-mortem` | **refused before GenLayer** ("not on this pool's frozen evidence allowlist"); bond refunded; the verdict stands | `0xed256bc4141c4e35ef771713e533ae6e86535552febaae547376ac3f90ccb75e` |
+| buyer contests the Multichain denial with `multichain.org` (not listed by DeFi Llama) | **refused before GenLayer**; bond refunded | `0x3619fa28c2c12f98f92a45d6eaa0d21b20151d7a8c05b4069f2ecc98aa328a28` |
 | every cover sold on the demo instance | all on VERIFIED pools | collect row "POOL VERIFICATION" |
 
 **Docs checked after the change:**
@@ -110,10 +141,10 @@ Line numbers are in the deployed `contracts/CoverClaim.py`. Tests are in `test/t
 
 | # | item | before the audit | code | tests |
 |---|---|---|---|---|
-| 2 | canonical incident identity | **FAIL**: settlement windows were keyed by `pool:incident_day`, so two records of one protocol on one day would share a batch | `_incident_id` L2092: the selected record's `id:day:normalised name`. It is compared exactly (`EXACT_STR`), stored on the claim and the batch, keys the batch (`_join_batch` L3831), and is what the content hash covers | `TestBindingAudit.test_2_differently_written_keys_group_and_scale_together`: `1183:2023-03-13` and `…:Euler V1` → one incident, one batch, same hash, scaled pro-rata. `test_2_two_records_on_one_day_are_two_incidents` |
-| 3 | contest binding | **PASS**: already bound | allowlist L4053; the contest has no key parameter (`contest(claim_id, evidence_urls, statement)` L4003) and its facts use the claim's stored key (L3567); only BOUND pages are read (L1923), so pages dated elsewhere and undated pages add nothing; `event_match` is asked again | `test_3_contest_page_dated_elsewhere_is_not_read`, `test_3_contest_undated_page_is_not_read`, `test_3_contest_bound_page_rejudged_with_event_match` (DIFFERENT → EVIDENCE_MISMATCH), `test_3_contest_allowlist_applies`, `test_3_contest_cannot_change_the_incident_key` |
-| 4 | refile binding | **PASS for the question, FAIL for leftover state**: the new judgement was already asked from scratch, but the rejected attempt's batch membership and resolved-contest state carried over | refile L3792: `_leave_batch`, gross and table reset, a resolved contest cleared; the key re-checked by `_key_check`; evidence by the allowlist; limit L3760 | `test_4_refile_reuses_nothing_from_the_rejected_attempt`, `test_4_refile_rechecks_the_key_from_scratch`, `test_4_refile_limit` |
-| 5 | one payout per cover | **FAIL**, and a real one: approve → contest flip → refile → re-approve inside one open window appended the claim to the same batch twice, and `finalize_incident` paid it twice. The test showed "2 != 1" and a broken ledger before the fix | listed once (L3846); a flip out of APPROVED leaves the batch (L4180, `_leave_batch` L3852); finalize pays each claim once (L4240), only if still in THIS batch and its cover is ACTIVE (L4249) | `test_5_flip_refile_reapprove_pays_once`, `test_5_paid_cover_is_never_paid_again`, `test_5_new_verdict_after_refile_can_be_contested`, `test_5_payouts_never_exceed_locked_capacity_random` (12 random pools, mixed keys, random flips: Σ payouts ≤ Σ locks, one payout per cover) |
+| 2 | canonical incident identity | **FAIL**: settlement windows were keyed by `pool:incident_day`, so two records of one protocol on one day would share a batch | `_incident_id` L2175: the selected record's `id:day:normalised name`. It is compared exactly (`EXACT_STR`), stored on the claim and the batch, keys the batch (`_join_batch` L3927), and is what the content hash covers | `TestBindingAudit.test_2_differently_written_keys_group_and_scale_together`: `1183:2023-03-13` and `…:Euler V1` → one incident, one batch, same hash, scaled pro-rata. `test_2_two_records_on_one_day_are_two_incidents` |
+| 3 | contest binding | **PASS**: already bound | allowlist L4163; the contest has no key parameter (`contest(claim_id, evidence_urls, statement)` L4113) and its facts use the claim's stored key (L3650); only BOUND pages are read (L2001), so pages dated elsewhere and undated pages add nothing; `event_match` is asked again | `test_3_contest_page_dated_elsewhere_is_not_read`, `test_3_contest_undated_page_is_not_read`, `test_3_contest_bound_page_rejudged_with_event_match` (DIFFERENT → EVIDENCE_MISMATCH), `test_3_contest_allowlist_applies`, `test_3_contest_cannot_change_the_incident_key` |
+| 4 | refile binding | **PASS for the question, FAIL for leftover state**: the new judgement was already asked from scratch, but the rejected attempt's batch membership and resolved-contest state carried over | refile L3889: `_leave_batch`, gross and table reset, a resolved contest cleared; the key re-checked by `_key_check`; evidence by the allowlist; combined refile limit L3855 (MAX_REFILES, every reason) | `test_4_refile_reuses_nothing_from_the_rejected_attempt`, `test_4_refile_rechecks_the_key_from_scratch`, `test_4_refile_limit` |
+| 5 | one payout per cover | **FAIL**, and a real one: approve → contest flip → refile → re-approve inside one open window appended the claim to the same batch twice, and `finalize_incident` paid it twice. The test showed "2 != 1" and a broken ledger before the fix | listed once (L3946); a flip out of APPROVED leaves the batch (L4296, `_leave_batch` L3952); finalize pays each claim once (L4356), only if still in THIS batch and its cover is ACTIVE (L4365) | `test_5_flip_refile_reapprove_pays_once`, `test_5_paid_cover_is_never_paid_again`, `test_5_new_verdict_after_refile_can_be_contested`, `test_5_payouts_never_exceed_locked_capacity_random` (12 random pools, mixed keys, random flips: Σ payouts ≤ Σ locks, one payout per cover) |
 | 6 | any other binding | two found (below); everything else PASS | see below | `TestBindingAudit6` |
 
 **Item 6, everything a stored result depends on:**
@@ -121,17 +152,17 @@ Line numbers are in the deployed `contracts/CoverClaim.py`. Tests are in `test/t
 | stored result | depends on | bound to | status |
 |---|---|---|---|
 | incident date, record fields | the one hacks row the key names | record | PASS |
-| severity (TVL window) | `/protocol/<slug>`, window anchored on the record's day; `id_match` requires the TVL document's id to be the pool's id (L1977) | record + pool | PASS (`test_severity_window_follows_the_record_not_the_filing_time`) |
+| severity (TVL window) | `/protocol/<slug>`, window anchored on the record's day; `id_match` requires the TVL document's id to be the pool's id (L2055) | record + pool | PASS (`test_severity_window_follows_the_record_not_the_filing_time`) |
 | classification, peril, exclusion, strength | bound pages only; bracket ∩ the pool's frozen perils and exclusions | record + policy | PASS |
-| outcome and gross (`_outcome` L3967) | cover start, end and amount; pool waiting period, table and deductible | cover + policy | PASS (`test_outcome_inputs_are_this_cover_and_this_pool`) |
+| outcome and gross (`_outcome` L4077) | cover start, end and amount; pool waiting period, table and deductible | cover + policy | PASS (`test_outcome_inputs_are_this_cover_and_this_pool`) |
 | settlement batch, pro-rata pool | canonical incident id, the locks of those covers | record + covers | **was FAIL** (item 2), fixed |
 | payout | the claim's membership in the batch, the cover's status | cover | **was FAIL** (item 5), fixed |
-| a page's evidence date on `web.archive.org` | text of the page | page | PASS: the Wayback "FILE ARCHIVED ON" footer is an HTML comment and is dropped. Hardened: a toolbar block, if one is served inside the page, is cut out (L1579) (`test_wayback_metadata_never_dates_a_page`) |
-| **CoverRegistry attestation** (`get_active_cover` / `is_covered`) | **the protocol string matched against the pool's free-text display name** as well as its slug | — | **FAIL**, fixed: matched only by the pool's frozen DeFi Llama slug, id, or `slug:id` (L4947). A pool named "Aave" over Euler's slug no longer attests Aave cover (`test_registry_ignores_display_names`, registry tests) |
+| a page's evidence date on `web.archive.org` | text of the page | page | PASS: the Wayback "FILE ARCHIVED ON" footer is an HTML comment and is dropped. Hardened: a toolbar block, if one is served inside the page, is cut out (L1652) (`test_wayback_metadata_never_dates_a_page`) |
+| **CoverRegistry attestation** (`get_active_cover` / `is_covered`) | **the protocol string matched against the pool's free-text display name** as well as its slug | — | **FAIL**, fixed: matched only by the pool's frozen DeFi Llama slug, id, or `slug:id` (L5065). A pool named "Aave" over Euler's slug no longer attests Aave cover (`test_registry_ignores_display_names`, registry tests) |
 | contest re-reading | the stored judged digest, and the record and TVL re-read under the claim's same key | record | PASS. A contest re-reads DeFi Llama live, so if DeFi Llama edits or removes the record afterwards, a contest can come out INCONCLUSIVE (refileable). That is a re-reading of the same record, never a different one |
 | pool slug vs id | both frozen at creation, but no web read is possible there | policy | residual, documented: a pool whose slug and id name different protocols can never pay (`id_match` pins every claim INCONCLUSIVE). `slug:id` lets an integrator require both |
 
-## Tests (offline, `python3 test/test_logic.py`, 667 passing)
+## Tests (offline, `python3 test/test_logic.py`, 668 passing; `python3 test/test_attacks.py`, 21 passing)
 
 `TestOneEventBindsEverything` runs on Curve's two real records in one cover window (fixtures captured from the live sources). DNS is excluded (FRONTEND_HIJACK) and Vyper is covered (SMART_CONTRACT_BUG).
 
@@ -150,7 +181,7 @@ Two earlier behaviours changed on purpose, and their tests were updated:
 - The canonical backdating tests now assert **refusal at filing** rather than a `REJECTED_BACKDATED` verdict.
 - Another protocol's article is now EVIDENCE_MISMATCH rather than INCONCLUSIVE.
 
-## On-chain proof (demo instance `0xC70DB65CaF6aa8a915b032FBFeBC6600A195F8e7`)
+## On-chain proof (demo instance `0x33e464ebF31eEaeD31fDB16D38CCb97FB30A8339`)
 
 Probed first:
 - `api.llama.fi/hacks` has both Curve DEX records under `defillamaId` 3: 2022-08-09 "Frontend & Infrastructure / DNS Hijack" and 2023-07-30 "Reentrancy / Vyper Compiler Bug".
@@ -163,69 +194,55 @@ Setup:
 
 | # | evidence | record (key) | outcome | event | binding | severity | judge tx |
 |---|---|---|---|---|---|---|---|
-| 1 | Vyper (rekt.news/curve-vyper-rekt) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG` | SAME (model) | BOUND 2023-07-31 | bucket 2, 4952 bps (Vyper window); gross 0.225 GEN | `0xa6b5e662c3a2d237be22a20b7b273ff76e3cf102417d6d3629e020d7ef190cdf` |
-| 2 | Vyper | `3:2022-08-09` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2023-07-31 | window anchored on 2022-08-09 (148 bps), not used | `0x80a2b3798b4543f060530b5e5b2c9e8ebed3c6a0a7c31623dac46dea86ac98d5` |
-| 3 | DNS (rekt.news/curve-finance-rekt) | `3:2023-07-30` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2022-08-10 | window anchored on 2023-07-30, not used | `0x92909b926bde95e10f89c0f51d558a3e0a827d74997a7de5abfd7ba901cfabae` |
-| 4 | DNS | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK` | SAME (model) | BOUND 2022-08-10 | bucket 0, 148 bps (DNS window) | `0xf4d8dbffab16030debf94a2523adfd8e1fac34b9c19c7a9d6eb7ec6fa0de9851` |
-| 5 | DNS, then refiled with Vyper | `3:2023-07-30` | EVIDENCE_MISMATCH → refile → **APPROVED → paid** | DIFFERENT → SAME | UNBOUND → BOUND | bucket 2, 4952 bps | mismatch `0x1735e2b92dd6131a08ae0d6b8708cd7c988cc14acb8e82c016769a65bb840603`, refile `0x6fba177701f5e4e72cd2f3c0b748346fe31880ecf54ffb011680dc8acf8a2b79`, judge `0xadd788bad11607436d3e1af644a34657c6270030bab721b398acabf7e992144a` |
-| 6 | [DNS, Vyper] (mixed) | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK`, no payout, classified from the DNS page only | SAME (model) | DNS BOUND 2022-08-10; Vyper UNBOUND 2023-07-31 | bucket 0 (DNS window) | `0xc091466c3ad357936662be01971363e5ac2e3cc4768871284bf66db5dc1c2d04` |
-| 7 | [Vyper, DNS] (mixed) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG`, classified from the Vyper page only | SAME (model) | Vyper BOUND 2023-07-31; DNS UNBOUND 2022-08-10 | bucket 2, 4952 bps | `0x1c35eb86c105ebe08c0e691d8e7dd2be6140a2b98522405dc3044588fd9d56de` |
+| 1 | Vyper (rekt.news/curve-vyper-rekt) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG` | SAME (model) | BOUND 2023-07-31 | bucket 2, 4952 bps (Vyper window); gross 0.225 GEN | `0xe79d721eabd37e675f7b6f255120899c125d62c30ba8bb5d2fdb1e67c7683dfb` |
+| 2 | Vyper | `3:2022-08-09` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2023-07-31 | window anchored on 2022-08-09 (148 bps), not used | `0x2b07e697af9ba1f505fb4314ec809dda94472f58bb100b195b687b2ba680dcf6` |
+| 3 | DNS (rekt.news/curve-finance-rekt) | `3:2023-07-30` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2022-08-10 | window anchored on 2023-07-30, not used | `0x62e33efac5c991afe5c466e7f51747b07539b066db055a2627cfde838d23c3b0` |
+| 4 | DNS | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK` | SAME (model) | BOUND 2022-08-10 | bucket 0, 148 bps (DNS window) | `0x63dbf7d4febe57dd98553b278f88452239f90961e6232de2453e983b0541d865` |
+| 5 | DNS, then refiled with Vyper | `3:2023-07-30` | EVIDENCE_MISMATCH → refile → **APPROVED → paid** | DIFFERENT → SAME | UNBOUND → BOUND | bucket 2, 4952 bps | mismatch `0x21d62a128d81c89ebf657add7aded702303761641c8eee9b8c40fdc71e4feb2b`, refile `0x48efb8fea5d93f8a75c898d845c29fa7d9ea73c9b974f0201841f293c5d61854`, judge `0x7ff3c68580e386bed4fe80651559fb692283909bd88df88f64ae6a10e430de5f` |
+| 6 | [DNS, Vyper] (mixed) | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK`, no payout, classified from the DNS page only | SAME (model) | DNS BOUND 2022-08-10; Vyper UNBOUND 2023-07-31 | bucket 0 (DNS window) | `0xd63eba5abb53ebbf4e4fe1f92bae440a4727b41ab9fdb42c2be772bfd268e542` |
+| 7 | [Vyper, DNS] (mixed) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG`, classified from the Vyper page only | SAME (model) | Vyper BOUND 2023-07-31; DNS UNBOUND 2022-08-10 | bucket 2, 4952 bps | `0xf47afbc0d4ce6bfef94bf736fae4ca2b1b5f2b27f4b20cb77d9653b5cc03a78b` |
 
 Claims 1 and 5 carry the same content hash `7b244fb5a5ef1dbd`: same key, same evidence, same record, same TVL window.
 
 Claim 2's hash `e4db574b4f52ad5e` and claim 3's `b6bc02b93277364b` differ from it and from each other; claim 3 shares its hash with claim 5's first (mismatched) judgement.
 
-**Canonical, backdating.** A cover bought on 2026-09-29, with a claim keyed to Euler's `1183:2023-03-13`, is refused at filing ("predates this cover's start plus its waiting period"), with no fetch and no model. The cover keeps its one claim: tx `0x8585c4498c3df5fb77284ab868c1967203a8e65440253b1036ac7518b9561ea6`.
+**Canonical, backdating.** A cover bought on 2026-09-29, with a claim keyed to Euler's `1183:2023-03-13`, is refused at filing ("predates this cover's start plus its waiting period"), with no fetch and no model. The cover keeps its one claim: tx `0x9b967f20eb41d8cdd1a38dbdaf7599d7e295de9ba4e3e85b45b58bacda491380`.
 
 **Settlement.**
-- Claims 1, 5 and 7 share one canonical incident (`3:2023-07-30:curve dex`) and are paid together in batch 1 (`0xed45b61f9fa20e8e9f6f765f312adb0b5459c2d91600a8349333a05e7c404d55`). Each was credited 0.225 GEN.
+- Claims 1, 5 and 7 (canonical incident `3:2023-07-30:curve dex`) are paid together in batch 1 (`0x9e815a17933f6800faf1ef74ca1c0368d7614eb309edbb79f97decd3b6abc9da`).
 - Claims 2, 3 and 6 have gross 0 and no batch.
-- The two pro-rata Euler claims were keyed `1183:2023-03-13` and `1183:2023-03-13:Euler V1`. They are one incident in one batch, scaled at factor 5555 bps (`0xc8198ca7d62149216489c8a0f14a781f1e266e64e1b5071d06ed71b4b3fe57ed`).
+- The two pro-rata Euler claims, keyed two ways, are one incident in one batch, scaled at 5555 bps.
 
-**All seeded scenarios pass, read back from chain state** by `node test/collect.mjs` ([docs/EVIDENCE.md](docs/EVIDENCE.md), **24/24**):
-- the 7-claim Curve proof, including the two mixed-evidence claims
-- pool verification: every pool that sold cover was verified; two failing pools could not sell and closed
-- the two contests from unverified domains, refused before GenLayer
-- one payout per cover (structural: every batch lists each claim once, no cover paid twice, payouts ≤ locked capacity)
-- Euler COVERED and CONTESTED (UPHELD)
+**All seeded scenarios pass, read back from chain state** by `node test/collect.mjs` ([docs/EVIDENCE.md](docs/EVIDENCE.md), **27/27**):
+- the review fixes: core name, late approval, refile identity
+- the 7-claim Curve proof
+- pool verification: two failing pools could not sell
+- contests from unverified domains refused
+- one payout per cover (structural)
+- Euler COVERED and CONTESTED
 - Multichain EXCLUDED
 - INCONCLUSIVE
 - PRO-RATA
 - EXPIRED
 - STALLED
-- canonical BACKDATED (refused at filing)
+- canonical BACKDATED
 - the waiting-period gate
-- the registry attest
+- the registry
 - ledger identity
 - demo drained
 
-The double-payout regression (approve → contest flip → refile → re-approve) cannot be forced on chain: the flip needs validators to change their reading. It is proven offline by `TestBindingAudit.test_5_*`. On chain it is checked structurally in every batch.
+**Drained to zero** in one pass: all seven pools closed, every balance withdrawn. The books read **balance 0 = held 0 + payable 0 wei, locked 0**. Studio Dev again finalized every `claim_payout` without executing the transfer: `undelivered_wei = 14397066666666666675`.
 
-**Drained to zero.** In one pass: every demo cover released, all seven pools closed (two of them never verified), every balance withdrawn. The books read **balance 0 = held 0 + payable 0 wei, locked 0** ([docs/drain-evidence.json](docs/drain-evidence.json)). Studio Dev again finalized every `claim_payout` without executing the transfer: `undelivered_wei = 14336233333333333341`, published by `get_stats`.
-
-**Audit.** `python3 tools/audit.py` gives **64 PASS / 0 FAIL** ([docs/AUDIT.md](docs/AUDIT.md)). It includes the new checks:
-- protocol-domain binding (the only non-base domain comes from `verify_pool`)
-- verified before sale
-- canonical incident identity, and one payout per cover
-- contest and refile bindings
-- registry identity
-- no "latest row" selection
-- hash binding
-- README addresses equal `deployments.json`
-
-**One more bug, found and fixed during this round.** On the first deployment of pool verification (archived in `docs/previous-deployment/6-verification-view-bug/`), the collector flagged pools #6 and #7: `get_pool` showed `verified: true` for a pool that had **failed** verification and was then closed. The flag was derived from the status.
-- It is now read from a stored `verify_verdict`, written only by `verify_pool`, with test `test_failed_then_closed_pool_never_reads_verified`.
-- No money path used the flag: `buy_cover` checks the live OPEN status.
-- Redeployed and reseeded.
+**Audit.** `python3 tools/audit.py` gives **69 PASS / 0 FAIL**. It now runs `test/test_attacks.py` and checks the judging gate and batch finality structurally.
 
 ## New addresses (GenLayer Studio Dev, chain 61997)
 
 | contract | address | deploy tx |
 |---|---|---|
-| `CoverClaim` (canonical) | `0x8a698aA7eF620260B192b89C141A1dcE168Dfd80` | `0x8f0fbf8c4466f13182ad35d9aa36c38579d28c8d2ccb4a89e6260687e1cbba98` |
-| `CoverClaimDemo` (DEMO, `demo_backdate_days = 1521`) | `0xC70DB65CaF6aa8a915b032FBFeBC6600A195F8e7` | `0x8668ef8e3d428aed20ed43e1a697d1e0559db791c9c66c57896284f1961db257` |
-| `CoverRegistry` | `0x8618B4CC15069B056b5b35AF37B029b27a152cf7` | `0xe29767a23946ae0dbc6c3a7072a7fa54bc2f4ce0e19c5da30d0c59212751f1e2` |
+| `CoverClaim` (canonical) | `0x039BCD3b9a12f81e1069dBbe9122A4B2e73db937` | `0x81b159036b3e0131ccfae8d97ecbf2c03a448f7d468338a62f8a2f367d73bcfb` |
+| `CoverClaimDemo` (DEMO, `demo_backdate_days = 1521`) | `0x33e464ebF31eEaeD31fDB16D38CCb97FB30A8339` | `0x9b2ec2eabe733a8fd1109d226de7d3cecf632ce38809b3957af6ac1820460670` |
+| `CoverRegistry` | `0x045C4C2BDE62CA730ceDf9B3ea810fbd645f2c6b` | `0xe42c25b72bca5f83934a96bd13de6f064f4d2496cbf128d7b033d0a9f901edf4` |
 
-- CoverClaim source: 232,855 bytes, sha256 `49b845736f93d48a…`, identical on chain for both instances (`node test/verify_onchain.mjs`).
-- Previous deployments: `docs/previous-deployment/1-first/`, `docs/previous-deployment/2-waitgate/`, `docs/previous-deployment/3-one-event/` (before the classifier-input confirmation), `docs/previous-deployment/4-matched-pages/` (before the binding audit), `5-binding-audit/` (before domain binding and pool verification), `6-verification-view-bug/`.
+- CoverClaim source: 239,268 bytes, sha256 `d901d87195097391…`, identical on chain for both instances (`node test/verify_onchain.mjs`).
+- Previous deployments: `docs/previous-deployment/1-first/`, `docs/previous-deployment/2-waitgate/`, `docs/previous-deployment/3-one-event/` (before the classifier-input confirmation), `docs/previous-deployment/4-matched-pages/` (before the binding audit), `5-binding-audit/` (before domain binding and pool verification), `6-verification-view-bug/`, `7-before-review-fixes/`.
 - App: https://coverclaim.vercel.app. It reads the addresses from Vercel production env vars, and the live bundle contains only these addresses.

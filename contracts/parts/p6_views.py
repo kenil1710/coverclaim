@@ -26,6 +26,7 @@
             "verify_attempts": int(pool.verify_attempts),
             "verify_reason": str(pool.verify_reason),
             "llama_name": str(pool.llama_name),
+            "core_name": str(pool.core_name),
             "llama_website": str(pool.llama_website),
             "payout_table_bps": [_as_int(x, 0) for x in _split_csv(pool.payout_table_csv)],
             "rate_bps": int(pool.rate_bps),
@@ -124,9 +125,8 @@
             "statement": str(claim.statement),
             "status": str(claim.status),
             "refiles": int(claim.refiles),
-            "mismatch_refiles": int(claim.mismatch_refiles),
-            "mismatch_refiles_left": MAX_MISMATCH_REFILES
-            - int(claim.mismatch_refiles),
+            "refiles_left": MAX_REFILES - int(claim.refiles),
+            "judgeable_at": self._judgeable_at(claim),
             "refile_until": int(claim.refile_until),
             "attempts": int(claim.attempts),
             "stalls": int(claim.stalls),
@@ -405,7 +405,9 @@
         if pool is None:
             return {"ok": False, "reason": "the cover's pool is missing"}
         key, why = self._key_check(cover, pool, incident_key, self._now())
+        _, _, kday, _, _ = _parse_key(key)
         return {"ok": why == "", "incident_key": key, "reason": why,
+                "judgeable_at": kday + JUDGE_AFTER_DAYS * DAY if kday > 0 else 0,
                 "llama_id": str(pool.llama_id),
                 "window": [_date_text(_day_of(int(cover.start)
                                               + int(pool.waiting_days) * DAY)),
@@ -645,7 +647,9 @@
             "incident_key_format": "<DeFi Llama id>:<YYYY-MM-DD>[:<record name>]",
             "bind_window_days": BIND_WINDOW_DAYS,
             "event_matches": list(EVENT_MATCHES),
-            "max_mismatch_refiles": MAX_MISMATCH_REFILES,
+            "max_refiles": MAX_REFILES,
+            "judge_after_days": JUDGE_AFTER_DAYS,
+            "generic_name_words": list(GENERIC_NAME_WORDS),
             "default_payout_table_bps": list(DEFAULT_PAYOUT_TABLE),
             "min_covered_strength": MIN_COVERED_STRENGTH,
             "strength_tolerance": STRENGTH_TOLERANCE,

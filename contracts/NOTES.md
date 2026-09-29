@@ -134,6 +134,30 @@ VERIFIED (OPEN) pools; FAILED_VERIFICATION pools can only be closed, which
 returns the capital. `/protocol/<slug>` is the same document judging already
 reads (69 MB for curve-dex, parsed inside the budget).
 
+## 2c. Four review findings (independent review, test/test_attacks.py)
+
+1. **Core name.** Verification accepted DeFi Llama's own name ("Curve DEX")
+   while binding required the pool name word-for-word in the evidence -
+   articles say "Curve Finance". Now `_core_name` drops trailing generic words
+   (dex, v1-v5, finance, protocol, labs, exchange) from DeFi Llama's name; the
+   pool name must reduce to the same core; the core is stored at
+   verification and is the name the judging path uses (facts, digest
+   salience, binding, prompt, reason) - so "Curve" and "Curve DEX" pools
+   produce byte-identical verdicts.
+2. **Full severity window.** `judge_claim` and `judge_contest` are refused
+   before incident day + `JUDGE_AFTER_DAYS` (8); severity is `measured` only
+   when a window point exists on day 7. Before, the underwriter could judge
+   on day 1, fix a partial-window bucket, and the buyer could not contest an
+   APPROVED claim. Consequence: every claim waits eight days - stated.
+3. **Final batches.** `_join_batch` now opens a new batch once the open one's
+   `closes_at` has passed, so a closed window's membership is final and late
+   approvals cannot hold it open (the attack: one approval every 47 h).
+   Each batch settles against its own covers' locks.
+4. **Source identity.** `_url_key` drops the fragment, trailing slashes and
+   scheme, sorts the query, and keys every Wayback timestamp of a page as one
+   archived source; `_same_incident` compares keys as the record they name.
+   One combined limit, `MAX_REFILES = 2`, for every refile reason.
+
 ## 3. The bracket, and why it is built from the BUYER's evidence only
 
 DeFi Llama's classification ("Key Compromise", "Frontend & Infrastructure") is

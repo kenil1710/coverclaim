@@ -286,9 +286,17 @@ PAGE_UNREAD = "UNREAD"
 MAX_PAGE_DATES = 40
 MAX_KEY = 120
 MAX_KEY_NAME = 80
-# How many times a claim may come back from EVIDENCE_MISMATCH with new
-# evidence or a corrected key. INCONCLUSIVE refiles are not counted here.
-MAX_MISMATCH_REFILES = 2
+# How many times a claim may be refiled, FOR ANY REASON COMBINED - after
+# INCONCLUSIVE, after EVIDENCE_MISMATCH, or after a stall. Each refile must
+# also bring a source or an incident that is genuinely new (see `_url_key`,
+# `_same_incident`): the same page re-spelled is not new evidence.
+MAX_REFILES = 2
+# Generic words DeFi Llama appends to a protocol's name ("Curve DEX", "Euler
+# V1"). Articles write "Curve Finance", "Euler Finance". The CORE name - the
+# record's name with these trailing words removed - is what evidence must
+# name, whatever the underwriter typed.
+GENERIC_NAME_WORDS = ("dex", "v1", "v2", "v3", "v4", "v5", "finance",
+                      "protocol", "labs", "exchange")
 MONTHS = {"jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3,
           "march": 3, "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
           "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9,
@@ -302,6 +310,10 @@ MONTHS = {"jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3,
 # here and published by `get_config`; a pool chooses only the PAYOUT per bucket.
 SEVERITY_EDGES_BPS = (1000, 3000, 6000, 9000)      # 10%, 30%, 60%, 90%
 SEVERITY_WINDOW_DAYS = 7
+# A claim (or contest) is judged only once the whole window has ended: the
+# incident day plus SEVERITY_WINDOW_DAYS, plus one day for that last point to
+# be published. Judging earlier would fix severity from a partial window.
+JUDGE_AFTER_DAYS = SEVERITY_WINDOW_DAYS + 1
 # Window points written into the TVL line (and so into the content hash). A
 # daily series has at most eight in the window.
 MAX_TVL_POINTS = 24
@@ -405,7 +417,7 @@ CL_AFTER_END = "REJECTED_AFTER_COVER_END"
 CL_PAID = "PAID"
 # The evidence is not about the selected incident. Pays nothing, moves
 # nothing, and - like INCONCLUSIVE - is refiled rather than contested, at most
-# MAX_MISMATCH_REFILES times.
+# MAX_REFILES times in all (every refile reason counts).
 CL_MISMATCH = "EVIDENCE_MISMATCH"
 CLAIM_STATUSES = (CL_FILED, CL_JUDGING, CL_INCONCLUSIVE, CL_MISMATCH,
                   CL_APPROVED, CL_NO_PAYOUT, CL_DENIED, CL_BACKDATED,

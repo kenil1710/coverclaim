@@ -49,6 +49,7 @@ const m3 = byId(MK.m3);
 const m4 = byId(MK.m4);
 const m5 = byId(MK.m5);
 const m6 = byId(MK.m6);
+const late = byId(K.late);
 const m7 = byId(MK.m7);
 const noText = (c, words) => words.every((w) => !String(c.digest ?? "").includes(w));
 const v1 = MK.m1 ? J(await demo.view("verify_claim", [MK.m1])) : {};
@@ -117,6 +118,23 @@ const scenarios = [
     evidence: `${batches.length} batches: ` + batches.map((b) => `#${b.batch_id} ${b.incident_id} members [${b.claim_ids.join(",")}] paid ${gen(b.paid_total_wei)} ≤ locked ${gen(b.available_wei)}`).join("; "),
   },
   {
+    scenario: "CORE NAME — the Curve proof runs on a pool named \"Curve DEX\" (DeFi Llama's own name); verification stored the core name \"Curve\", which the evidence names",
+    pass: poolById(seed.demo?.pools?.curve).protocol_name === "Curve DEX" && poolById(seed.demo?.pools?.curve).core_name === "Curve" && paidOrApproved(m1) && m1.protocol_match === true,
+    evidence: `pool #${seed.demo?.pools?.curve} "${poolById(seed.demo?.pools?.curve).protocol_name}" → core "${poolById(seed.demo?.pools?.curve).core_name}"; claim #${m1.claim_id} ${m1.status}, protocol named: ${m1.protocol_match}`,
+  },
+  {
+    scenario: "LATE APPROVAL — an approval after a batch's window closed goes into a new batch; both settle",
+    pass: !!late.claim_id && late.batch_id !== 0 && late.batch_id !== seed.demo?.late_first_batch && late.status === "PAID"
+      && (batches.find((b) => b.batch_id === seed.demo?.late_first_batch) ?? {}).status === "FINALIZED"
+      && !(batches.find((b) => b.batch_id === seed.demo?.late_first_batch)?.claim_ids ?? []).includes(late.claim_id),
+    evidence: `first batch #${seed.demo?.late_first_batch} members [${(batches.find((b) => b.batch_id === seed.demo?.late_first_batch)?.claim_ids ?? []).join(",")}]; late claim #${late.claim_id} in batch #${late.batch_id}, ${late.status}; judge tx ${txOf("demo-late-judge")}`,
+  },
+  {
+    scenario: "REFILE IDENTITY — the same page with a #fragment is refused as not new",
+    pass: /same source/.test(returnedOf("multi-m5-refile-same-page-refused").reason ?? ""),
+    evidence: `"${String(returnedOf("multi-m5-refile-same-page-refused").reason ?? "").slice(0, 120)}" tx ${txOf("multi-m5-refile-same-page-refused")}`,
+  },
+  {
     scenario: "COVERED — Euler V1 2023-03-13 paid at its severity bucket",
     pass: ["PAID", "APPROVED"].includes(covered.status) && covered.classification === "COVERED" && covered.severity_bucket === 4,
     evidence: `claim #${covered.claim_id} ${covered.status}; ${covered.peril}; bucket ${covered.severity_bucket} (drop ${covered.drop_bps} bps); gross ${gen(covered.gross_wei)} GEN, paid ${gen(covered.payout_wei)} GEN; judge tx ${txOf("demo-covered-judge")}`,
@@ -149,7 +167,7 @@ const scenarios = [
   },
   {
     scenario: "MULTI-INCIDENT 5 — refile after mismatch: DNS evidence on the 2023 record, refiled with the Vyper report → COVERED",
-    pass: paidOrApproved(m5) && m5.effective === "COVERED" && m5.mismatch_refiles === 1 && m5.refiles === 1 && v5.hash_matches
+    pass: paidOrApproved(m5) && m5.effective === "COVERED" && m5.refiles === 1 && m5.refiles_left === 1 && v5.hash_matches
       && returnedOf("multi-m5-judge-mismatch").outcome === "EVIDENCE_MISMATCH",
     evidence: `claim #${m5.claim_id} first ${returnedOf("multi-m5-judge-mismatch").outcome} (tx ${txOf("multi-m5-judge-mismatch")}), refiled (tx ${txOf("multi-m5-refile")}), then ${m5.status} bucket ${m5.severity_bucket}, paid ${gen(m5.payout_wei)} GEN (tx ${txOf("multi-m5-judge-after-refile")})`,
   },

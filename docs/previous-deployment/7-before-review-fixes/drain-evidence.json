@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-29T15:17:30.374Z",
+  "at": "2026-09-29T12:40:06.326Z",
   "pools": [
     {
       "id": 1,
@@ -65,8 +65,8 @@
     "locked_wei": "0",
     "capital_wei": "0",
     "bonds_wei": "0",
-    "chain_balance_wei": "14397066666666666675",
-    "undelivered_wei": "14397066666666666675",
+    "chain_balance_wei": "14336233333333333341",
+    "undelivered_wei": "14336233333333333341",
     "ledger_balanced": true,
     "held_matches_books": true
   },
@@ -78,7 +78,7 @@
       "args": [
         11
       ],
-      "tx": "0x17b67272af88c5542517d551f1ced5ef3afad2d3a3da911d6fb3d43bf7c54a20",
+      "tx": "0x91d997a224fa40ff77facb6cd59634db47613453c89e516123fcb660322fc2df",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -96,7 +96,7 @@
       "args": [
         2
       ],
-      "tx": "0xbc3ba7904f1ac30ad0f071264f91d8a80408e77aae1fe5290cefe2f547e5015e",
+      "tx": "0x598296f4a1bd9ffcacc1db34de5eaccd0182094c57cbb725d3e930d4b9a4e89a",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -114,7 +114,7 @@
       "args": [
         3
       ],
-      "tx": "0xb52eba76ca3e40875cb2f6dc1832953491768cedfa0fe78a999710efce328bd9",
+      "tx": "0x04925bf89ba005ade870ed687c841c09660d6fecf66133dca68d95686eae44c5",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -132,7 +132,7 @@
       "args": [
         4
       ],
-      "tx": "0x27cd8af509fae6cf9e9f3a255b752a5059a0710f82cefac7a1ab4e58f3706805",
+      "tx": "0x86e88e18125ffb33af205810337818233494d9fe214825528a9af37f2ec901e2",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -150,7 +150,7 @@
       "args": [
         6
       ],
-      "tx": "0x4410b9824d39f153d54cfa7d210f9b1ffe72ddf0e52562b2e8444f1eee54e29a",
+      "tx": "0x3672ced39679ad0eac6bc404ac33c0b620907d428a800fb48e642a18ee448ea6",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -168,7 +168,7 @@
       "args": [
         10
       ],
-      "tx": "0x273ba1daed70e1403c779d889cafcce17a7cfcd8c4dd73f9e3722b2217e61187",
+      "tx": "0xabb649183b52591f42d345af8ef532be28bea8be4e3ea975435be895f3124a05",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -186,7 +186,7 @@
       "args": [
         14
       ],
-      "tx": "0xcea037259b916801b611c5cf9fd8a9326d70cd598e04f8639ae363a73c867f5e",
+      "tx": "0x3d0beacf5838c9e4cb765fbea90458fac71e1aad11a69d5d4b13db0121e65192",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -204,12 +204,12 @@
       "args": [
         1
       ],
-      "tx": "0x3a60c2e4640b16aa4a7b9da240ff5466bebcfd1c65246e5b8ed9142abed8390d",
+      "tx": "0x11e760eccd32766ed25918ea268946a02842ff73061b6684a66d538fb33355ae",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
         "pool_id": 1,
-        "returned_wei": "1650000000000000000",
+        "returned_wei": "2100000000000000000",
         "status": "OK"
       }
     },
@@ -220,7 +220,7 @@
       "args": [
         2
       ],
-      "tx": "0x5b4dd9acaf4ee4200a88c6ae0ac27616c3e8d4ad0d2e7abbd4807b8e96b813c9",
+      "tx": "0xfc7e3d3a9866c60ef1d68fc4359d161b515653169eac5b911c2be8ff189d5bc3",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -236,7 +236,7 @@
       "args": [
         3
       ],
-      "tx": "0xf7f02e7f639b5912747552d4c600d0c79af2740608fb4a67c75da6d6492edbcb",
+      "tx": "0xa111204230bf3e31a239ac3b1bfcef5c9fccc8fb13a444084a0b89a375e01570",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -252,7 +252,7 @@
       "args": [
         4
       ],
-      "tx": "0x83b04ad023a3b13d616268aab9a026d891c0b5e379a483ddd0ea0d90af5fe634",
+      "tx": "0x8cb65ef90e7c0c102f6ce018f75eac9fd334b30839c2ba412614088334386d79",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -268,7 +268,7 @@
       "args": [
         5
       ],
-      "tx": "0x0072cf96a8f65f2d37ed78688a943132af3dde90d03952858d1311ad6bae1072",
+      "tx": "0x2ace5631e90bb1897936701655a84bdc576677dd4a06da14c37cc8dead03c2d9",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -278,16 +278,16 @@
       }
     },
     {
-      "label": "claim_payout uw1 (1.710833 GEN)",
+      "label": "claim_payout uw1 (2.160833 GEN)",
       "role": "uw1",
       "method": "claim_payout",
       "args": [],
-      "tx": "0x41d45347df9ede306292ccd5665dc3046767246b8abcc80904c27c9ad6cbd452",
+      "tx": "0xea9ba58b133a1e6450da1f3b2fe2bf1a1e02318075ee844a84724d1f11dbabe5",
       "status": "ACCEPTED",
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "1.710833333333333334",
-        "paid_wei": "1710833333333333334",
+        "paid_gen": "2.160833333333333334",
+        "paid_wei": "2160833333333333334",
         "status": "OK"
       }
     },
@@ -296,7 +296,7 @@
       "role": "uw2",
       "method": "claim_payout",
       "args": [],
-      "tx": "0xfc835ec4521762c113e115dbdaa5308a18bb773b576387367739685bdd9a2037",
+      "tx": "0x33fc5a6122d436123bfd69858d89038f0fc8d88f561fcab34837b181271ad679",
       "status": "ACCEPTED",
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
@@ -310,7 +310,7 @@
       "role": "uw3",
       "method": "claim_payout",
       "args": [],
-      "tx": "0x5b9be17fc5a8635691377e7365877898ab36a8fc91ebc677db02b279e22c19b9",
+      "tx": "0xe22875faf78279e32fb492bd9bef973dc4c66a60ac17395a692b2dc777eaeab0",
       "status": "ACCEPTED",
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
@@ -324,7 +324,7 @@
       "role": "buyer3",
       "method": "claim_payout",
       "args": [],
-      "tx": "0x7b579d8bc4876f5a1534a9d770d4137c581ab0d3524ed9f151771173bcaea3bd",
+      "tx": "0x44d97a12c990ef8cf32f09549703d44163721eaf89ed69efc9c894b2f0fe9bd8",
       "status": "ACCEPTED",
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",

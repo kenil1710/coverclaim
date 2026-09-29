@@ -15,7 +15,10 @@
             "key_id": lid,
             "key_day": day,
             "key_name": name,
-            "protocol_name": str(pool.protocol_name),
+            # THE CORE NAME DeFi Llama gave at verification - what evidence
+            # must name - never the underwriter's spelling of the pool name.
+            "protocol_name": str(pool.core_name) if str(pool.core_name) != ""
+            else _core_name(pool.protocol_name),
             "llama_slug": str(pool.llama_slug),
             "llama_id": str(pool.llama_id),
             "perils": _split_csv(pool.perils_csv),
@@ -30,6 +33,15 @@
             else False,
             "prior_bound": int(claim.bound) if mode == "contest" else 0,
         }
+
+    def _judgeable_at(self, claim: Claim) -> int:
+        """When this claim's incident's whole severity window has ended: the
+        key's day + JUDGE_AFTER_DAYS. The key's day IS the record's day
+        (records are selected by exact day)."""
+        _, _, day, _, why = _parse_key(str(claim.incident_key))
+        if why or day <= 0:
+            return 0
+        return day + JUDGE_AFTER_DAYS * DAY
 
     def _key_check(self, cover: Cover, pool: Pool, text: typing.Any,
                    now: int) -> tuple:
@@ -181,7 +193,7 @@
         Something must change: at least one URL this claim has never used, or
         a different incident key. Nothing is lost by either verdict and nothing
         is gained by resubmitting it. A claim comes back from EVIDENCE_MISMATCH
-        at most MAX_MISMATCH_REFILES times."""
+        at most MAX_REFILES times in all, whatever the reason."""
         self._bank()
         sender = gl.message.sender_address
         now = self._now()
@@ -200,10 +212,10 @@
             return self._refuse("claim #" + str(clid) + " is " + st.lower()
                                 + "; only an INCONCLUSIVE, EVIDENCE_MISMATCH or "
                                 "stalled claim is refiled")
-        if st == CL_MISMATCH and int(claim.mismatch_refiles) >= MAX_MISMATCH_REFILES:
+        if int(claim.refiles) >= MAX_REFILES:
             return self._refuse("claim #" + str(clid) + " has used all "
-                                + str(MAX_MISMATCH_REFILES) + " refiles after "
-                                "EVIDENCE_MISMATCH")
+                                + str(MAX_REFILES) + " refiles (every reason "
+                                "counts: inconclusive, mismatch, stall)")
         cover = self._cover(claim.cover_id)
         if cover is None:
             return self._refuse("the claim's cover is missing")
@@ -217,6 +229,9 @@
             key, why = self._key_check(cover, pool, incident_key, now)
             if why:
                 return self._refuse("incident refused before judging: " + why)
+        # The same incident, however the key is spelled, is not a correction.
+        new_incident = not _same_incident(str(claim.incident_key),
+                                          str(claim.incident_id), key)
         given = evidence_urls if _split_urls(evidence_urls) else claim.urls
         urls, why = _parse_urls(given, self._allowlist(pool))
         if why:
@@ -226,12 +241,11 @@
         for u in urls:
             if _url_key(u) not in used:
                 fresh += 1
-        if fresh == 0 and key == str(claim.incident_key):
-            return self._refuse("every one of these URLs was already judged on "
-                                "this claim for this incident; bring at least "
-                                "one new source or a corrected incident key")
-        if st == CL_MISMATCH:
-            claim.mismatch_refiles = u32(int(claim.mismatch_refiles) + 1)
+        if fresh == 0 and not new_incident:
+            return self._refuse("every one of these sources was already judged on "
+                                "this claim for this incident (a re-spelled URL "
+                                "or key is the same source); bring at least one "
+                                "new source or a different incident")
         # NOTHING OF THE REJECTED ATTEMPT CARRIES OVER. The next judgement is
         # asked from scratch (mode "claim": no prior digest, no prior sources,
         # no prior binding); settlement fields return to zero; and a contest
@@ -259,8 +273,7 @@
         self._set_status(claim, CL_FILED)
         return {"status": "OK", "claim_id": clid, "refiles": int(claim.refiles),
                 "incident_key": key,
-                "mismatch_refiles_left": MAX_MISMATCH_REFILES
-                - int(claim.mismatch_refiles),
+                "refiles_left": MAX_REFILES - int(claim.refiles),
                 "note": "refiled; call judge_claim(" + str(clid) + ")"}
 
     def _join_batch(self, pool: Pool, claim: Claim, now: int) -> int:
@@ -274,7 +287,11 @@
         key = str(int(pool.pool_id)) + ":" + str(claim.incident_id)
         bid = int(self.open_batch.get(key) or 0)
         batch = self._batch(bid) if bid > 0 else None
-        if batch is None or str(batch.status) != B_OPEN:
+        # MEMBERSHIP IS FINAL WHEN THE WINDOW CLOSES. A claim approved after
+        # that - however it got there - opens (or joins) a NEW batch, which
+        # settles separately against its own covers' locks. Nothing approved
+        # later can hold an earlier, closed window open.
+        if batch is None or str(batch.status) != B_OPEN or now >= int(batch.closes_at):
             bid = len(self.batches) + 1
             batch = self.batches.append_new_get()
             batch.batch_id = u32(bid)
@@ -378,6 +395,16 @@
                                 + (" - refile it with new evidence" if
                                    st == CL_INCONCLUSIVE else "")
                                 + "; nothing to judge")
+        ready = self._judgeable_at(claim)
+        if now < ready:
+            # SEVERITY IS NEVER FIXED FROM A PARTIAL WINDOW. Before the
+            # incident's 7-day TVL window has ended, nobody - buyer or
+            # underwriter - can have the claim judged.
+            return self._refuse("the 7-day TVL window of incident "
+                                + str(claim.incident_key) + " has not ended; "
+                                "claim #" + str(clid) + " can be judged from "
+                                + str(ready), {"judgeable_at": ready,
+                                               "seconds_remaining": ready - now})
         facts = self._claim_facts(claim, cover, pool, "claim")
 
         # Rule 3's documented exception: ATTEMPTS, a statistic about the path.
@@ -556,6 +583,12 @@
                                 + " is already in flight")
         if ct != CT_PENDING and ct != CT_JUDGING:
             return self._refuse("claim #" + str(clid) + " has no pending contest")
+        ready = self._judgeable_at(claim)
+        if now < ready:
+            return self._refuse("the 7-day TVL window of incident "
+                                + str(claim.incident_key) + " has not ended; "
+                                "the contest can be judged from " + str(ready),
+                                {"judgeable_at": ready})
         facts = self._claim_facts(claim, cover, pool, "contest")
         claim.contest_status = CT_JUDGING
         claim.contest_judging_since = u64(now)

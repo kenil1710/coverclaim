@@ -2,47 +2,47 @@
   {
     "label": "wait7-pool",
     "method": "create_pool",
-    "tx": "0x9b4a3a8843b9d4cfa76fd4f7a7e31de98c9b0b18298d416107449e1faf472e0c",
+    "tx": "0xc4fe3245e9fd6d84603175aea82fd43aea3e24ecc5555181a1b4bcb799844a3f",
     "status": "ACCEPTED",
     "returned": null
   },
   {
     "label": "wait7-verify",
     "method": "verify_pool",
-    "tx": "0x657671ad0b32b0b6416e5eb442b180f75452db449bd2aa577dfbcdc6ec9431f3",
+    "tx": "0x304527bc8633eceb593cfbc15b6936d12332bac83a303f995ce8e2b43c6e3ecf",
     "status": "ACCEPTED",
     "returned": null
   },
   {
     "label": "wait7-cover",
     "method": "buy_cover",
-    "tx": "0xb6be86cd8647ae1b476e188a6fe81e1a7d8df774b576c2bbdbf84358c77a79e8",
+    "tx": "0xc451a058a465b32568bec2162c01309e10ddeb8010b20bfe7eabc54389eedd2a",
     "status": "ACCEPTED",
     "returned": {
-      "claim_deadline": 1795878670,
+      "claim_deadline": 1795869364,
       "cover_id": 3,
       "demo_backdated_days": 0,
-      "end": 1793286670,
+      "end": 1793277364,
       "lock_wei": "100000000000000000",
       "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
       "overpaid_wei": "0",
       "pool_id": 3,
       "premium_gen": "0.001",
       "premium_wei": "1000000000000000",
-      "start": 1790694670,
+      "start": 1790685364,
       "status": "OK",
-      "waiting_ends": 1791299470
+      "waiting_ends": 1791290164
     }
   },
   {
     "label": "wait7-file-refused",
     "method": "file_claim",
-    "tx": "0x91e68600c351e9c0ddf197ceede42ee83ad5c16b3262a8110512daf068a0c4a3",
+    "tx": "0x56b756d48fc99221b047fc865586caa83cca4c31ab15c6c62844b75b47282935",
     "status": "ACCEPTED",
     "returned": {
       "claim_with": "claim_payout()",
-      "claimable_after": 1791299470,
-      "reason": "cover waiting period has not ended yet, claimable after 1791299470",
+      "claimable_after": 1791290164,
+      "reason": "cover waiting period has not ended yet, claimable after 1791290164",
       "refunded_wei": "0",
       "seconds_remaining": 604787,
       "status": "REJECTED"
@@ -54,6 +54,6 @@
     "claim_id": 0,
     "claimable": false,
     "in_waiting_period": true,
-    "waiting_ends": 1791299470
+    "waiting_ends": 1791290164
   }
 ]
