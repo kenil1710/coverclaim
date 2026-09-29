@@ -66,10 +66,15 @@ Now:
 4. Each evidence page is bound (`_bind`): BOUND if it names the protocol and
    writes a date within ±3 days of the record; UNDATED if it writes no date;
    UNBOUND if its dates are all elsewhere (or it names another protocol).
-   Only BOUND and UNDATED pages are read. Dated evidence with no bound page →
+   **Only BOUND pages reach the classifier**: the digest - so the prompt,
+   the bracket, the strength and the hash - is built from bound pages alone.
+   (A first version also read UNDATED pages beside a bound one; a steward
+   confirmation asked that unmatched pages never reach the classifier, and an
+   undated page is unmatched.) Dated evidence with no bound page →
    EVIDENCE_MISMATCH (DIFFERENT) without a model call; undated-only evidence
-   that would otherwise reach the model → EVIDENCE_MISMATCH (UNCLEAR). A
-   claim never pays without a page that dates the event.
+   that names a risk → EVIDENCE_MISMATCH (UNCLEAR), and naming none →
+   INCONCLUSIVE - undated text decides only that, and never reaches the
+   model. A claim never pays without a page that dates the event.
 5. When the model is asked, it answers `event_match` SAME / DIFFERENT /
    UNCLEAR beside the classification, compared exactly. Anything but SAME is
    EVIDENCE_MISMATCH, whatever it classified.

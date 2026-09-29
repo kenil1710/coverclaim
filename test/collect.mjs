@@ -38,6 +38,9 @@ const m2 = byId(MK.m2);
 const m3 = byId(MK.m3);
 const m4 = byId(MK.m4);
 const m5 = byId(MK.m5);
+const m6 = byId(MK.m6);
+const m7 = byId(MK.m7);
+const noText = (c, words) => words.every((w) => !String(c.digest ?? "").includes(w));
 const v1 = MK.m1 ? J(await demo.view("verify_claim", [MK.m1])) : {};
 const v5 = MK.m5 ? J(await demo.view("verify_claim", [MK.m5])) : {};
 const returnedOf = (label) => seed.steps.filter((s) => s.label === label).map((s) => s.returned).pop() ?? {};
@@ -59,6 +62,19 @@ const wgCoverId = wg.find((x) => x.label === "cover-after")?.cover_id ?? 0;
 const wgCover = wgCoverId ? J(await canon.view("get_cover", [wgCoverId])) : {};
 
 const scenarios = [
+  {
+    scenario: "MIXED EVIDENCE 6 — DNS record, [DNS article, Vyper article]: classified from the DNS page only → EXCLUDED, no payout",
+    pass: m6.status === "DENIED_EXCLUDED" && m6.exclusion === "FRONTEND_HIJACK" && m6.gross_wei === "0"
+      && /curve-finance-rekt BOUND/.test(m6.evidence_binding) && /curve-vyper-rekt UNBOUND/.test(m6.evidence_binding)
+      && noText(m6, ["Vyper", "JPEG", "Alchemix"]),
+    evidence: `claim #${m6.claim_id} ${m6.status}; ${m6.exclusion}; binding "${m6.evidence_binding}"; judged digest has no Vyper text: ${noText(m6, ["Vyper", "JPEG", "Alchemix"])}; tx ${txOf("multi-m6-judge")}`,
+  },
+  {
+    scenario: "MIXED EVIDENCE 7 — Vyper record, [Vyper article, DNS article]: classified from the Vyper page only → COVERED",
+    pass: paidOrApproved(m7) && m7.effective === "COVERED" && /curve-vyper-rekt BOUND/.test(m7.evidence_binding)
+      && /curve-finance-rekt UNBOUND/.test(m7.evidence_binding) && noText(m7, ["DNS", "hijack"]),
+    evidence: `claim #${m7.claim_id} ${m7.status}; ${m7.peril}; bucket ${m7.severity_bucket}; binding "${m7.evidence_binding}"; judged digest has no DNS text: ${noText(m7, ["DNS", "hijack"])}; tx ${txOf("multi-m7-judge")}`,
+  },
   {
     scenario: "COVERED — Euler V1 2023-03-13 paid at its severity bucket",
     pass: ["PAID", "APPROVED"].includes(covered.status) && covered.classification === "COVERED" && covered.severity_bucket === 4,
@@ -188,7 +204,7 @@ const md = [
   "",
   "| claim | key | evidence binding | event | outcome | TVL window |",
   "|---|---|---|---|---|---|",
-  ...[m1, m2, m3, m4, m5].filter((c) => c.claim_id).map((c) => `| #${c.claim_id} | \`${c.incident_key}\` | \`${c.evidence_binding}\` | ${c.event_match} | ${c.status} | \`${String(c.tvl_window).slice(0, 90)}…\` |`),
+  ...[m1, m2, m3, m4, m5, m6, m7].filter((c) => c.claim_id).map((c) => `| #${c.claim_id} | \`${c.incident_key}\` | \`${c.evidence_binding}\` | ${c.event_match} | ${c.status} | \`${String(c.tvl_window).slice(0, 90)}…\` |`),
   "",
 ];
 writeFileSync(new URL("docs/EVIDENCE.md", root), md.join("\n"));

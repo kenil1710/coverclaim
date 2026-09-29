@@ -98,18 +98,32 @@ async function newPool(address, role, label, spec, capital, extra = {}) {
   return ret?.pool_id ?? (await lastId(address, "get_pools"));
 }
 
+// The contract allows one cover per wallet per buy_cooldown_s. A refused buy
+// whose return value the SDK cannot read looks like a success, so: wait out
+// the cooldown before a wallet's next buy, and require a NEW cover id.
+const lastBuy = {};
 async function newCover(address, role, label, pool, amount, days) {
+  const cool = Number((await view(address, "get_config")).buy_cooldown_s);
+  const key = address + role;
+  const wait = (lastBuy[key] ?? 0) + (cool + 5) * 1000 - Date.now();
+  if (wait > 0) await sleep(wait);
+  const before = (await view(address, "get_covers_by_buyer", [acc[role].address])).items.map((c) => c.cover_id);
   const q = await view(address, "quote", [pool, amount, days]);
   const { ret } = await step(label, address, role, "buy_cover", [pool, amount, days], BigInt(q.premium_wei));
+  lastBuy[key] = Date.now();
   if (ret?.cover_id) return ret.cover_id;
-  const mine = await view(address, "get_covers_by_buyer", [acc[role].address]);
-  return mine.items[mine.items.length - 1].cover_id;
+  const after = (await view(address, "get_covers_by_buyer", [acc[role].address])).items.map((c) => c.cover_id);
+  const fresh = after.filter((id) => !before.includes(id));
+  if (fresh.length !== 1) throw new Error(`${label}: buy_cover did not create a cover (${JSON.stringify(ret)})`);
+  return fresh[0];
 }
 
 async function newClaim(address, role, label, cover, key, urls, statement) {
   const { ret } = await step(label, address, role, "file_claim", [cover, key, urls, statement]);
   if (ret?.claim_id) return ret.claim_id;
-  return (await view(address, "get_cover", [cover])).claim_id;
+  const id = (await view(address, "get_cover", [cover])).claim_id;
+  if (!id) throw new Error(`${label}: file_claim created no claim (${JSON.stringify(ret)})`);
+  return id;
 }
 
 const SPEC = {
@@ -153,11 +167,44 @@ if (part === "all" || part === "canonical") {
   save();
 }
 
+if (part === "euler-covered") {
+  // Re-run of the COVERED + CONTESTED scenario alone, on a fresh Euler pool.
+  console.log("\n=== DEMO (euler-covered)", DEMO);
+  EV.demo = EV.demo ?? {};
+  const pool = await newPool(DEMO, "uw1", "demo-euler-pool-2", SPEC.euler, 2n * GEN);
+  const cover = await newCover(DEMO, "buyer1", "demo-covered-cover", pool, GEN, 365);
+  const claim = await newClaim(DEMO, "buyer1", "demo-covered-claim", cover, KEY.euler, URL_.euler,
+    "Euler V1 was drained on 13 March 2023 via the donateToReserves flaw.");
+  EV.demo.covers.covered = cover;
+  EV.demo.claims.covered = claim;
+  EV.demo.pools.euler2 = pool;
+  save();
+  await step("demo-covered-judge", DEMO, "trigger", "judge_claim", [claim]);
+  const bond = BigInt((await view(DEMO, "get_config")).contest_bond_wei);
+  await step("demo-contest", DEMO, "uw1", "contest", [claim, URL_.eulerPM,
+    "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it."], bond);
+  await step("demo-contest-judge", DEMO, "trigger", "judge_contest", [claim]);
+  await waitUntil("settlement of claim " + claim, async () => {
+    const cl = await view(DEMO, "get_claim", [claim]);
+    const cfg = await view(DEMO, "get_config");
+    if (cl.status === "PAID") return true;
+    const b = await view(DEMO, "get_batch", [cl.batch_id]);
+    if (cl.batch_id && cfg.now >= b.closes_at + 5) {
+      await step(`demo-finalize-batch-${cl.batch_id}`, DEMO, "trigger", "finalize_incident", [cl.batch_id]);
+    }
+    return false;
+  });
+  for (const role of ["buyer1", "uw1"]) {
+    const owed = await view(DEMO, "payout_of", [acc[role].address]);
+    if (BigInt(owed.owed_wei) > 0n) await step(`demo-payout-${role}-2`, DEMO, role, "claim_payout", []);
+  }
+}
+
 if (part === "all" || part === "demo") {
   console.log("\n=== DEMO", DEMO);
   const P = {};
   P.euler = await newPool(DEMO, "uw1", "demo-euler-pool", SPEC.euler, 3n * GEN);
-  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 3n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
+  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 4n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
   P.multichain = await newPool(DEMO, "uw3", "demo-multichain-pool", SPEC.multichain, 2n * GEN);
   P.prorata = await newPool(DEMO, "uw2", "demo-euler-prorata-pool", { ...SPEC.euler, wording: "Thin pool: 50% collateral. Claims on one incident beyond capital are paid pro-rata." }, GEN, { coll: 5000, max: GEN });
   P.tornado = await newPool(DEMO, "uw3", "demo-tornado-pool", SPEC.tornado, GEN);
@@ -168,7 +215,7 @@ if (part === "all" || part === "demo") {
   // both records. Each claim names a record; the evidence must be about it.
   const M = {};
   const mc = {};
-  for (const [id, role] of [["m1", "buyer2"], ["m2", "buyer3"], ["m3", "buyer4"], ["m4", "buyer5"], ["m5", "buyer6"]]) {
+  for (const [id, role] of [["m1", "buyer2"], ["m2", "buyer3"], ["m3", "buyer4"], ["m4", "buyer5"], ["m5", "buyer6"], ["m6", "buyer3"], ["m7", "buyer4"]]) {
     mc[id] = await newCover(DEMO, role, `multi-${id}-cover`, P.curve, GEN / 2n, 365);
   }
   const cv = await view(DEMO, "get_cover", [mc.m1]);
@@ -187,6 +234,12 @@ if (part === "all" || part === "demo") {
     "Curve's front end was hijacked through DNS on 9 August 2022.");
   M.m5 = await newClaim(DEMO, "buyer6", "multi-m5-file", mc.m5, KEY.curveVyper, URL_.curveDns,
     "Wrong evidence first; refiled with the right article.");
+  // MIXED EVIDENCE: two pages, only one about the selected record. Only the
+  // bound page may reach the classifier.
+  M.m6 = await newClaim(DEMO, "buyer3", "multi-m6-file", mc.m6, KEY.curveDns, `${URL_.curveDns} ${URL_.curveVyper}`,
+    "DNS record; the DNS article and the Vyper article both attached.");
+  M.m7 = await newClaim(DEMO, "buyer4", "multi-m7-file", mc.m7, KEY.curveVyper, `${URL_.curveVyper} ${URL_.curveDns}`,
+    "Vyper record; the Vyper article and the DNS article both attached.");
   EV.demo.multi = { covers: mc, claims: M };
   save();
   // M5 first: a mismatch, then a refile inside the claim window.
@@ -198,6 +251,8 @@ if (part === "all" || part === "demo") {
   await step("multi-m3-judge", DEMO, "trigger", "judge_claim", [M.m3]);
   await step("multi-m4-judge", DEMO, "trigger", "judge_claim", [M.m4]);
   await step("multi-m5-judge-after-refile", DEMO, "trigger", "judge_claim", [M.m5]);
+  await step("multi-m6-judge", DEMO, "trigger", "judge_claim", [M.m6]);
+  await step("multi-m7-judge", DEMO, "trigger", "judge_claim", [M.m7]);
 
   const C = {};
   C.expired = await newCover(DEMO, "buyer1", "demo-expired-cover", P.euler, GEN / 5n, 1);
@@ -276,7 +331,7 @@ if (part === "all" || part === "demo") {
   await step("demo-release-expired", DEMO, "trigger", "release_cover", [C.expired]);
 
   // Payouts: the only method that transfers, and it reads no clock.
-  for (const role of ["buyer1", "buyer2", "buyer5", "buyer6", "uw1", "uw2"]) {
+  for (const role of ["buyer1", "buyer2", "buyer4", "buyer5", "buyer6", "uw1", "uw2"]) {
     const owed = await view(DEMO, "payout_of", [acc[role].address]);
     if (BigInt(owed.owed_wei) > 0n) await step(`demo-payout-${role}`, DEMO, role, "claim_payout", []);
   }

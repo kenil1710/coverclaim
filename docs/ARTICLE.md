@@ -44,7 +44,7 @@ When anyone triggers a judgement, each validator independently:
 
 1. reads DeFi Llama's incident list and selects **the one record the claim's key names** — exact day, exact protocol id, never "the latest" — which is where the incident date comes from, not from the article and not from the model;
 2. reads the protocol's TVL history and measures the drop from the day before **that record's** date to the lowest point in the next seven days — that is the severity bucket;
-3. fetches the evidence pages and **binds each one to that record**: a page counts only if it names the protocol and writes a date within three days of it; then keeps only the sentences that name the protocol or a risk;
+3. fetches the evidence pages and **binds each one to that record**: a page counts only if it names the protocol and writes a date within three days of it — and only those pages ever reach the model; then keeps only the sentences that name the protocol or a risk;
 4. computes the **bracket**: which of the pool's covered perils and exclusions the evidence actually names, and what evidence strength the sources can support.
 
 If no page is about the selected incident, the answer is EVIDENCE_MISMATCH; if the evidence names no risk, INCONCLUSIVE — in both cases **no model is called at all**. Otherwise the model answers inside the bracket, and also says whether the evidence describes the SAME incident as the record (SAME / DIFFERENT / UNCLEAR). A validator checks the leader's choice against the leader's own inputs by arithmetic before it spends an inference, then fetches everything itself and compares the whole vector: event match, classification, peril, exclusion, incident key and date, which pages were bound, severity bucket, the TVL window and the hash of all of it, exactly.
@@ -98,4 +98,4 @@ On the canonical instance, a cover bought today and claimed against Euler's 2023
 
 - App: https://coverclaim.vercel.app
 - Code, probe, audit and evidence: https://github.com/kenil1710/coverclaim
-- 628 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.
+- 632 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.

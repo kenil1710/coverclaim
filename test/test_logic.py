@@ -2758,8 +2758,8 @@ class TestContest(unittest.TestCase):
         out = send(self.c, BOB, GEN // 10, "contest", clid, arch,
                    "The archived article shows the root cause differently.")
         self.assertTrue(ok(out), out)
-        RENDER[arch] = ("Curve later confirmed an oracle flaw in its own "
-                        "contracts drained pools that same day.")
+        RENDER[arch] = ("On August 9, 2022 Curve later confirmed an oracle flaw "
+                        "in its own contracts drained pools that same day.")
         MODEL.serve_raw(_TopStrength("COVERED", "ORACLE_MANIPULATION", "NONE"))
         out = send(self.c, STRANGER, 0, "judge_contest", clid)
         self.assertEqual(out["contest"], "UPHELD", out)
@@ -2773,7 +2773,7 @@ class TestContest(unittest.TestCase):
         out = judge(self.c, clid, "EXCLUDED", "NONE", "USER_KEY_COMPROMISE")
         self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
         url = "https://multichain.org/post-mortem"
-        RENDER[url] = ("Multichain's post-mortem: the bridge router contract "
+        RENDER[url] = ("July 7, 2023. Multichain's post-mortem: the bridge router contract "
                        "had a message verification flaw that let the attacker "
                        "forge withdrawals across chains.")
         out = send(self.c, BOB, GEN // 10, "contest", clid, url,
@@ -3432,6 +3432,80 @@ class TestOneEventBindsEverything(unittest.TestCase):
         out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
         self.assertEqual(out["incident_date"], "2022-08-09")
         self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+
+    # ONLY MATCHED PAGES REACH THE CLASSIFIER
+    def prompt_of_last_call(self):
+        self.assertGreater(len(MODEL.log), 0, "the model was never asked")
+        return MODEL.log[-1]
+
+    def test_mixed_dns_record_classifies_from_dns_page_only(self):
+        # record = DNS 2022; evidence = [DNS article (bound), Vyper article (not)]
+        clid = self.claim(K_DNS, R_CURVE_DNS + " " + R_VYPER)
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+        self.assertEqual(int(self.c.claims[clid - 1].gross_wei), 0)
+        prompt = self.prompt_of_last_call()
+        body = prompt[prompt.index("<<<EVIDENCE"):prompt.index("EVIDENCE>>>")]
+        self.assertIn("DNS", body)
+        for vyper_only in ("Vyper", "JPEG", "Alchemix", "Metronome", "July 31, 2023"):
+            self.assertNotIn(vyper_only, body, vyper_only)
+        # the whole prompt is byte-identical to the DNS page's prompt alone
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_CURVE_DNS], key=K_DNS, claim_id=clid,
+                        perils=["SMART_CONTRACT_BUG", "ORACLE_MANIPULATION", "ECONOMIC_EXPLOIT"])
+        self.assertEqual(prompt, C._prompt(f, C._reading(f, fetch_raw(f))))
+        k = self.c.claims[clid - 1]
+        self.assertIn("curve-finance-rekt BOUND", str(k.bind_line))
+        self.assertIn("curve-vyper-rekt UNBOUND", str(k.bind_line))
+        self.assertNotIn("Vyper", str(k.digest))
+
+    def test_mixed_vyper_record_classifies_from_vyper_page_only(self):
+        # record = Vyper 2023; evidence = [Vyper article (bound), DNS article (not)]
+        clid = self.claim(K_VYPER, R_VYPER + " " + R_CURVE_DNS)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "APPROVED")
+        self.assertEqual(out["severity_bucket"], 2)
+        prompt = self.prompt_of_last_call()
+        body = prompt[prompt.index("<<<EVIDENCE"):prompt.index("EVIDENCE>>>")]
+        self.assertIn("Vyper", body)
+        for dns_only in ("DNS", "hijack", "front end", "August 10, 2022"):
+            self.assertNotIn(dns_only, body, dns_only)
+        self.assertNotIn("FRONTEND_HIJACK:", prompt)
+        self.assertNotIn("DNS", str(self.c.claims[clid - 1].digest))
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_VYPER], key=K_VYPER, claim_id=clid,
+                        perils=["SMART_CONTRACT_BUG", "ORACLE_MANIPULATION", "ECONOMIC_EXPLOIT"])
+        self.assertEqual(prompt, C._prompt(f, C._reading(f, fetch_raw(f))))
+
+    def test_undated_page_never_reaches_the_classifier(self):
+        # A bound page plus an UNDATED allowlisted page: the undated text is
+        # in no prompt, digest, bracket or hash.
+        extra = "https://curve.finance/notes"
+        RENDER[extra] = ("Curve notes: a governance proposal and a phishing "
+                         "campaign are unrelated background to this incident.")
+        clid = self.claim(K_VYPER, R_VYPER + " " + extra)
+        judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        prompt = self.prompt_of_last_call()
+        for w in ("phishing", "governance proposal", "PHISHING:", "GOVERNANCE_ATTACK:"):
+            self.assertNotIn(w, prompt, w)
+        k = self.c.claims[clid - 1]
+        self.assertIn("curve.finance/notes UNDATED", str(k.bind_line))
+        self.assertNotIn("phishing", str(k.digest))
+        self.assertNotIn("PHISHING", str(k.bracket))
+
+    def test_classifier_input_is_exactly_the_bound_digests(self):
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_CURVE_DNS, R_VYPER, "https://curve.finance/notes"],
+                        key=K_DNS)
+        install_web()
+        RENDER["https://curve.finance/notes"] = "Curve notes about a phishing campaign in general terms."
+        raw = C._read_sources(f)
+        r = C._reading(f, raw)
+        bound = [p["digest"] for p, st in zip(raw["pages"], C._bind(raw["pages"], r["incident_day"], True)[0])
+                 if st == "BOUND"]
+        self.assertEqual(len(bound), 1)
+        self.assertEqual(r["digest"], C._short(" ".join(bound), C.MAX_DIGEST))
+        self.assertIn(r["digest"], C._prompt(f, r))
 
     # e.
     def test_e_record_outside_the_window_refused_before_model(self):

@@ -154,7 +154,7 @@ export default function FileClaimPage() {
             {check.isLoading && urls.trim() && <span className="dim" style={{ fontSize: "0.8rem" }}>Checking against the frozen allowlist…</span>}
 
             <p className="dim" style={{ fontSize: "0.76rem" }}>
-              At least one page must name {cover?.protocol_name ?? "the protocol"} and date the incident within 3 days of the record. A page dated to a different event is not read; with no page about the selected incident the claim is EVIDENCE_MISMATCH — no payout, refile allowed (twice).
+              At least one page must name {cover?.protocol_name ?? "the protocol"} and date the incident within 3 days of the record. Only such pages are shown to the validators&apos; model — a page dated to a different event, or not dated at all, is not read; with no page about the selected incident the claim is EVIDENCE_MISMATCH — no payout, refile allowed (twice).
             </p>
 
             <h3 style={{ marginTop: 6 }}>4 · Statement (optional)</h3>

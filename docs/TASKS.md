@@ -41,3 +41,12 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] Vercel production env → new addresses; deployed; live bundle has only the new addresses
 - [x] RESUBMISSION.md
 - [x] push (no Co-Authored-By) — aec7e1f
+
+## Confirmation: only matched pages reach the classifier
+- [x] finding: dated-elsewhere pages were already excluded; UNDATED pages still reached the classifier → FAIL, fixed (bound pages only)
+- [x] tests: DNS record + [DNS, Vyper] → EXCLUDED from DNS page only; Vyper record + [Vyper, DNS] → COVERED from Vyper page only; prompts byte-identical to single-page prompts; undated page never in prompt (632 tests)
+- [x] redeployed (canonical 0xF2F545d2…, demo 0xf59B1A3D…, registry 0x06144d47…), byte-for-byte verified
+- [x] reseeded incl. mixed-evidence claims 6 and 7 on chain; Euler scenario re-run after a seed-script cooldown bug (fixed)
+- [x] drained to 0; chain scenarios 19/19; audit 54/0
+- [x] addresses updated: deployments.json, README, RESUBMISSION, frontend env (Vercel prod), live bundle verified
+- [x] pushed; GitHub bytes verified

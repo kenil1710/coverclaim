@@ -400,10 +400,15 @@ def _reading(facts: dict, raw: dict) -> dict:
     record_day = _as_int(llama.get("date"), 0) if found else 0
     states, bind_line = _bind(pages, record_day, found)
 
-    # ONLY pages about the selected incident are read: a BOUND page, or an
-    # UNDATED one beside it. A page dated to some other event contributes
-    # nothing - not a sentence, not an indicator, not a source.
+    # ONLY BOUND PAGES REACH THE CLASSIFIER: a page that names the protocol
+    # AND dates the selected incident. Its sentences alone make the digest -
+    # hence the prompt, the bracket, the strength and the hash. A page dated
+    # to another event, or not dated at all, contributes nothing to any of
+    # them. Undated text is looked at for ONE thing only, below: whether an
+    # evidence set with no bound page names a risk at all (UNCLEAR mismatch)
+    # or names none (INCONCLUSIVE). It never reaches the model.
     fresh = []
+    undated_text = []
     sources = 0
     named = False
     bound = 0
@@ -418,7 +423,9 @@ def _reading(facts: dict, raw: dict) -> dict:
             dated_any = True
         if st == PAGE_BOUND:
             bound += 1
-        if st != PAGE_BOUND and st != PAGE_UNDATED:
+        if st == PAGE_UNDATED:
+            undated_text.append(str(p.get("digest", "")))
+        if st != PAGE_BOUND:
             continue
         dg = str(p.get("digest", ""))
         if dg:
@@ -510,6 +517,21 @@ def _reading(facts: dict, raw: dict) -> dict:
                   "record (" + _date_text(record_day) + "); the evidence is "
                   "not about incident " + str(facts.get("incident_key", ""))
                   + " [" + _short(bind_line, 160) + "]")
+    elif bound == 0 and not contest:
+        # Nothing bound and nothing dated: no page can be tied to the record.
+        u = _norm(" ".join(undated_text))
+        if len(_hits_of(u, PERIL_WORDS, PERILS)) + \
+                len(_hits_of(u, EXCLUSION_WORDS, EXCLUSIONS)) == 0:
+            pinned = ("the evidence names no peril and no exclusion; there is "
+                      "nothing to classify")
+        else:
+            pinned_as = EVIDENCE_MISMATCH
+            gate = EVENT_UNCLEAR
+            pinned = ("no evidence page dates the event, so none can be tied to "
+                      "the selected record (" + _date_text(record_day) + "); add "
+                      "a page that names " + name + " and dates incident "
+                      + str(facts.get("incident_key", "")) + " within "
+                      + str(BIND_WINDOW_DAYS) + " days")
     elif not named:
         pinned = ("no evidence page names " + name + "; evidence about another "
                   "protocol cannot support a claim on this one")
@@ -519,17 +541,6 @@ def _reading(facts: dict, raw: dict) -> dict:
     elif len(allowed_p) == 0 and len(allowed_x) == 0:
         pinned = ("the evidence points only to risks this policy neither "
                   "covers nor excludes (" + _csv(perils_hit + excl_hit) + ")")
-    elif bound == 0:
-        # UNCLEAR, deterministically: the evidence would be classifiable but
-        # no page dates the event at all, so nothing ties it to the selected
-        # record. A claim never pays without a page that does.
-        pinned_as = EVIDENCE_MISMATCH
-        gate = EVENT_UNCLEAR
-        pinned = ("no evidence page dates the event, so none can be tied to the "
-                  "selected record (" + _date_text(record_day) + "); add a page "
-                  "that names " + name + " and dates incident "
-                  + str(facts.get("incident_key", "")) + " within "
-                  + str(BIND_WINDOW_DAYS) + " days")
 
     options = []
     if not pinned:
