@@ -149,10 +149,12 @@ EULER = dict(name="Euler", slug="euler-v1", lid="1183", chain="Ethereum",
              domains="euler.finance")
 CURVE = dict(name="Curve", slug="curve-dex", lid="3", chain="Ethereum",
              domains="curve.finance")
+# DeFi Llama lists no website for Multichain or Tornado Cash (fixtures, and
+# live on 2026-09-29): their pools declare no protocol domain.
 MULTI = dict(name="Multichain", slug="multichain", lid="591", chain="Fantom",
-             domains="multichain.org")
+             domains="")
 TORNADO = dict(name="Tornado Cash", slug="tornado-cash", lid="148",
-               chain="Ethereum", domains="tornado.cash")
+               chain="Ethereum", domains="")
 KYBER = dict(name="KyberSwap", slug="kyberswap-elastic", lid="2615",
              chain="Arbitrum", domains="kyberswap.com")
 
@@ -248,13 +250,20 @@ def rejected(out) -> bool:
 
 def make_pool(c, uw=UW, spec=EULER, capital=10 * GEN, perils=ALL_PERILS,
               excl=ALL_EXCL, rate=100, wait=7, ded=1000, max_cover=5 * GEN,
-              term=365, coll=10000, table="", wording="Frozen at creation."):
+              term=365, coll=10000, table="", wording="Frozen at creation.",
+              verify=True):
     out = send(c, uw, capital, "create_pool", spec["name"], spec["slug"],
                spec["lid"], spec["chain"], perils, excl, rate, wait, ded,
                max_cover, term, coll, table, spec["domains"], wording)
     if not ok(out):
         raise AssertionError("fixture pool failed: " + str(out))
-    return int(out["pool_id"])
+    pid = int(out["pool_id"])
+    if verify:
+        v = send(c, STRANGER, 0, "verify_pool", pid)
+        if not ok(v) or v.get("outcome") != "OPEN":
+            raise AssertionError("fixture pool did not verify: " + str(v))
+        del CALLS[:]          # tests about filing/judging count their own fetches
+    return pid
 
 
 def premium_of(c, pid, amount, days):
@@ -1756,8 +1765,13 @@ class TestCreatePool(unittest.TestCase):
         p = self.c.pools[0]
         self.assertEqual(int(p.capital_wei), 10 * GEN)
         self.assertEqual(p.underwriter, UW)
-        self.assertEqual(out["evidence_allowlist"],
-                         ["rekt.news", "web.archive.org", "euler.finance"])
+        # created UNVERIFIED: the declared domain is NOT on the allowlist yet
+        self.assertEqual(out["evidence_allowlist"], ["rekt.news", "web.archive.org"])
+        self.assertEqual(out["declared_domain"], "euler.finance")
+        self.assertEqual(str(p.status), "UNVERIFIED")
+        v = send(self.c, STRANGER, 0, "verify_pool", 1)
+        self.assertEqual(v["outcome"], "OPEN")
+        self.assertEqual(v["evidence_allowlist"], ["rekt.news", "web.archive.org", "euler.finance"])
 
     def test_policy_hash_verifies(self):
         self.create()
@@ -2772,7 +2786,7 @@ class TestContest(unittest.TestCase):
         clid = file(self.c, cid, R_MULTI)
         out = judge(self.c, clid, "EXCLUDED", "NONE", "USER_KEY_COMPROMISE")
         self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
-        url = "https://multichain.org/post-mortem"
+        url = "https://rekt.news/multichain-post-mortem"
         RENDER[url] = ("July 7, 2023. Multichain's post-mortem: the bridge router contract "
                        "had a message verification flaw that let the attacker "
                        "forge withdrawals across chains.")
@@ -3282,18 +3296,26 @@ class TestLoophole08_OtherProtocolsIncident(unittest.TestCase):
         self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
 
     def test_id_mismatch_pool_cannot_pay(self):
+        # slug multichain (id 591) with Euler's id: fails verification, can
+        # never sell, and closes with the underwriter's capital returned.
         c = fresh()
-        pid = make_pool(c, spec=dict(EULER, slug="multichain"))
-        clid = file(c, buy(c, pid), R_EULER)
-        out = judge(c, clid)
-        self.assertEqual(out["outcome"], "INCONCLUSIVE")
-        self.assertIn("different protocols", str(c.claims[0].pinned))
+        pid = make_pool(c, spec=dict(EULER, slug="multichain"), verify=False)
+        v = send(c, STRANGER, 0, "verify_pool", pid)
+        self.assertEqual(v["outcome"], "FAILED_VERIFICATION")
+        self.assertIn("slug and id are different protocols", v["reason"])
+        out = send(c, ALICE, GEN, "buy_cover", pid, GEN, 30)
+        self.assertTrue(rejected(out))
+        self.assertIn("failed verification", out["reason"])
+        self.assertEqual(int(c.payout_wei.get(ALICE)), GEN)      # value came back
+        self.assertTrue(ok(send(c, UW, 0, "close_pool", pid)))
+        self.assertEqual(int(c.payout_wei.get(UW)), 10 * GEN)
 
     def test_unknown_protocol_cannot_pay(self):
         c = fresh()
-        pid = make_pool(c, spec=dict(EULER, lid="999999"))
-        clid = file(c, buy(c, pid), R_EULER)
-        self.assertEqual(judge(c, clid)["outcome"], "INCONCLUSIVE")
+        pid = make_pool(c, spec=dict(EULER, lid="999999"), verify=False)
+        self.assertEqual(send(c, STRANGER, 0, "verify_pool", pid)["outcome"],
+                         "FAILED_VERIFICATION")
+        self.assertTrue(rejected(send(c, ALICE, GEN, "buy_cover", pid, GEN, 30)))
 
 
 class TestOneEventBindsEverything(unittest.TestCase):
@@ -3966,11 +3988,16 @@ class TestBindingAudit6(unittest.TestCase):
 
     def test_registry_ignores_display_names(self):
         c = fresh(demo=False)
-        # a pool NAMED "Aave" over Euler's slug and id
-        pid = make_pool(c, spec=dict(EULER, name="Aave"), wait=0)
+        # a pool NAMED "Aave" over Euler's slug and id can no longer even sell
+        pid = make_pool(c, spec=dict(EULER, name="Aave"), wait=0, verify=False)
+        self.assertEqual(send(c, STRANGER, 0, "verify_pool", pid)["outcome"],
+                         "FAILED_VERIFICATION")
+        self.assertTrue(rejected(send(c, ALICE, GEN, "buy_cover", pid, GEN // 10, 30)))
+        # and a verified pool is found by slug or id, never by its display name
+        pid = make_pool(c, uw=UW2, spec=EULER, wait=0)
         buy(c, pid, days=30)
         advance(DAY)
-        self.assertFalse(view(c, "get_active_cover", ALICE.as_hex, "Aave")["found"])
+        self.assertFalse(view(c, "get_active_cover", ALICE.as_hex, "Euler")["found"])
         self.assertTrue(view(c, "get_active_cover", ALICE.as_hex, "euler-v1")["found"])
 
     def test_wayback_metadata_never_dates_a_page(self):
@@ -4006,6 +4033,221 @@ class TestBindingAudit6(unittest.TestCase):
 
 def self_ids(c, bid):
     return [int(x) for x in (c.batch_claims.get(str(bid)) or [])]
+
+
+class TestPoolVerification(unittest.TestCase):
+    """Protocol-domain binding and verification before sale."""
+
+    def pool(self, c, spec=EULER, **kw):
+        return make_pool(c, spec=spec, verify=False, **kw)
+
+    def verify(self, c, pid):
+        return send(c, STRANGER, 0, "verify_pool", pid)
+
+    # --- 2. verification before sale --------------------------------------------
+    def test_buy_before_verification_refused(self):
+        c = fresh()
+        pid = self.pool(c)
+        prem = premium_of(c, pid, GEN, 30)
+        out = send(c, ALICE, prem, "buy_cover", pid, GEN, 30)
+        self.assertTrue(rejected(out))
+        self.assertIn("not verified yet", out["reason"])
+        self.assertEqual(int(c.pools[0].premiums_held_wei), 0)
+        self.assertEqual(int(c.payout_wei.get(ALICE)), prem)      # every wei back
+        self.assertEqual(len(c.covers), 0)
+        self.assertFalse(view(c, "quote", pid, GEN, 30)["ok"])
+        self.assertTrue(ok(self.verify(c, pid)))
+        self.assertTrue(ok(send(c, ALICE, prem, "buy_cover", pid, GEN, 30)))
+
+    def test_mismatched_slug_id_fails_and_cannot_sell(self):
+        c = fresh()
+        pid = self.pool(c, spec=dict(CURVE, lid="1183"))
+        v = self.verify(c, pid)
+        self.assertEqual(v["outcome"], "FAILED_VERIFICATION")
+        self.assertIn("slug curve-dex is DeFi Llama id 3, not 1183", v["reason"])
+        self.assertTrue(rejected(send(c, ALICE, GEN, "buy_cover", pid, GEN, 30)))
+        self.assertTrue(rejected(send(c, UW, GEN, "add_capacity", pid)))
+        self.assertTrue(rejected(self.verify(c, pid)))            # once only
+        self.assertTrue(ok(send(c, UW, 0, "close_pool", pid)))
+        self.assertEqual(int(c.payout_wei.get(UW)), 10 * GEN + GEN)   # capital + refused add
+
+    def test_failed_then_closed_pool_never_reads_verified(self):
+        c = fresh()
+        pid = self.pool(c, spec=dict(CURVE, lid="1183"))
+        self.assertFalse(view(c, "get_pool", pid)["verified"])          # before
+        self.verify(c, pid)
+        v = view(c, "get_pool", pid)
+        self.assertEqual((v["verified"], v["verify_verdict"]), (False, "FAILED"))
+        send(c, UW, 0, "close_pool", pid)
+        v = view(c, "get_pool", pid)
+        self.assertEqual((v["status"], v["verified"], v["verify_verdict"]), ("CLOSED", False, "FAILED"))
+        ok_pid = make_pool(c, uw=UW2)
+        send(c, UW2, 0, "close_pool", ok_pid)
+        self.assertTrue(view(c, "get_pool", ok_pid)["verified"])     # verified, then closed
+
+    def test_unknown_slug_fails(self):
+        c = fresh()
+        pid = self.pool(c, spec=dict(EULER, slug="not-a-protocol"))
+        WEB[proto("not-a-protocol")] = (400, "Protocol not found")
+        v = self.verify(c, pid)
+        self.assertEqual(v["outcome"], "FAILED_VERIFICATION")
+        self.assertIn("no protocol with slug", v["reason"])
+
+    def test_wrong_protocol_name_fails(self):
+        c = fresh()
+        pid = self.pool(c, spec=dict(EULER, name="Aave"))
+        self.assertEqual(self.verify(c, pid)["outcome"], "FAILED_VERIFICATION")
+        for name in ("Euler", "Euler V1", "euler"):
+            c2 = fresh()
+            self.assertEqual(self.verify(c2, self.pool(c2, spec=dict(EULER, name=name)))["outcome"],
+                             "OPEN", name)
+        c3 = fresh()
+        self.assertEqual(self.verify(c3, self.pool(c3, spec=dict(EULER, name="V1")))["outcome"],
+                         "FAILED_VERIFICATION")
+
+    def test_transient_source_is_retry_and_changes_nothing(self):
+        c = fresh()
+        pid = self.pool(c)
+        WEB[proto("euler-v1")] = (503, "")
+        v = self.verify(c, pid)
+        self.assertEqual(v["outcome"], "RETRY")
+        self.assertEqual(str(c.pools[0].status), "UNVERIFIED")
+        install_web()
+        self.assertEqual(self.verify(c, pid)["outcome"], "OPEN")
+
+    def test_verification_works_while_paused(self):
+        c = fresh()
+        pid = self.pool(c)
+        send(c, OWNER, 0, "set_paused", True)
+        self.assertEqual(self.verify(c, pid)["outcome"], "OPEN")
+
+    def test_nobody_can_pay_a_premium_into_a_pool_that_can_never_pay(self):
+        bad = [dict(EULER, lid="3"), dict(EULER, slug="curve-dex"), dict(EULER, name="Aave"),
+               dict(EULER, domains="euler-postmortem.xyz"), dict(MULTI, domains="multichain.org"),
+               dict(TORNADO, domains="tornado.cash")]
+        for spec in bad:
+            c = fresh()
+            pid = self.pool(c, spec=spec)
+            for when in ("before", "after"):
+                if when == "after":
+                    self.assertEqual(self.verify(c, pid)["outcome"], "FAILED_VERIFICATION", spec)
+                out = send(c, ALICE, GEN, "buy_cover", pid, GEN // 10, 30)
+                self.assertTrue(rejected(out), (spec, when))
+            self.assertEqual(int(c.pools[0].premiums_held_wei), 0)
+            self.assertEqual(int(c.total_premiums_wei), 0)
+            self.assertEqual(len(c.covers), 0)
+            self.assertTrue(ok(send(c, UW, 0, "close_pool", pid)))
+
+    def test_verified_pool_works_as_before(self):
+        c = fresh()
+        pid = self.pool(c)
+        self.assertEqual(self.verify(c, pid)["outcome"], "OPEN")
+        clid = file(c, buy(c, pid), R_EULER)
+        self.assertEqual(judge(c, clid)["outcome"], "APPROVED")
+        self.assertTrue(view(c, "get_policy", pid)["hash_matches"])
+
+    # --- 1. protocol domain binding ----------------------------------------------
+    def test_declared_domain_must_be_defillamas_website(self):
+        c = fresh()
+        pid = self.pool(c, spec=dict(EULER, domains="euler-postmortem.xyz"))
+        v = self.verify(c, pid)
+        self.assertEqual(v["outcome"], "FAILED_VERIFICATION")
+        self.assertIn("is not the website DeFi Llama lists", v["reason"])
+        self.assertNotIn("euler-postmortem.xyz", view(c, "get_pool", pid)["evidence_allowlist"])
+
+    def test_matching_domain_is_the_only_protocol_domain(self):
+        c = fresh()
+        pid = self.pool(c)                             # declared euler.finance
+        self.verify(c, pid)
+        self.assertEqual(view(c, "get_pool", pid)["evidence_allowlist"],
+                         ["rekt.news", "web.archive.org", "euler.finance"])
+        c = fresh()
+        pid = self.pool(c, spec=dict(EULER, domains=""))   # none declared: DeFi Llama's
+        self.verify(c, pid)
+        self.assertEqual(str(c.pools[0].protocol_domain), "euler.finance")
+
+    def test_no_website_listed_means_no_protocol_domain(self):
+        c = fresh()
+        pid = self.pool(c, spec=MULTI)
+        self.assertEqual(self.verify(c, pid)["outcome"], "OPEN")
+        self.assertEqual(view(c, "get_pool", pid)["evidence_allowlist"], ["rekt.news", "web.archive.org"])
+        c = fresh()
+        pid = self.pool(c, spec=dict(MULTI, domains="multichain.org"))
+        self.assertEqual(self.verify(c, pid)["outcome"], "FAILED_VERIFICATION")
+
+    def test_shared_publishing_host_is_never_a_protocol_domain(self):
+        for url in ("https://medium.com/@euler", "https://github.com/euler-xyz",
+                    "https://x.com/eulerfinance", "http://euler.finance", ""):
+            self.assertEqual(C._website_domain(url), "", url)
+        self.assertEqual(C._website_domain("https://www.euler.finance"), "euler.finance")
+        self.assertEqual(C._website_domain("https://kyberswap.com/#/swap"), "kyberswap.com")
+        c = fresh()
+        doc = json.loads(TVL["euler-v1"]); doc["url"] = "https://medium.com/@euler"
+        WEB[proto("euler-v1")] = (200, json.dumps(doc))
+        pid = self.pool(c, spec=dict(EULER, domains=""))
+        self.assertEqual(self.verify(c, pid)["outcome"], "OPEN")
+        self.assertEqual(str(c.pools[0].protocol_domain), "")
+        c = fresh()
+        WEB[proto("euler-v1")] = (200, json.dumps(doc))
+        pid = self.pool(c, spec=dict(EULER, domains="medium.com"))
+        self.assertEqual(self.verify(c, pid)["outcome"], "FAILED_VERIFICATION")
+
+    def test_contest_from_unverified_domain_refused_before_model(self):
+        c = fresh()
+        pid = make_pool(c)                                # verified: euler.finance
+        clid = file(c, buy(c, pid), R_EULER)
+        judge(c, clid)
+        calls = MODEL.calls
+        for url in ("https://euler-postmortem.xyz/truth",       # underwriter's own site
+                    "https://www.euler-finance.com/pm",          # lookalike
+                    "https://web.archive.org/web/2023/https://euler-postmortem.xyz/truth"):
+            out = send(c, UW, int(c.contest_bond_wei), "contest", clid, url,
+                       "The official post-mortem proves a key compromise, not a code bug.")
+            self.assertTrue(rejected(out), url)
+            self.assertIn("allowlist", out["reason"] + str(out.get("allowlist", "")))
+        self.assertEqual(MODEL.calls, calls)
+        self.assertEqual(str(c.claims[clid - 1].contest_status), "")
+        self.assertEqual(int(c.payout_wei.get(UW) or 0), 3 * int(c.contest_bond_wei))  # bonds refunded
+        # a pool with no website listed: the protocol's own domain is refused too
+        c = fresh()
+        pid = make_pool(c, spec=MULTI)
+        clid = file(c, buy(c, pid), R_MULTI)
+        judge(c, clid, "EXCLUDED", "NONE", "USER_KEY_COMPROMISE")
+        out = send(c, ALICE, int(c.contest_bond_wei), "contest", clid,
+                   "https://multichain.org/post-mortem", "The project's own page says the bridge was flawed.")
+        self.assertTrue(rejected(out))
+
+    # --- consensus and storage --------------------------------------------------
+    def test_forged_verdict_refused_by_validators(self):
+        facts = {"pool_id": 1, "llama_slug": "curve-dex", "llama_id": "1183",
+                 "protocol_name": "Euler", "declared_domain": "euler.finance"}
+        install_web()
+        honest = C._verify_collect(facts)
+        self.assertEqual(honest["verdict"], "FAILED")
+        forged = dict(honest, verdict="VERIFIED", domain="euler.finance", reason="ok")
+        self.assertFalse(C._verify_agrees(forged, honest, facts))
+        forged_raw = dict(honest, raw=dict(honest["raw"], doc_id="1183"))
+        self.assertFalse(C._verify_agrees(forged_raw, honest, facts))
+        self.assertTrue(C._verify_agrees(honest, C._verify_collect(facts), facts))
+
+    def test_verification_fields_written_only_by_verify_pool(self):
+        fields = ("verified_at", "verify_verdict", "protocol_domain", "llama_name",
+                  "llama_website", "verify_reason")
+        for name, m in _methods(_class(TREE, "CoverClaim")).items():
+            for n in ast.walk(m):
+                if isinstance(n, ast.Assign):
+                    for t in n.targets:
+                        if isinstance(t, ast.Attribute) and t.attr in fields:
+                            self.assertEqual(name, "verify_pool", (name, t.attr))
+
+    def test_allowlist_has_one_source_of_protocol_domain(self):
+        src = ast.unparse(_methods(_class(TREE, "CoverClaim"))["_allowlist"])
+        self.assertIn("pool.protocol_domain", src)
+        self.assertNotIn("declared_domain", src)
+        for name in ("file_claim", "refile_claim", "contest", "check_evidence"):
+            m = ast.unparse(_methods(_class(TREE, "CoverClaim"))[name])
+            self.assertIn("self._allowlist(pool)", m, name)
+            self.assertNotIn("domains_csv", m, name)
 
 
 class TestLoophole09_OwnerPauseCannotFreezeMoney(unittest.TestCase):
@@ -4314,7 +4556,7 @@ class TestSourceInvariants(unittest.TestCase):
         for name, m in CC_METHODS.items():
             text = ast.unparse(m)
             if "run_nondet" in text:
-                self.assertEqual(name, "_consensus")
+                self.assertIn(name, ("_consensus", "_verify_consensus"))
 
     def test_registry_custody_false(self):
         reg = _class(REG_TREE, "CoverRegistry")

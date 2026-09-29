@@ -4,10 +4,10 @@
       "network": "studiodev",
       "chain_id": 61997,
       "CoverClaim": {
-        "address": "0x8a698aA7eF620260B192b89C141A1dcE168Dfd80",
-        "deploy_tx": "0x8f0fbf8c4466f13182ad35d9aa36c38579d28c8d2ccb4a89e6260687e1cbba98",
-        "source_bytes": 232855,
-        "source_sha256": "49b845736f93d48ab53f93b38a0c84c16cb0a197b77f830f4af6d810725b3424",
+        "address": "0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3",
+        "deploy_tx": "0xb6d4fd74e413509d803232a8bb4684b736a4c2aaaa08613ab707185795a3e06d",
+        "source_bytes": 218088,
+        "source_sha256": "3e8593642bad764fcf8ee1dfd4a1501936228eddefcc92365379a959750ea237",
         "policy_version": "1.0.0",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "demo": false,
@@ -18,14 +18,14 @@
         "stall_ttl_s": 86400,
         "buy_cooldown_s": 60,
         "contest_bond_wei": "100000000000000000",
-        "deployed_at": "2026-09-29T10:59:19.180Z"
+        "deployed_at": "2026-09-29T08:18:58.068Z"
       },
       "explorer": "https://explorer-studio-dev.genlayer.com/",
       "CoverClaimDemo": {
-        "address": "0xC70DB65CaF6aa8a915b032FBFeBC6600A195F8e7",
-        "deploy_tx": "0x8668ef8e3d428aed20ed43e1a697d1e0559db791c9c66c57896284f1961db257",
-        "source_bytes": 232855,
-        "source_sha256": "49b845736f93d48ab53f93b38a0c84c16cb0a197b77f830f4af6d810725b3424",
+        "address": "0x02A81134c4aCc85386Ad092Bcd2EB55809df15a9",
+        "deploy_tx": "0x755c47837df2c77ff169725538aa42711f345bfd6db3967de266b08d5b27aa0a",
+        "source_bytes": 218088,
+        "source_sha256": "3e8593642bad764fcf8ee1dfd4a1501936228eddefcc92365379a959750ea237",
         "policy_version": "1.0.0",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "demo": true,
@@ -36,18 +36,18 @@
         "stall_ttl_s": 600,
         "buy_cooldown_s": 10,
         "contest_bond_wei": "100000000000000000",
-        "deployed_at": "2026-09-29T10:59:28.839Z"
+        "deployed_at": "2026-09-29T08:19:05.271Z"
       },
       "CoverRegistry": {
-        "address": "0x8618B4CC15069B056b5b35AF37B029b27a152cf7",
-        "deploy_tx": "0xe29767a23946ae0dbc6c3a7072a7fa54bc2f4ce0e19c5da30d0c59212751f1e2",
+        "address": "0x325A84972a8D86D94bFb4301CA04312B15Cf2F99",
+        "deploy_tx": "0x416a275c3b89a1ade41b1b1aa75ac69da593b1fbacef96f772606d6706d9d5bb",
         "source_bytes": 8239,
         "source_sha256": "7aa733788f6cff508768c0377bc002059dc1ea178dabfb3a2e9d7773193094b1",
-        "coverclaim": "0x8a698aA7eF620260B192b89C141A1dcE168Dfd80",
+        "coverclaim": "0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "custody": false,
         "payable_methods": 0,
-        "deployed_at": "2026-09-29T10:59:37.269Z"
+        "deployed_at": "2026-09-29T08:19:13.863Z"
       }
     }
   }

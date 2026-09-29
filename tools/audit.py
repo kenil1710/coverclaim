@@ -207,6 +207,18 @@ def main() -> int:
           "claim.incident_id" in jb and "incident_key" not in jb and "not in self._ids" in jb and t_ok, t_ev)
     check("patterns", "contest and refile bindings: same checks as filing, key fixed in a contest, refile from scratch, "
           "limit enforced; one payout per cover", t_ok, t_ev)
+    al = ast.unparse(CC["_allowlist"])
+    uses = all("self._allowlist(pool)" in ast.unparse(CC[m]) and "domains_csv" not in ast.unparse(CC[m])
+               for m in ("file_claim", "refile_claim", "contest", "check_evidence"))
+    t_ok, t_ev = run_tests("TestPoolVerification")
+    check("patterns", "protocol domain binding: the only non-base allowlist domain is the website DeFi Llama "
+          "lists for the pool's protocol, set by verify_pool; underwriter text never adds a domain",
+          "pool.protocol_domain" in al and "declared_domain" not in al and uses and t_ok, t_ev)
+    bc = ast.unparse(CC["buy_cover"])
+    check("patterns", "pool verified before sale: buy_cover sells only OPEN (verified) pools; a pool whose slug, id, "
+          "name and domain are not one DeFi Llama protocol can only be closed",
+          "pool.status) != POOL_OPEN" in bc and "verify_pool" in CC and t_ok, t_ev)
+
     t_ok, t_ev = run_tests("TestBindingAudit6")
     check("patterns", "other bindings: registry matches frozen DeFi Llama identity only; archive metadata never "
           "dates a page; severity and outcome inputs bound to record, cover and pool", t_ok, t_ev)

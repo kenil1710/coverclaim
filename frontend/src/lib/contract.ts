@@ -232,6 +232,9 @@ export const createPool = (c: Addr, account: Addr, p: PoolInput) =>
     p.capacityWei,
   );
 
+/** Permissionless, one consensus round: DeFi Llama confirms slug, id, name and domain. */
+export const verifyPool = (c: Addr, account: Addr, pool: number) =>
+  write(c, account, "verify_pool", [pool]);
 export const addCapacity = (c: Addr, account: Addr, pool: number, wei: bigint) =>
   write(c, account, "add_capacity", [pool], wei);
 export const withdrawCapacity = (c: Addr, account: Addr, pool: number, wei: bigint) =>

@@ -8,6 +8,8 @@ import { BUCKET_LABELS, duration, gen, pct } from "@/lib/format";
 
 const LOOPHOLES = [
   ["Buying cover after an incident is public", "A claim names one DeFi Llama incident record by key (id:YYYY-MM-DD). The date is the record's, never the claimant's: a key dated before cover start + waiting period is refused at filing, before any validator is asked, and the cover keeps its one claim. Typing an in-window date for an older incident names no record and pays nothing. The premium is not refunded."],
+  ["The underwriter's own domain as evidence", "The only protocol domain on a pool's allowlist is the website DeFi Llama lists for that protocol, confirmed by verify_pool. A domain the underwriter declares that is not that website fails the pool; an underwriter can never publish the page that decides a contest."],
+  ["A pool that can never pay selling cover", "buy_cover sells only VERIFIED pools. A pool whose slug, id, name or domain are not one DeFi Llama protocol fails verification and can only be closed, returning the underwriter's capital — no premium is ever taken."],
   ["Fake evidence from a random blog", "Every URL must be https on the pool's frozen allowlist (subdomain-exact, no userinfo, no ports). An archive snapshot counts only if the archived page is itself allowlisted. Refused in file_claim before any validator runs."],
   ["Underwriter withdrawing before a claim", "Each cover locks collateral until it expires and its claim window closes. withdraw_capacity can only take the unlocked part; close_pool is refused while any cover is live."],
   ["Same cover claimed twice", "One claim per cover, stored on the cover. An INCONCLUSIVE claim is refiled on the same record — never filed again."],
@@ -42,7 +44,7 @@ export default function DocsPage() {
         <section className="card stack">
           <h3 className="row" style={{ gap: 8 }}><BookOpen size={18} color="var(--orange)" /> How it works</h3>
           <ol className="muted" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.9, fontSize: "0.92rem" }}>
-            <li><strong style={{ color: "var(--ink)" }}>Frozen policy.</strong> create_pool validates and writes every term once and hashes it; there is no setter anywhere.</li>
+            <li><strong style={{ color: "var(--ink)" }}>Frozen policy.</strong> create_pool validates and writes every term once and hashes it; there is no setter anywhere. The pool then sells nothing until verify_pool — one consensus round against DeFi Llama — confirms its slug, id, name and domain are one protocol.</li>
             <li><strong style={{ color: "var(--ink)" }}>Mechanical rejection first.</strong> Capacity, term, per-buyer cap, exact premium, rate limit, claim window, one claim per cover and the evidence allowlist are checked by code before GenLayer runs.</li>
             <li><strong style={{ color: "var(--ink)" }}>GenLayer last.</strong> Each validator fetches DeFi Llama&apos;s incident list and TVL history and the evidence pages, keeps the salient sentences, and computes the bracket. No indicator phrase, or protocol not named → INCONCLUSIVE with no model call. Otherwise the model chooses inside the bracket.</li>
             <li><strong style={{ color: "var(--ink)" }}>Full vector compared.</strong> Classification, peril, exclusion, incident date, protocol match, severity bucket, TVL figures, bracket and content hash exactly; strength within one step. A leader outside its own bracket is refused by arithmetic.</li>

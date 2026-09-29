@@ -22,7 +22,7 @@ function PoolCard({ p, i }: { p: Pool; i: number }) {
             <span className="mono dim" style={{ fontSize: "0.72rem" }}>defillama/{p.llama_slug}</span>
           </div>
           <span className="pill" style={p.selling ? { color: "var(--covered)", borderColor: "rgba(46,229,157,0.3)" } : {}}>
-            {p.status === "CLOSED" ? "Closed" : p.selling ? "Selling" : "Not selling"}
+            {p.status === "CLOSED" ? "Closed" : p.status === "UNVERIFIED" ? "Awaiting verification" : p.status === "FAILED_VERIFICATION" ? "Failed verification" : p.selling ? "Selling" : "Not selling"}
           </span>
         </div>
         <CapacityBar locked={p.locked_wei} capital={p.capital_wei} />
@@ -57,8 +57,8 @@ function PoolCard({ p, i }: { p: Pool; i: number }) {
 export default function PoolsPage() {
   const { data, error, isLoading, mutate } = usePools();
   const pools = data?.items ?? [];
-  const open = pools.filter((p) => p.status === "OPEN");
-  const closed = pools.filter((p) => p.status !== "OPEN");
+  const open = pools.filter((p) => p.status === "OPEN" || p.status === "UNVERIFIED");
+  const closed = pools.filter((p) => p.status !== "OPEN" && p.status !== "UNVERIFIED");
   return (
     <div className="wrap">
       <PageHead

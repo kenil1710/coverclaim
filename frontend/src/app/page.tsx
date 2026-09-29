@@ -32,7 +32,7 @@ const STEPS = [
   {
     icon: Lock,
     title: "The policy is frozen",
-    body: "An underwriter deposits capacity and fixes the wording: covered perils, exclusions, evidence domains, rate, waiting period, deductible and the payout table. No term can change after a cover is sold.",
+    body: "An underwriter deposits capacity and fixes the wording: covered perils, exclusions, rate, waiting period, deductible and the payout table. No term can change after a cover is sold.",
   },
   {
     icon: Coins,

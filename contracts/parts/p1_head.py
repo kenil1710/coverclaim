@@ -326,7 +326,19 @@ LLAMA_PROTOCOL_URL = "https://api.llama.fi/protocol/"
 # which the contract reads itself.
 BASE_DOMAINS = ("rekt.news", "web.archive.org")
 ARCHIVE_HOST = "web.archive.org"
-MAX_OFFICIAL_DOMAINS = 3
+# One protocol domain at most, and only the website DeFi Llama lists for the
+# pool's protocol - confirmed by `verify_pool`, never taken on the
+# underwriter's word (a domain the underwriter controls would let them write
+# the evidence that decides their own claims).
+MAX_OFFICIAL_DOMAINS = 1
+# Hosts where ANYONE can publish a page. If DeFi Llama's listed website is one
+# of these (a Medium blog, a GitHub org, an X account), no protocol domain is
+# allowed at all: rekt.news and DeFi Llama are the only sources.
+SHARED_HOSTS = ("medium.com", "github.com", "gitlab.com", "twitter.com", "x.com",
+                "t.me", "telegram.me", "discord.gg", "discord.com", "linktr.ee",
+                "notion.site", "mirror.xyz", "substack.com", "google.com",
+                "docs.google.com", "youtube.com", "reddit.com", "ipfs.io",
+                "dweb.link", "facebook.com", "linkedin.com", "paragraph.xyz")
 MAX_URLS = 3
 MAX_URL_LEN = 300
 MAX_STATEMENT = 600
@@ -364,8 +376,17 @@ DEFAULT_CONTEST_BOND_WEI = 10 ** 17            # 0.1 GEN
 MAX_BACKDATE_DAYS = 3650
 
 # --- statuses -------------------------------------------------------------------
+# A pool is created UNVERIFIED and sells nothing until `verify_pool` - one
+# consensus round against DeFi Llama's protocol record - confirms that its
+# slug, id, name and declared domain are one protocol. OPEN means verified.
+# FAILED_VERIFICATION can only be closed, returning the underwriter's capital.
+POOL_UNVERIFIED = "UNVERIFIED"
 POOL_OPEN = "OPEN"
+POOL_FAILED = "FAILED_VERIFICATION"
 POOL_CLOSED = "CLOSED"
+POOL_STATUSES = (POOL_UNVERIFIED, POOL_OPEN, POOL_FAILED, POOL_CLOSED)
+V_VERIFIED = "VERIFIED"
+V_FAILED = "FAILED"
 
 COVER_ACTIVE = "ACTIVE"
 COVER_PAID = "PAID"

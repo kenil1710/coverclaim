@@ -137,10 +137,10 @@
         key, why = self._key_check(cover, pool, incident_key, now)
         if why:
             return self._refuse("incident refused before judging: " + why)
-        urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(evidence_urls, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why,
-                                {"allowlist": _split_csv(pool.domains_csv)})
+                                {"allowlist": self._allowlist(pool)})
         text = _clean(statement, MAX_STATEMENT)
 
         clid = len(self.claims) + 1
@@ -218,7 +218,7 @@
             if why:
                 return self._refuse("incident refused before judging: " + why)
         given = evidence_urls if _split_urls(evidence_urls) else claim.urls
-        urls, why = _parse_urls(given, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(given, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why)
         used = str(claim.used_urls).split(" ")
@@ -493,7 +493,7 @@
         if value < bond:
             return self._refuse("the contest bond is " + _gen(bond) + " GEN",
                                 {"bond_wei": str(bond)})
-        urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(evidence_urls, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why)
         used = str(claim.used_urls).split(" ")

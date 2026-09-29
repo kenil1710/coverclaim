@@ -27,6 +27,16 @@ const dStats = J(await demo.view("get_stats"));
 const cStats = J(await canon.view("get_stats"));
 const dCfg = J(await demo.view("get_config"));
 const dPools = J(await demo.view("get_pools", [0, 100])).items;
+const cPools = J(await canon.view("get_pools", [0, 100])).items;
+const FP = seed.demo?.failed_pools ?? {};
+const poolById = (id) => dPools.find((p) => p.pool_id === id) ?? {};
+const fDomain = poolById(FP.domain);
+const fSlug = poolById(FP.slugid);
+const allCovers = J(await demo.view("get_claims", [0, 100])).items;
+const dCovers = [];
+for (const p of dPools) for (const cv of J(await demo.view("get_covers_by_pool", [p.pool_id])).items) dCovers.push({ ...cv, pool_status_at_read: p.status, pool_verified: p.verified });
+const batchMembers = {};
+for (const b of batches) batchMembers[b.batch_id] = b.claim_ids;
 const K = seed.demo?.claims ?? {};
 const C = seed.demo?.covers ?? {};
 const byId = (id) => dClaims.find((c) => c.claim_id === id) ?? {};
@@ -74,6 +84,37 @@ const scenarios = [
     pass: paidOrApproved(m7) && m7.effective === "COVERED" && /curve-vyper-rekt BOUND/.test(m7.evidence_binding)
       && /curve-finance-rekt UNBOUND/.test(m7.evidence_binding) && noText(m7, ["DNS", "hijack"]),
     evidence: `claim #${m7.claim_id} ${m7.status}; ${m7.peril}; bucket ${m7.severity_bucket}; binding "${m7.evidence_binding}"; judged digest has no DNS text: ${noText(m7, ["DNS", "hijack"])}; tx ${txOf("multi-m7-judge")}`,
+  },
+  {
+    scenario: "POOL VERIFICATION — every pool that sold cover was verified against DeFi Llama; its only protocol domain is the website DeFi Llama lists",
+    pass: dCovers.length > 0 && dCovers.every((cv) => cv.pool_verified === true)
+      && dPools.filter((p) => p.verified).every((p) => p.evidence_allowlist.filter((d) => !["rekt.news", "web.archive.org"].includes(d)).every((d) => d === p.protocol_domain))
+      && cPools.every((p) => p.verified === true),
+    evidence: dPools.filter((p) => p.verified).map((p) => `#${p.pool_id} ${p.llama_slug}: domain ${p.protocol_domain || "none"} (DeFi Llama ${p.llama_website || "lists none"})`).join("; ") + `; ${dCovers.length} demo covers, all on verified pools`,
+  },
+  {
+    scenario: "VERIFICATION FAILS — declared domain DeFi Llama does not list: cannot sell, premium refused, closed with capital returned",
+    pass: fDomain.status === "CLOSED" && fDomain.verified === false && /is not the website DeFi Llama lists/.test(fDomain.verify_reason) && fDomain.cover_count === 0
+      && seed.steps.some((x) => x.label === "demo-domain-buy-refused" && /failed verification/.test(x.returned?.reason ?? "")),
+    evidence: `pool #${fDomain.pool_id} declared ${fDomain.declared_domain}: "${fDomain.verify_reason}"; covers ${fDomain.cover_count}; verify tx ${txOf("demo-fake-domain-pool-verify")}; buy refused ${txOf("demo-domain-buy-refused")}; closed ${txOf("demo-domain-close")}`,
+  },
+  {
+    scenario: "VERIFICATION FAILS — slug and id of different protocols: cannot sell, closed with capital returned",
+    pass: fSlug.status === "CLOSED" && fSlug.verified === false && /slug and id are different protocols/.test(fSlug.verify_reason) && fSlug.cover_count === 0
+      && seed.steps.some((x) => x.label === "demo-slugid-buy-refused" && /failed verification/.test(x.returned?.reason ?? "")),
+    evidence: `pool #${fSlug.pool_id} ${fSlug.llama_slug}/${fSlug.llama_id}: "${fSlug.verify_reason}"; verify tx ${txOf("demo-slug-id-mismatch-pool-verify")}; buy refused ${txOf("demo-slugid-buy-refused")}`,
+  },
+  {
+    scenario: "CONTEST FROM AN UNVERIFIED DOMAIN — refused before GenLayer (underwriter's own domain; protocol domain DeFi Llama does not list)",
+    pass: ["demo-contest-unverified-domain", "demo-contest-unlisted-domain"].every((l) => { const x = seed.steps.find((y) => y.label === l); return x?.returned?.status === "REJECTED" && /allowlist/.test(x.returned.reason ?? ""); }),
+    evidence: ["demo-contest-unverified-domain", "demo-contest-unlisted-domain"].map((l) => { const x = seed.steps.find((y) => y.label === l); return `${l}: "${String(x?.returned?.reason ?? "").slice(0, 110)}" tx ${x?.tx}`; }).join("; "),
+  },
+  {
+    scenario: "ONE PAYOUT PER COVER (double-payout regression, structural) — every batch lists each claim once; no cover paid twice; payouts ≤ locked capacity",
+    pass: Object.values(batchMembers).every((m) => new Set(m).size === m.length)
+      && new Set(dClaims.filter((c) => BigInt(c.payout_wei) > 0n).map((c) => c.cover_id)).size === dClaims.filter((c) => BigInt(c.payout_wei) > 0n).length
+      && batches.every((b) => BigInt(b.paid_total_wei ?? 0) <= BigInt(b.available_wei ?? 0)),
+    evidence: `${batches.length} batches: ` + batches.map((b) => `#${b.batch_id} ${b.incident_id} members [${b.claim_ids.join(",")}] paid ${gen(b.paid_total_wei)} ≤ locked ${gen(b.available_wei)}`).join("; "),
   },
   {
     scenario: "COVERED — Euler V1 2023-03-13 paid at its severity bucket",

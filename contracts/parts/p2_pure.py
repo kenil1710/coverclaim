@@ -711,7 +711,7 @@ def _policy_text(name: str, slug: str, llama_id: str, chain: str,
                  perils: list, exclusions: list, rate_bps: int,
                  waiting_days: int, deductible_bps: int, max_cover: int,
                  term_days: int, collateral_bps: int, table: list,
-                 domains: list, wording: str) -> str:
+                 domains: list, wording: str, declared: str = "") -> str:
     """The canonical wording of a policy: every frozen term, in a fixed order,
     in plain English. Stored nowhere - it is re-derived from the stored terms,
     hashed into `policy_hash`, and shown by `get_policy` - so the text a buyer
@@ -736,7 +736,11 @@ def _policy_text(name: str, slug: str, llama_id: str, chain: str,
     for i in range(BUCKETS):
         rows.append(edges[i] + " TVL drop -> " + _pct(table[i]))
     lines.append("Payout by severity: " + "; ".join(rows))
-    lines.append("Evidence allowlist: " + ", ".join(domains))
+    lines.append("Evidence allowlist: " + ", ".join(domains) + " + the website "
+                 "DeFi Llama lists for protocol id " + llama_id + ", confirmed by "
+                 "verify_pool (declared: " + (declared if declared else "none")
+                 + "); no other domain, and none if DeFi Llama lists none or "
+                 "lists a shared publishing host")
     lines.append("Claims: a claim names ONE DeFi Llama incident record of this "
                  "protocol by key (id:YYYY-MM-DD[:name]) dated inside the cover "
                  "after the waiting period; the evidence must name the protocol "
@@ -915,4 +919,81 @@ def _parse_tvl_line(line: str) -> dict:
         elif tag == "points":
             out["count"] = _as_int(val, 0)
         i += 2
+    return out
+
+
+# --- pool verification (pure) ------------------------------------------------------
+
+
+def _website_domain(url: typing.Any) -> str:
+    """The protocol domain DeFi Llama's listed website allows: its https host
+    without a leading "www.", or "" when there is no usable website - none
+    listed, not https, a shared publishing host anyone can post on, or a host
+    the contract already reads for itself."""
+    host = _host_of(str(url if url is not None else ""))
+    if host.startswith("www."):
+        host = host[4:]
+    if host == "" or not _valid_domain(host):
+        return ""
+    if host in SHARED_HOSTS or host in BASE_DOMAINS:
+        return ""
+    if host == "llama.fi" or host.endswith(".llama.fi"):
+        return ""
+    return host
+
+
+def _verify_verdict(facts: dict, raw: dict) -> dict:
+    """VERIFIED or FAILED for a pool, from DeFi Llama's protocol record alone.
+    PURE: the leader, every validator and `verify_pool` after consensus
+    derive it from the same raw fields.
+
+    VERIFIED requires ALL of:
+      - /protocol/<slug> exists (a 400 "Protocol not found" is an answer);
+      - its `id` is the pool's DeFi Llama id (slug and id are one protocol);
+      - the pool's name names DeFi Llama's protocol - word-aligned, and on
+        the same first word ("Euler" for "Euler V1") - because the evidence
+        must name the pool's protocol, and a pool named for another protocol
+        could never be paid;
+      - a declared domain, if any, IS the website DeFi Llama lists.
+    The protocol domain on the allowlist is then DeFi Llama's website domain
+    (or none). The underwriter's text never adds a domain."""
+    slug = str(facts.get("llama_slug", ""))
+    want_id = str(facts.get("llama_id", ""))
+    name = str(facts.get("protocol_name", ""))
+    declared = str(facts.get("declared_domain", ""))
+    status = _as_int(raw.get("status"), 0)
+    out = {"verdict": V_FAILED, "domain": "", "reason": "",
+           "llama_name": _clean(raw.get("name", ""), 80),
+           "website": _clean(raw.get("url", ""), 200),
+           "doc_id": _clean(raw.get("doc_id", ""), 40)}
+    if status != 200 or not raw.get("found"):
+        out["reason"] = ("DeFi Llama has no protocol with slug " + slug
+                         + " (api.llama.fi answered " + str(status) + ")")
+        return out
+    if out["doc_id"] != want_id:
+        out["reason"] = ("slug " + slug + " is DeFi Llama id " + out["doc_id"]
+                         + ", not " + want_id + ": slug and id are different "
+                         "protocols")
+        return out
+    ln = _norm(out["llama_name"])
+    pn = _norm(name)
+    if pn == "" or not _names_protocol(ln, name) or ln.split(" ")[0] != pn.split(" ")[0]:
+        out["reason"] = ("the pool is named " + _short(name, 60) + " but DeFi "
+                         "Llama id " + want_id + " is " + out["llama_name"]
+                         + "; evidence naming the pool's protocol could never "
+                         "be about this one")
+        return out
+    domain = _website_domain(out["website"])
+    if declared != "" and declared != domain:
+        out["reason"] = ("declared domain " + declared + " is not the website "
+                         "DeFi Llama lists for " + out["llama_name"] + " ("
+                         + (out["website"] if out["website"] else "none listed")
+                         + ")")
+        return out
+    out["verdict"] = V_VERIFIED
+    out["domain"] = domain
+    out["reason"] = ("slug " + slug + ", id " + want_id + " and name agree with "
+                     "DeFi Llama (" + out["llama_name"] + "); protocol domain: "
+                     + (domain if domain else "none - only rekt.news and DeFi "
+                        "Llama count"))
     return out

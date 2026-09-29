@@ -18,6 +18,7 @@ await step("wait7-pool", "uw3", "create_pool", ["Euler", "euler-v1", "1183", "Et
   "PHISHING,FRONTEND_HIJACK,USER_KEY_COMPROMISE,RUG_BY_TEAM,GOVERNANCE_ATTACK", 100, 7, 1000, GEN, 90, 10000, "", "euler.finance",
   "Waiting-period gate demonstration."], GEN);
 const pid = (await v.view("get_pools", [0, 100])).total;
+for (let i = 0; i < 4 && (await v.view("get_pool", [pid])).status === "UNVERIFIED"; i++) await step("wait7-verify", "trigger", "verify_pool", [pid]);
 const q = await v.view("quote", [pid, GEN / 10n, 30]);
 await step("wait7-cover", "outsider", "buy_cover", [pid, GEN / 10n, 30], BigInt(q.premium_wei));
 const covers = await v.view("get_covers_by_buyer", [JSON.parse(readFileSync(new URL("./.accounts.json", import.meta.url))).outsider.address]);

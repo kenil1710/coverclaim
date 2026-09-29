@@ -155,9 +155,9 @@ function Wizard({ onCreated }: { onCreated: () => void }) {
           {step === 3 && (
             <>
               <p className="muted" style={{ fontSize: "0.86rem" }}>
-                Every pool allows {(cfg.data?.base_domains ?? ["rekt.news", "web.archive.org"]).join(" and ")} (archive snapshots only of allowlisted pages). Add the protocol&apos;s official domain for post-mortems.
+                Every pool allows {(cfg.data?.base_domains ?? ["rekt.news", "web.archive.org"]).join(" and ")} (archive snapshots only of allowlisted pages). Optionally declare the protocol&apos;s domain for post-mortems: it counts only if it IS the website DeFi Llama lists for this protocol (checked by verify_pool; a mismatch fails the pool). Leave it empty to use whatever DeFi Llama lists.
               </p>
-              {field("Official domain(s), comma separated (max 3)", "domains", undefined, true)}
+              {field("Protocol domain (must match DeFi Llama's listed website; optional)", "domains", undefined, true)}
               <label className="stack" style={{ gap: 4 }}>
                 <span className="label" style={{ margin: 0 }}>Underwriter notes (frozen into the wording)</span>
                 <textarea className="textarea" maxLength={1500} value={f.wording} onChange={(e) => set("wording", e.target.value)} />
@@ -172,7 +172,7 @@ Excluded: ${input.exclusions.join(", ") || "none"}
 Premium ${pct(input.rateBps)}/30d · waiting ${input.waitingDays}d · deductible ${pct(input.deductibleBps)}
 Max cover/buyer ${gen(input.maxCoverWei)} GEN · term ${input.termDays}d · collateral ${pct(input.collateralBps)}
 Payout table: ${input.payoutTable.map((b) => pct(b)).join(" / ")}
-Evidence: rekt.news, web.archive.org, ${input.officialDomains}
+Evidence: rekt.news, web.archive.org + DeFi Llama's listed website (declared: ${input.officialDomains || "none"}), confirmed by verify_pool before any cover is sold
 Capacity: ${gen(input.capacityWei)} GEN
 
 Once created, NOTHING above can be changed — by you or anyone.`}
@@ -216,7 +216,8 @@ function MyPool({ p, refresh }: { p: Pool; refresh: () => void }) {
         <span>Paid to claimants</span><span>{gen(p.paid_out_wei)} GEN</span>
         <span>Live covers</span><span>{p.active_covers}</span>
       </div>
-      {p.status === "OPEN" && (
+      {p.status === "FAILED_VERIFICATION" && <p className="quote">{p.verify_reason}</p>}
+      {p.status !== "CLOSED" && (
         <div className="row" style={{ alignItems: "flex-start" }}>
           <input className="input" style={{ maxWidth: 150 }} placeholder="GEN" value={amt} onChange={(e) => setAmt(e.target.value)} aria-label="Amount to withdraw" />
           <TxButton className="btn btn-ghost btn-sm" label="Withdraw unlocked" icon={<Coins size={14} />} disabled={!w || w > toBig(p.free_wei)} send={(a) => withdrawCapacity(contract!, a, p.pool_id, w!)} onDone={refresh} />

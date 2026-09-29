@@ -30,7 +30,9 @@ That has no API. It is a judgement. So the design is one sentence, and it is wri
 
 ## Freeze the wording first
 
-An underwriter opens a pool for one protocol and, in the same transaction, freezes the policy: which of four perils it covers (`SMART_CONTRACT_BUG`, `ORACLE_MANIPULATION`, `ECONOMIC_EXPLOIT`, `BRIDGE_COMPROMISE`), which of five it excludes (`PHISHING`, `FRONTEND_HIJACK`, `USER_KEY_COMPROMISE`, `RUG_BY_TEAM`, `GOVERNANCE_ATTACK`), the rate, waiting period, deductible, term, collateral ratio, payout table and the domains evidence may come from. All of it is written once and hashed. There is no setter anywhere in the contract; a test walks the syntax tree to prove it.
+An underwriter opens a pool for one protocol and, in the same transaction, freezes the policy: which of four perils it covers (`SMART_CONTRACT_BUG`, `ORACLE_MANIPULATION`, `ECONOMIC_EXPLOIT`, `BRIDGE_COMPROMISE`), which of five it excludes (`PHISHING`, `FRONTEND_HIJACK`, `USER_KEY_COMPROMISE`, `RUG_BY_TEAM`, `GOVERNANCE_ATTACK`), the rate, waiting period, deductible, term, collateral ratio and payout table. All of it is written once and hashed. There is no setter anywhere in the contract; a test walks the syntax tree to prove it.
+
+What the underwriter does **not** get to choose is where evidence comes from. A first version let them name the protocol's "official domain" — and an underwriter who controls a domain can publish a post-mortem there and use it to contest a claim they would otherwise pay. Now a pool starts unverified and sells nothing until one consensus round reads DeFi Llama's record for its protocol: the id must match, the name must match, and the only protocol domain that ever reaches the evidence allowlist is the website DeFi Llama lists. If it lists none, only rekt.news counts. A pool that fails can only be closed, so no premium is ever paid into a pool that could never pay.
 
 A fixed vocabulary matters more than it looks. A free-text peril puts the meaning of the policy back in the hands of whoever reads it. "Smart contract bug" means the text frozen next to it — "a flaw in the protocol's own smart-contract code or its compiler … that an attacker exploited" — and the model is shown exactly that text and nothing else.
 
@@ -98,4 +100,4 @@ On the canonical instance, a cover bought today and claimed against Euler's 2023
 
 - App: https://coverclaim.vercel.app
 - Code, probe, audit and evidence: https://github.com/kenil1710/coverclaim
-- 650 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.
+- 667 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.

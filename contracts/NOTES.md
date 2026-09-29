@@ -112,6 +112,28 @@ and parser before deploying (docs/TASKS.md).
 **Consequence, stated in the README:** an incident DeFi Llama has not recorded
 yet cannot be claimed until it has.
 
+## 2b. Who chooses the evidence domains: not the underwriter
+
+**Correction (binding review).** The first versions let the underwriter list
+up to three "official domains" on the allowlist. An underwriter who controls
+a domain can publish a "post-mortem" there and contest a COVERED claim with
+it. Now a pool declares at most one domain, and the allowlist gets a protocol
+domain only from `verify_pool`: one consensus round reading
+`api.llama.fi/protocol/<slug>`, whose `id` must be the pool's id, whose name
+the pool's name must name (same first word, word-aligned), and whose `url`
+must be the declared domain if one was declared. The protocol domain is then
+that website's host without "www." - or none, if DeFi Llama lists none or a
+shared publishing host (medium.com, github.com, x.com, ...), where anyone can
+post. Live on 2026-09-29: Euler V1 → euler.finance, Curve DEX → curve.finance,
+Multichain → none, Tornado Cash → an IPNS gateway host.
+
+The same round closes the premium trap: a pool whose slug, id and name are
+not one protocol could never pay (its claims are pinned INCONCLUSIVE by
+`id_match`, or its name is never in the evidence). `buy_cover` sells only
+VERIFIED (OPEN) pools; FAILED_VERIFICATION pools can only be closed, which
+returns the capital. `/protocol/<slug>` is the same document judging already
+reads (69 MB for curve-dex, parsed inside the budget).
+
 ## 3. The bracket, and why it is built from the BUYER's evidence only
 
 DeFi Llama's classification ("Key Compromise", "Frontend & Infrastructure") is

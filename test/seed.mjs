@@ -90,12 +90,22 @@ async function step(label, address, role, method, args, value = 0n) {
 const view = (address, m, args = []) => connect({ address }).view(m, args);
 const lastId = async (address, m) => (await view(address, m, [0, 100])).total;
 
-async function newPool(address, role, label, spec, capital, extra = {}) {
+async function newPool(address, role, label, spec, capital, extra = {}, expect = "OPEN") {
   const o = { rate: 100, wait: 7, ded: 1000, max: 2n * GEN, term: 365, coll: 10000, table: "", perils: ALL_P, excl: ALL_X, ...extra };
   const { ret } = await step(label, address, role, "create_pool",
     [spec.name, spec.slug, spec.id, spec.chain, o.perils, o.excl, o.rate, o.wait, o.ded, o.max, o.term, o.coll, o.table, spec.domains, spec.wording],
     capital);
-  return ret?.pool_id ?? (await lastId(address, "get_pools"));
+  const pid = ret?.pool_id ?? (await lastId(address, "get_pools"));
+  // VERIFIED BEFORE SALE: one consensus round against DeFi Llama.
+  for (let i = 0; i < 4; i++) {
+    await step(`${label}-verify`, address, "trigger", "verify_pool", [pid]);
+    const st = (await view(address, "get_pool", [pid])).status;
+    if (st !== "UNVERIFIED") {
+      if (st !== expect) throw new Error(`${label}: verification gave ${st}, expected ${expect}`);
+      return pid;
+    }
+  }
+  throw new Error(`${label}: verification never settled`);
 }
 
 // The contract allows one cover per wallet per buy_cooldown_s. A refused buy
@@ -131,9 +141,11 @@ const SPEC = {
     wording: "Euler V1 lending markets on Ethereum." },
   curve: { name: "Curve", slug: "curve-dex", id: "3", chain: "Ethereum", domains: "curve.finance",
     wording: "Curve DEX pools on Ethereum." },
-  multichain: { name: "Multichain", slug: "multichain", id: "591", chain: "Multi-chain", domains: "multichain.org",
+  // DeFi Llama lists no website for Multichain, and an IPNS gateway for
+  // Tornado Cash: neither pool declares a domain (a mismatch fails the pool).
+  multichain: { name: "Multichain", slug: "multichain", id: "591", chain: "Multi-chain", domains: "",
     wording: "Multichain router and bridge deposits." },
-  tornado: { name: "Tornado Cash", slug: "tornado-cash", id: "148", chain: "Ethereum", domains: "tornado.cash",
+  tornado: { name: "Tornado Cash", slug: "tornado-cash", id: "148", chain: "Ethereum", domains: "",
     wording: "Tornado Cash pools and governance." },
 };
 
@@ -211,6 +223,21 @@ if (part === "all" || part === "demo") {
   EV.demo = { pools: P };
   save();
 
+  // POOLS THAT CAN NEVER PAY CANNOT SELL. Both fail verification; a premium
+  // sent to them comes straight back; closing returns the capital.
+  const F = {};
+  F.domain = await newPool(DEMO, "uw1", "demo-fake-domain-pool",
+    { ...SPEC.euler, domains: "euler-postmortem.xyz", wording: "Declares a domain DeFi Llama does not list." }, GEN, {}, "FAILED_VERIFICATION");
+  F.slugid = await newPool(DEMO, "uw3", "demo-slug-id-mismatch-pool",
+    { ...SPEC.euler, slug: "curve-dex", wording: "Curve's slug with Euler's id." }, GEN, {}, "FAILED_VERIFICATION");
+  for (const [k, pid] of Object.entries(F)) {
+    const q = await view(DEMO, "quote", [pid, GEN / 10n, 30]);
+    await step(`demo-${k}-buy-refused`, DEMO, "buyer1", "buy_cover", [pid, GEN / 10n, 30], BigInt(q.premium_wei) || 10n ** 15n);
+    await step(`demo-${k}-close`, DEMO, k === "domain" ? "uw1" : "uw3", "close_pool", [pid]);
+  }
+  EV.demo.failed_pools = F;
+  save();
+
   // MULTI-INCIDENT PROOF, FIRST: one Curve pool, one cover window spanning
   // both records. Each claim names a record; the evidence must be about it.
   const M = {};
@@ -281,11 +308,18 @@ if (part === "all" || part === "demo") {
   // COVERED, then the underwriter contests it at once with NOVEL evidence.
   await step("demo-covered-judge", DEMO, "trigger", "judge_claim", [K.covered]);
   const bond = BigInt((await view(DEMO, "get_config")).contest_bond_wei);
+  // The underwriter tries to contest with a "post-mortem" on a domain it
+  // controls: refused before GenLayer, bond returned.
+  await step("demo-contest-unverified-domain", DEMO, "uw1", "contest", [K.covered, "https://euler-postmortem.xyz/official-post-mortem",
+    "Our official post-mortem shows the root cause was a leaked admin key, not a code flaw."], bond);
   await step("demo-contest", DEMO, "uw1", "contest", [K.covered, URL_.eulerPM,
     "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it."], bond);
   await step("demo-contest-judge", DEMO, "trigger", "judge_contest", [K.covered]);
 
   await step("demo-multichain-judge", DEMO, "trigger", "judge_claim", [K.multichain]);
+  // DeFi Llama lists no website for Multichain: its own domain is not evidence.
+  await step("demo-contest-unlisted-domain", DEMO, "buyer3", "contest", [K.multichain, "https://multichain.org/post-mortem",
+    "The project's own page says the bridge router had a verification flaw."], bond);
   await step("demo-inconclusive-judge", DEMO, "trigger", "judge_claim", [K.inconclusive]);
   await step("demo-prorata-judge-a", DEMO, "trigger", "judge_claim", [K.prorataA]);
   await step("demo-prorata-judge-b", DEMO, "trigger", "judge_claim", [K.prorataB]);

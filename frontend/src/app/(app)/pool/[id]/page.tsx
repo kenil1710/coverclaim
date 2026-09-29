@@ -9,7 +9,7 @@ import { CapacityBar } from "@/components/CapacityBar";
 import { CardSkeleton, ErrorState } from "@/components/States";
 import { TxButton } from "@/components/TxButton";
 import { useWallet } from "@/components/WalletProvider";
-import { buyCover } from "@/lib/contract";
+import { buyCover, verifyPool } from "@/lib/contract";
 import { useConfig, usePolicy, usePool, useQuote } from "@/lib/hooks";
 import { useInstance } from "@/lib/instance";
 import { BUCKET_LABELS, date, duration, gen, human, parseGen, pct, short, toBig } from "@/lib/format";
@@ -65,9 +65,26 @@ export default function PoolPage() {
           </span>
         </div>
         <span className="pill" style={p.selling ? { color: "var(--covered)" } : {}}>
-          <Clock size={12} /> {p.status === "CLOSED" ? "Closed" : p.seconds_left > 0 ? `${duration(p.seconds_left)} of term left` : "Term ended"}
+          <Clock size={12} /> {p.status === "CLOSED" ? "Closed" : p.status === "UNVERIFIED" ? "Not verified yet" : p.status === "FAILED_VERIFICATION" ? "Failed verification" : p.seconds_left > 0 ? `${duration(p.seconds_left)} of term left` : "Term ended"}
         </span>
       </div>
+
+      {p.status === "UNVERIFIED" && (
+        <div className="card stack" style={{ borderColor: "rgba(255,107,44,0.35)", marginBottom: 16 }}>
+          <h3 className="row" style={{ gap: 8 }}><ShieldCheck size={16} color="var(--orange)" /> Not selling until verified</h3>
+          <p className="muted" style={{ fontSize: "0.86rem" }}>
+            GenLayer validators read DeFi Llama&apos;s record for <span className="mono">{p.llama_slug}</span> once: its id must be {p.llama_id}, its name must be {p.protocol_name}&apos;s, and {p.declared_domain ? <>the declared domain <span className="mono">{p.declared_domain}</span> must be the website it lists</> : <>the website it lists (if any) becomes the protocol domain</>}. No premium can be paid before that. Anyone can trigger it.
+          </p>
+          <TxButton label="Verify pool against DeFi Llama" icon={<ShieldCheck size={16} />} send={(a) => verifyPool(contract!, a, p.pool_id)} onDone={() => void pool.mutate()} />
+        </div>
+      )}
+      {p.status === "FAILED_VERIFICATION" && (
+        <div className="card stack" style={{ borderColor: "var(--excluded)", marginBottom: 16 }}>
+          <h3 className="row" style={{ gap: 8 }}><ShieldX size={16} color="var(--excluded)" /> Failed verification — can never sell</h3>
+          <p className="quote">{p.verify_reason}</p>
+          <p className="muted" style={{ fontSize: "0.84rem" }}>The underwriter can only close it; closing returns their capital.</p>
+        </div>
+      )}
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))", alignItems: "start" }}>
         <div className="stack" style={{ gap: 16 }}>
@@ -195,9 +212,9 @@ export default function PoolPage() {
           </motion.div>
 
           <div className="card stack">
-            <h3>Evidence allowlist (frozen)</h3>
+            <h3>Evidence allowlist</h3>
             <p className="muted" style={{ fontSize: "0.84rem" }}>
-              A claim on this pool may only cite these domains. Anything else is refused before GenLayer runs. DeFi Llama&apos;s incident list and TVL history are read by the contract itself.
+              A claim or contest on this pool may only cite these domains; anything else is refused before GenLayer runs. The only protocol domain allowed is the website DeFi Llama lists for this protocol, confirmed at verification{p.verified ? (p.protocol_domain ? "" : " — DeFi Llama lists none usable, so only rekt.news counts") : " (pending)"}. DeFi Llama&apos;s incident list and TVL history are read by the contract itself.
             </p>
             <div className="row" style={{ gap: 6 }}>
               {p.evidence_allowlist.map((d) => <span key={d} className="pill mono">{d}</span>)}

@@ -297,6 +297,62 @@ def _tvl(facts: dict, day: int) -> dict:
             "window": window}
 
 
+def _verify_collect(facts: dict) -> dict:
+    """WHAT EVERY NODE RUNS for `verify_pool`: fetch DeFi Llama's protocol
+    record for the pool's slug, keep only the fields verification reads (as
+    strings), derive the verdict. Returns {"retry": True} on a transient
+    failure - which a validator agrees with only if it sees the same."""
+    status, body = _http(LLAMA_PROTOCOL_URL + str(facts.get("llama_slug", "")))
+    q = _fnv(str(facts.get("pool_id", "")) + "|" + str(facts.get("llama_slug", ""))
+             + "|" + str(facts.get("llama_id", "")) + "|"
+             + str(facts.get("protocol_name", "")) + "|"
+             + str(facts.get("declared_domain", "")))
+    if _transient(status):
+        return {"retry": True, "question": q,
+                "why": "api.llama.fi/protocol answered " + str(status)}
+    raw = {"status": status, "found": False, "doc_id": "", "name": "", "url": ""}
+    if status == 200:
+        try:
+            doc = json.loads(body)
+        except Exception:
+            doc = None
+        if isinstance(doc, dict):
+            raw["found"] = True
+            raw["doc_id"] = _clean(doc.get("id", ""), 40)
+            raw["name"] = _clean(doc.get("name", ""), 80)
+            u = doc.get("url")
+            raw["url"] = _clean(u if isinstance(u, str) else "", 200)
+    out = _verify_verdict(facts, raw)
+    out["raw"] = raw
+    out["question"] = q
+    out["retry"] = False
+    return out
+
+
+VERIFY_FIELDS = ("question", "verdict", "domain", "reason", "llama_name",
+                 "website", "doc_id")
+
+
+def _verify_agrees(lead: typing.Any, mine: typing.Any, facts: dict) -> bool:
+    """Exact agreement on every field, and the leader's verdict must be the
+    one its own raw fields derive (a pure gate, as `_coherent` for claims)."""
+    if not isinstance(lead, dict) or not isinstance(mine, dict):
+        return False
+    if bool(lead.get("retry")) or bool(mine.get("retry")):
+        return bool(lead.get("retry")) and bool(mine.get("retry")) \
+            and str(lead.get("question", "")) == str(mine.get("question", "!"))
+    raw = lead.get("raw")
+    if not isinstance(raw, dict):
+        return False
+    derived = _verify_verdict(facts, raw)
+    for k in VERIFY_FIELDS:
+        if k != "question" and str(lead.get(k, "")) != str(derived.get(k, "!")):
+            return False
+        if str(lead.get(k, "")) != str(mine.get(k, "!")):
+            return False
+    return True
+
+
 def _read_sources(facts: dict) -> dict:
     """Fetch everything a judgement needs. Returns {"retry": True, ...} if any
     MANDATORY source was transiently unreachable, else the raw inputs - every

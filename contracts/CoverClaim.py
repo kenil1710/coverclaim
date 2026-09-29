@@ -326,7 +326,19 @@ LLAMA_PROTOCOL_URL = "https://api.llama.fi/protocol/"
 # which the contract reads itself.
 BASE_DOMAINS = ("rekt.news", "web.archive.org")
 ARCHIVE_HOST = "web.archive.org"
-MAX_OFFICIAL_DOMAINS = 3
+# One protocol domain at most, and only the website DeFi Llama lists for the
+# pool's protocol - confirmed by `verify_pool`, never taken on the
+# underwriter's word (a domain the underwriter controls would let them write
+# the evidence that decides their own claims).
+MAX_OFFICIAL_DOMAINS = 1
+# Hosts where ANYONE can publish a page. If DeFi Llama's listed website is one
+# of these (a Medium blog, a GitHub org, an X account), no protocol domain is
+# allowed at all: rekt.news and DeFi Llama are the only sources.
+SHARED_HOSTS = ("medium.com", "github.com", "gitlab.com", "twitter.com", "x.com",
+                "t.me", "telegram.me", "discord.gg", "discord.com", "linktr.ee",
+                "notion.site", "mirror.xyz", "substack.com", "google.com",
+                "docs.google.com", "youtube.com", "reddit.com", "ipfs.io",
+                "dweb.link", "facebook.com", "linkedin.com", "paragraph.xyz")
 MAX_URLS = 3
 MAX_URL_LEN = 300
 MAX_STATEMENT = 600
@@ -364,8 +376,17 @@ DEFAULT_CONTEST_BOND_WEI = 10 ** 17            # 0.1 GEN
 MAX_BACKDATE_DAYS = 3650
 
 # --- statuses -------------------------------------------------------------------
+# A pool is created UNVERIFIED and sells nothing until `verify_pool` - one
+# consensus round against DeFi Llama's protocol record - confirms that its
+# slug, id, name and declared domain are one protocol. OPEN means verified.
+# FAILED_VERIFICATION can only be closed, returning the underwriter's capital.
+POOL_UNVERIFIED = "UNVERIFIED"
 POOL_OPEN = "OPEN"
+POOL_FAILED = "FAILED_VERIFICATION"
 POOL_CLOSED = "CLOSED"
+POOL_STATUSES = (POOL_UNVERIFIED, POOL_OPEN, POOL_FAILED, POOL_CLOSED)
+V_VERIFIED = "VERIFIED"
+V_FAILED = "FAILED"
 
 COVER_ACTIVE = "ACTIVE"
 COVER_PAID = "PAID"
@@ -1122,7 +1143,7 @@ def _policy_text(name: str, slug: str, llama_id: str, chain: str,
                  perils: list, exclusions: list, rate_bps: int,
                  waiting_days: int, deductible_bps: int, max_cover: int,
                  term_days: int, collateral_bps: int, table: list,
-                 domains: list, wording: str) -> str:
+                 domains: list, wording: str, declared: str = "") -> str:
     """The canonical wording of a policy: every frozen term, in a fixed order,
     in plain English. Stored nowhere - it is re-derived from the stored terms,
     hashed into `policy_hash`, and shown by `get_policy` - so the text a buyer
@@ -1147,7 +1168,11 @@ def _policy_text(name: str, slug: str, llama_id: str, chain: str,
     for i in range(BUCKETS):
         rows.append(edges[i] + " TVL drop -> " + _pct(table[i]))
     lines.append("Payout by severity: " + "; ".join(rows))
-    lines.append("Evidence allowlist: " + ", ".join(domains))
+    lines.append("Evidence allowlist: " + ", ".join(domains) + " + the website "
+                 "DeFi Llama lists for protocol id " + llama_id + ", confirmed by "
+                 "verify_pool (declared: " + (declared if declared else "none")
+                 + "); no other domain, and none if DeFi Llama lists none or "
+                 "lists a shared publishing host")
     lines.append("Claims: a claim names ONE DeFi Llama incident record of this "
                  "protocol by key (id:YYYY-MM-DD[:name]) dated inside the cover "
                  "after the waiting period; the evidence must name the protocol "
@@ -1326,6 +1351,83 @@ def _parse_tvl_line(line: str) -> dict:
         elif tag == "points":
             out["count"] = _as_int(val, 0)
         i += 2
+    return out
+
+
+# --- pool verification (pure) ------------------------------------------------------
+
+
+def _website_domain(url: typing.Any) -> str:
+    """The protocol domain DeFi Llama's listed website allows: its https host
+    without a leading "www.", or "" when there is no usable website - none
+    listed, not https, a shared publishing host anyone can post on, or a host
+    the contract already reads for itself."""
+    host = _host_of(str(url if url is not None else ""))
+    if host.startswith("www."):
+        host = host[4:]
+    if host == "" or not _valid_domain(host):
+        return ""
+    if host in SHARED_HOSTS or host in BASE_DOMAINS:
+        return ""
+    if host == "llama.fi" or host.endswith(".llama.fi"):
+        return ""
+    return host
+
+
+def _verify_verdict(facts: dict, raw: dict) -> dict:
+    """VERIFIED or FAILED for a pool, from DeFi Llama's protocol record alone.
+    PURE: the leader, every validator and `verify_pool` after consensus
+    derive it from the same raw fields.
+
+    VERIFIED requires ALL of:
+      - /protocol/<slug> exists (a 400 "Protocol not found" is an answer);
+      - its `id` is the pool's DeFi Llama id (slug and id are one protocol);
+      - the pool's name names DeFi Llama's protocol - word-aligned, and on
+        the same first word ("Euler" for "Euler V1") - because the evidence
+        must name the pool's protocol, and a pool named for another protocol
+        could never be paid;
+      - a declared domain, if any, IS the website DeFi Llama lists.
+    The protocol domain on the allowlist is then DeFi Llama's website domain
+    (or none). The underwriter's text never adds a domain."""
+    slug = str(facts.get("llama_slug", ""))
+    want_id = str(facts.get("llama_id", ""))
+    name = str(facts.get("protocol_name", ""))
+    declared = str(facts.get("declared_domain", ""))
+    status = _as_int(raw.get("status"), 0)
+    out = {"verdict": V_FAILED, "domain": "", "reason": "",
+           "llama_name": _clean(raw.get("name", ""), 80),
+           "website": _clean(raw.get("url", ""), 200),
+           "doc_id": _clean(raw.get("doc_id", ""), 40)}
+    if status != 200 or not raw.get("found"):
+        out["reason"] = ("DeFi Llama has no protocol with slug " + slug
+                         + " (api.llama.fi answered " + str(status) + ")")
+        return out
+    if out["doc_id"] != want_id:
+        out["reason"] = ("slug " + slug + " is DeFi Llama id " + out["doc_id"]
+                         + ", not " + want_id + ": slug and id are different "
+                         "protocols")
+        return out
+    ln = _norm(out["llama_name"])
+    pn = _norm(name)
+    if pn == "" or not _names_protocol(ln, name) or ln.split(" ")[0] != pn.split(" ")[0]:
+        out["reason"] = ("the pool is named " + _short(name, 60) + " but DeFi "
+                         "Llama id " + want_id + " is " + out["llama_name"]
+                         + "; evidence naming the pool's protocol could never "
+                         "be about this one")
+        return out
+    domain = _website_domain(out["website"])
+    if declared != "" and declared != domain:
+        out["reason"] = ("declared domain " + declared + " is not the website "
+                         "DeFi Llama lists for " + out["llama_name"] + " ("
+                         + (out["website"] if out["website"] else "none listed")
+                         + ")")
+        return out
+    out["verdict"] = V_VERIFIED
+    out["domain"] = domain
+    out["reason"] = ("slug " + slug + ", id " + want_id + " and name agree with "
+                     "DeFi Llama (" + out["llama_name"] + "); protocol domain: "
+                     + (domain if domain else "none - only rekt.news and DeFi "
+                        "Llama count"))
     return out
 
 
@@ -1624,6 +1726,62 @@ def _tvl(facts: dict, day: int) -> dict:
             "anchor": int(day), "before_at": before_at if before >= 0 else 0,
             "before": before, "low": low, "after_points": after_points,
             "window": window}
+
+
+def _verify_collect(facts: dict) -> dict:
+    """WHAT EVERY NODE RUNS for `verify_pool`: fetch DeFi Llama's protocol
+    record for the pool's slug, keep only the fields verification reads (as
+    strings), derive the verdict. Returns {"retry": True} on a transient
+    failure - which a validator agrees with only if it sees the same."""
+    status, body = _http(LLAMA_PROTOCOL_URL + str(facts.get("llama_slug", "")))
+    q = _fnv(str(facts.get("pool_id", "")) + "|" + str(facts.get("llama_slug", ""))
+             + "|" + str(facts.get("llama_id", "")) + "|"
+             + str(facts.get("protocol_name", "")) + "|"
+             + str(facts.get("declared_domain", "")))
+    if _transient(status):
+        return {"retry": True, "question": q,
+                "why": "api.llama.fi/protocol answered " + str(status)}
+    raw = {"status": status, "found": False, "doc_id": "", "name": "", "url": ""}
+    if status == 200:
+        try:
+            doc = json.loads(body)
+        except Exception:
+            doc = None
+        if isinstance(doc, dict):
+            raw["found"] = True
+            raw["doc_id"] = _clean(doc.get("id", ""), 40)
+            raw["name"] = _clean(doc.get("name", ""), 80)
+            u = doc.get("url")
+            raw["url"] = _clean(u if isinstance(u, str) else "", 200)
+    out = _verify_verdict(facts, raw)
+    out["raw"] = raw
+    out["question"] = q
+    out["retry"] = False
+    return out
+
+
+VERIFY_FIELDS = ("question", "verdict", "domain", "reason", "llama_name",
+                 "website", "doc_id")
+
+
+def _verify_agrees(lead: typing.Any, mine: typing.Any, facts: dict) -> bool:
+    """Exact agreement on every field, and the leader's verdict must be the
+    one its own raw fields derive (a pure gate, as `_coherent` for claims)."""
+    if not isinstance(lead, dict) or not isinstance(mine, dict):
+        return False
+    if bool(lead.get("retry")) or bool(mine.get("retry")):
+        return bool(lead.get("retry")) and bool(mine.get("retry")) \
+            and str(lead.get("question", "")) == str(mine.get("question", "!"))
+    raw = lead.get("raw")
+    if not isinstance(raw, dict):
+        return False
+    derived = _verify_verdict(facts, raw)
+    for k in VERIFY_FIELDS:
+        if k != "question" and str(lead.get(k, "")) != str(derived.get(k, "!")):
+            return False
+        if str(lead.get(k, "")) != str(mine.get(k, "!")):
+            return False
+    return True
 
 
 def _read_sources(facts: dict) -> dict:
@@ -2370,6 +2528,19 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
     return (CL_APPROVED, gross)
 
 
+def _not_selling(pool: typing.Any) -> str:
+    st = str(pool.status)
+    pid = str(int(pool.pool_id))
+    if st == POOL_UNVERIFIED:
+        return ("pool #" + pid + " is not verified yet; anyone may call "
+                "verify_pool(" + pid + ") - no premium is taken before DeFi "
+                "Llama confirms the pool")
+    if st == POOL_FAILED:
+        return ("pool #" + pid + " failed verification (" + _short(str(pool.verify_reason), 160)
+                + "); it can never sell cover and can only be closed")
+    return "pool #" + pid + " is closed"
+
+
 # --- storage --------------------------------------------------------------------
 
 
@@ -2396,6 +2567,7 @@ class Pool:
     exclusions_csv: str
     domains_csv: str
     payout_table_csv: str
+    declared_domain: str
     rate_bps: u32
     waiting_days: u32
     deductible_bps: u32
@@ -2409,6 +2581,17 @@ class Pool:
     expires_at: u64
     status: str
     closed_at: u64
+
+    # --- verification: written ONCE, by `verify_pool`, from an agreed and
+    # re-derived verdict. `protocol_domain` is the only way a domain other
+    # than rekt.news / web.archive.org reaches the evidence allowlist.
+    verified_at: u64
+    verify_verdict: str
+    verify_attempts: u32
+    protocol_domain: str
+    llama_name: str
+    llama_website: str
+    verify_reason: str
 
     capital_wei: u256
     locked_wei: u256
@@ -2837,6 +3020,87 @@ class CoverClaim(gl.contract.Contract):
         cover.status = status
         cover.settled_at = u64(now)
 
+    def _allowlist(self, pool: Pool) -> list:
+        """The pool's evidence allowlist: the base domains, plus the protocol
+        domain `verify_pool` took from DeFi Llama - and nothing else."""
+        out = _split_csv(pool.domains_csv)
+        d = str(pool.protocol_domain)
+        if d != "" and d not in out:
+            out.append(d)
+        return out
+
+    def _verify_consensus(self, facts: dict) -> typing.Any:
+        """One consensus round for `verify_pool`. The closure captures only
+        `facts` (plain values), never `self`."""
+        task = facts
+
+        def leader_fn() -> dict:
+            return _verify_collect(task)
+
+        def validator_fn(leader_result: gl.vm.Result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            return _verify_agrees(leader_result.calldata, _verify_collect(task), task)
+
+        return gl.vm.run_nondet(leader_fn, validator_fn)
+
+    @gl.public.write
+    def verify_pool(self, pool_id: typing.Any) -> typing.Any:
+        """Confirm, ONCE, against DeFi Llama's protocol record for the pool's
+        frozen slug, that its slug, id, name and declared domain are one
+        protocol. PERMISSIONLESS; one consensus round; moves no money.
+
+        VERIFIED -> OPEN: the pool may sell cover, and DeFi Llama's listed
+        website (if any, and not a shared publishing host) becomes the
+        protocol domain on its evidence allowlist. FAILED -> the pool can
+        never sell; `close_pool` returns the underwriter's capital. A source
+        outage changes nothing and can be retried."""
+        self._bank()
+        pool = self._pool(pool_id)
+        if pool is None:
+            return self._refuse("no pool with id " + str(_as_int(pool_id, 0)))
+        pid = int(pool.pool_id)
+        if str(pool.status) != POOL_UNVERIFIED:
+            return self._refuse("pool #" + str(pid) + " is " + str(pool.status)
+                                + "; verification happens once")
+        now = self._now()
+        if now <= 0:
+            return self._refuse("the block time was unreadable; retry")
+        facts = {"pool_id": pid, "llama_slug": str(pool.llama_slug),
+                 "llama_id": str(pool.llama_id),
+                 "protocol_name": str(pool.protocol_name),
+                 "declared_domain": str(pool.declared_domain)}
+        # Rule 3's documented exception: attempts are a statistic.
+        pool.verify_attempts = u32(int(pool.verify_attempts) + 1)
+        out = self._verify_consensus(facts)
+        if not isinstance(out, dict) or out.get("retry"):
+            return {"status": "OK", "pool_id": pid, "verified": False,
+                    "outcome": "RETRY",
+                    "reason": _short(str(out.get("why", "")) if isinstance(out, dict)
+                                     else "no agreed answer", 200),
+                    "note": "nothing changed; anyone may call verify_pool again"}
+        raw = out.get("raw")
+        if not isinstance(raw, dict):
+            return self._refuse("the validators did not return a usable answer; "
+                                "nothing changed")
+        # RULE 11: re-derived from the agreed raw fields.
+        v = _verify_verdict(facts, raw)
+        pool.llama_name = str(v["llama_name"])
+        pool.llama_website = str(v["website"])
+        pool.verify_reason = _short(str(v["reason"]), 300)
+        pool.verified_at = u64(now)
+        pool.verify_verdict = str(v["verdict"])
+        if str(v["verdict"]) == V_VERIFIED:
+            pool.protocol_domain = str(v["domain"])
+            pool.status = POOL_OPEN
+        else:
+            pool.status = POOL_FAILED
+        return {"status": "OK", "pool_id": pid, "verified": True,
+                "outcome": str(pool.status), "protocol_domain": str(pool.protocol_domain),
+                "evidence_allowlist": self._allowlist(pool),
+                "llama_name": str(v["llama_name"]), "website": str(v["website"]),
+                "reason": str(v["reason"])}
+
     def _earn(self, pool: Pool, amount: int) -> None:
         """Premium becomes the underwriter's."""
         if amount <= 0:
@@ -2924,12 +3188,16 @@ class CoverClaim(gl.contract.Contract):
             return self._refuse(why)
         official, why = _parse_domains(official_domains_csv)
         if why:
-            return self._refuse("official domains: " + why)
-        domains = list(BASE_DOMAINS) + official
+            return self._refuse("protocol domain: " + why)
+        declared = official[0] if len(official) > 0 else ""
+        # The underwriter DECLARES at most one domain; it reaches the
+        # allowlist only if `verify_pool` finds it is the website DeFi Llama
+        # lists for this protocol. Until then the allowlist is the base.
+        domains = list(BASE_DOMAINS)
         notes = _clean(wording, MAX_WORDING)
         text = _policy_text(name, slug, lid, chain_name, perils, exclusions,
                             rate, wait, ded, max_cover, term, coll, table,
-                            domains, notes)
+                            domains, notes, declared)
         if not self._take(sender, value):
             return self._refuse("the capacity could not be booked")
 
@@ -2944,6 +3212,7 @@ class CoverClaim(gl.contract.Contract):
         pool.perils_csv = _csv(perils)
         pool.exclusions_csv = _csv(exclusions)
         pool.domains_csv = _csv(domains)
+        pool.declared_domain = declared
         pool.payout_table_csv = _csv(table)
         pool.rate_bps = u32(rate)
         pool.waiting_days = u32(wait)
@@ -2955,7 +3224,7 @@ class CoverClaim(gl.contract.Contract):
         pool.policy_hash = _fnv(text)
         pool.created_at = u64(now)
         pool.expires_at = u64(now + term * DAY)
-        pool.status = POOL_OPEN
+        pool.status = POOL_UNVERIFIED
         pool.capital_wei = u256(value)
         pool.deposited_wei = u256(value)
         self.pools_by_underwriter.get_or_insert_default(sender).append(u32(pid))
@@ -2965,6 +3234,10 @@ class CoverClaim(gl.contract.Contract):
                 "capacity_wei": str(value), "capacity_gen": _gen(value),
                 "expires_at": now + term * DAY,
                 "evidence_allowlist": domains,
+                "declared_domain": declared,
+                "pool_status": POOL_UNVERIFIED,
+                "next": "anyone may call verify_pool(" + str(pid) + "); cover "
+                        "is sold only once DeFi Llama confirms the pool",
                 "note": ("the policy is frozen: no term of it can be changed by "
                          "anyone, including you")}
 
@@ -2983,7 +3256,8 @@ class CoverClaim(gl.contract.Contract):
             return self._refuse("new capacity is paused; withdrawals are not")
         if sender != pool.underwriter:
             return self._refuse("only this pool's underwriter can add capacity")
-        if str(pool.status) != POOL_OPEN or now <= 0 or now >= int(pool.expires_at):
+        if str(pool.status) not in (POOL_OPEN, POOL_UNVERIFIED) or now <= 0 \
+                or now >= int(pool.expires_at):
             return self._refuse("pool #" + str(int(pool.pool_id))
                                 + " is closed or past its term")
         if value <= 0:
@@ -3046,7 +3320,7 @@ class CoverClaim(gl.contract.Contract):
             return self._refuse("no pool with id " + str(_as_int(pool_id, 0)))
         if sender != pool.underwriter:
             return self._refuse("only this pool's underwriter can close it")
-        if str(pool.status) != POOL_OPEN:
+        if str(pool.status) == POOL_CLOSED:
             return self._refuse("pool #" + str(int(pool.pool_id))
                                 + " is already closed")
         if int(pool.active_covers) > 0:
@@ -3095,7 +3369,8 @@ class CoverClaim(gl.contract.Contract):
         if now <= 0:
             return self._refuse("the block time was unreadable; retry")
         if str(pool.status) != POOL_OPEN:
-            return self._refuse("pool #" + str(pid) + " is closed")
+            # NO PREMIUM INTO A POOL THAT COULD NEVER PAY.
+            return self._refuse(_not_selling(pool))
         if now >= int(pool.expires_at):
             return self._refuse("pool #" + str(pid) + " has reached the end of "
                                 "its term")
@@ -3419,10 +3694,10 @@ class CoverClaim(gl.contract.Contract):
         key, why = self._key_check(cover, pool, incident_key, now)
         if why:
             return self._refuse("incident refused before judging: " + why)
-        urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(evidence_urls, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why,
-                                {"allowlist": _split_csv(pool.domains_csv)})
+                                {"allowlist": self._allowlist(pool)})
         text = _clean(statement, MAX_STATEMENT)
 
         clid = len(self.claims) + 1
@@ -3500,7 +3775,7 @@ class CoverClaim(gl.contract.Contract):
             if why:
                 return self._refuse("incident refused before judging: " + why)
         given = evidence_urls if _split_urls(evidence_urls) else claim.urls
-        urls, why = _parse_urls(given, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(given, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why)
         used = str(claim.used_urls).split(" ")
@@ -3775,7 +4050,7 @@ class CoverClaim(gl.contract.Contract):
         if value < bond:
             return self._refuse("the contest bond is " + _gen(bond) + " GEN",
                                 {"bond_wei": str(bond)})
-        urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
+        urls, why = _parse_urls(evidence_urls, self._allowlist(pool))
         if why:
             return self._refuse("evidence refused before judging: " + why)
         used = str(claim.used_urls).split(" ")
@@ -4162,7 +4437,18 @@ class CoverClaim(gl.contract.Contract):
             "chain": str(pool.chain),
             "perils": _split_csv(pool.perils_csv),
             "exclusions": _split_csv(pool.exclusions_csv),
-            "evidence_allowlist": _split_csv(pool.domains_csv),
+            "evidence_allowlist": self._allowlist(pool),
+            "declared_domain": str(pool.declared_domain),
+            "protocol_domain": str(pool.protocol_domain),
+            # From the STORED verdict, never from the status: a pool that
+            # failed verification and was then closed is not "verified".
+            "verified": str(pool.verify_verdict) == V_VERIFIED,
+            "verify_verdict": str(pool.verify_verdict),
+            "verified_at": int(pool.verified_at),
+            "verify_attempts": int(pool.verify_attempts),
+            "verify_reason": str(pool.verify_reason),
+            "llama_name": str(pool.llama_name),
+            "llama_website": str(pool.llama_website),
             "payout_table_bps": [_as_int(x, 0) for x in _split_csv(pool.payout_table_csv)],
             "rate_bps": int(pool.rate_bps),
             "waiting_days": int(pool.waiting_days),
@@ -4393,7 +4679,7 @@ class CoverClaim(gl.contract.Contract):
                             int(pool.deductible_bps), int(pool.max_cover_wei),
                             int(pool.term_days), int(pool.collateral_bps),
                             self._table(pool), _split_csv(pool.domains_csv),
-                            str(pool.wording))
+                            str(pool.wording), str(pool.declared_domain))
         return {"found": True, "pool_id": int(pool.pool_id), "text": text,
                 "policy_hash": str(pool.policy_hash),
                 "hash_matches": _fnv(text) == str(pool.policy_hash)}
@@ -4493,7 +4779,7 @@ class CoverClaim(gl.contract.Contract):
             payouts.append(str(_gross(amount, table[i], int(pool.deductible_bps))))
         reason = ""
         if str(pool.status) != POOL_OPEN:
-            reason = "pool closed"
+            reason = _not_selling(pool)
         elif amount < MIN_COVER_WEI:
             reason = "below the minimum cover"
         elif n < 1 or n > int(pool.term_days):
@@ -4518,7 +4804,7 @@ class CoverClaim(gl.contract.Contract):
         pool = self._pool(pool_id)
         if pool is None:
             return {"ok": False, "items": [], "reason": "no such pool"}
-        domains = _split_csv(pool.domains_csv)
+        domains = self._allowlist(pool)
         items = []
         ok = True
         for u in _split_urls(evidence_urls):
@@ -4797,6 +5083,15 @@ class CoverClaim(gl.contract.Contract):
             "min_collateral_bps": MIN_COLLATERAL_BPS,
             "min_novel_chars": MIN_NOVEL_CHARS,
             "claim_statuses": list(CLAIM_STATUSES),
+            "pool_statuses": list(POOL_STATUSES),
+            "shared_hosts": list(SHARED_HOSTS),
+            "pool_verification": ("verify_pool reads api.llama.fi/protocol/{slug} "
+                                  "once: the record's id must be the pool's id, "
+                                  "the pool's name must name it, and a declared "
+                                  "domain must be the website it lists. Cover is "
+                                  "sold only by VERIFIED pools; the protocol "
+                                  "domain on the allowlist is DeFi Llama's "
+                                  "website, or none."),
             "contest_statuses": list(CONTEST_STATUSES),
             "sources": {"incidents": LLAMA_HACKS_URL,
                         "tvl": LLAMA_PROTOCOL_URL + "{slug}"},

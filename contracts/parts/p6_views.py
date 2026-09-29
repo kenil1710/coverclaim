@@ -15,7 +15,18 @@
             "chain": str(pool.chain),
             "perils": _split_csv(pool.perils_csv),
             "exclusions": _split_csv(pool.exclusions_csv),
-            "evidence_allowlist": _split_csv(pool.domains_csv),
+            "evidence_allowlist": self._allowlist(pool),
+            "declared_domain": str(pool.declared_domain),
+            "protocol_domain": str(pool.protocol_domain),
+            # From the STORED verdict, never from the status: a pool that
+            # failed verification and was then closed is not "verified".
+            "verified": str(pool.verify_verdict) == V_VERIFIED,
+            "verify_verdict": str(pool.verify_verdict),
+            "verified_at": int(pool.verified_at),
+            "verify_attempts": int(pool.verify_attempts),
+            "verify_reason": str(pool.verify_reason),
+            "llama_name": str(pool.llama_name),
+            "llama_website": str(pool.llama_website),
             "payout_table_bps": [_as_int(x, 0) for x in _split_csv(pool.payout_table_csv)],
             "rate_bps": int(pool.rate_bps),
             "waiting_days": int(pool.waiting_days),
@@ -246,7 +257,7 @@
                             int(pool.deductible_bps), int(pool.max_cover_wei),
                             int(pool.term_days), int(pool.collateral_bps),
                             self._table(pool), _split_csv(pool.domains_csv),
-                            str(pool.wording))
+                            str(pool.wording), str(pool.declared_domain))
         return {"found": True, "pool_id": int(pool.pool_id), "text": text,
                 "policy_hash": str(pool.policy_hash),
                 "hash_matches": _fnv(text) == str(pool.policy_hash)}
@@ -346,7 +357,7 @@
             payouts.append(str(_gross(amount, table[i], int(pool.deductible_bps))))
         reason = ""
         if str(pool.status) != POOL_OPEN:
-            reason = "pool closed"
+            reason = _not_selling(pool)
         elif amount < MIN_COVER_WEI:
             reason = "below the minimum cover"
         elif n < 1 or n > int(pool.term_days):
@@ -371,7 +382,7 @@
         pool = self._pool(pool_id)
         if pool is None:
             return {"ok": False, "items": [], "reason": "no such pool"}
-        domains = _split_csv(pool.domains_csv)
+        domains = self._allowlist(pool)
         items = []
         ok = True
         for u in _split_urls(evidence_urls):
@@ -650,6 +661,15 @@
             "min_collateral_bps": MIN_COLLATERAL_BPS,
             "min_novel_chars": MIN_NOVEL_CHARS,
             "claim_statuses": list(CLAIM_STATUSES),
+            "pool_statuses": list(POOL_STATUSES),
+            "shared_hosts": list(SHARED_HOSTS),
+            "pool_verification": ("verify_pool reads api.llama.fi/protocol/{slug} "
+                                  "once: the record's id must be the pool's id, "
+                                  "the pool's name must name it, and a declared "
+                                  "domain must be the website it lists. Cover is "
+                                  "sold only by VERIFIED pools; the protocol "
+                                  "domain on the allowlist is DeFi Llama's "
+                                  "website, or none."),
             "contest_statuses": list(CONTEST_STATUSES),
             "sources": {"incidents": LLAMA_HACKS_URL,
                         "tvl": LLAMA_PROTOCOL_URL + "{slug}"},

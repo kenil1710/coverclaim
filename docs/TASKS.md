@@ -61,3 +61,11 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] redeployed all three, byte-for-byte verified (canonical 0x8a7e766b…, demo 0x02A81134…, registry 0x325A8497…)
 - [x] Vercel production env + deploy; live bundle only new addresses
 - [x] reseed incl. Curve proof and two-way-keyed pro-rata (19/19); drained to 0; audit 57/0; pushed
+
+## Protocol-domain binding and pool verification
+- [x] 1 protocol domain binding: FAIL (underwriter-chosen domains on the allowlist) → only DeFi Llama's listed website, via verify_pool; shared hosts never; tests
+- [x] 2 pool verification before sale: FAIL (pools sold at creation) → UNVERIFIED until verify_pool; FAILED can only close; tests
+- [x] extra: pool name must name DeFi Llama's protocol (premium trap via mis-named pool)
+- [x] bug found by the chain collector and fixed: failed-then-closed pool read "verified" (view derived from status) → stored verify_verdict; redeployed
+- [x] 667 offline tests; README / ARTICLE / NOTES / app docs re-checked
+- [x] redeployed all three, byte-for-byte; 24/24 chain scenarios; drained to 0; audit 64/0; Vercel; pushed

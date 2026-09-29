@@ -11,6 +11,14 @@ export type Pool = {
   perils: string[];
   exclusions: string[];
   evidence_allowlist: string[];
+  declared_domain: string;
+  protocol_domain: string;
+  verified: boolean;
+  verified_at: number;
+  verify_verdict: string;
+  verify_reason: string;
+  llama_name: string;
+  llama_website: string;
   payout_table_bps: number[];
   rate_bps: number;
   waiting_days: number;
