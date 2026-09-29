@@ -63,16 +63,36 @@ const pb = byId(K.prorataB);
 const st = byId(K.stalled);
 const backdatedCover = seed.canonical?.cover_backdated ? J(await canon.view("get_cover", [seed.canonical.cover_backdated])) : {};
 const backdatedRefusal = returnedOf("canon-backdated-file-refused");
-const expired = J(await demo.view("get_cover", [C.expired]));
+const expired = C.expired ? J(await demo.view("get_cover", [C.expired])) : {};
 const pBatch = batches.find((b) => b.claim_ids.includes(K.prorataA)) ?? {};
-const att = J(await reg.view("get_attestation", [0]));
+let att = {};
+try { att = J(await reg.view("get_attestation", [0])); } catch { att = {}; }
+const outage = byId(K.outage);
+const stagingRefusal = returnedOf("staging-judge-early-refused");
+let stagingClaim = {};
+if (seed.staging?.address) {
+  try { stagingClaim = J(await connect({ address: seed.staging.address }).view("get_claim", [seed.staging.claim])); } catch { stagingClaim = {}; }
+}
 let wg = [];
 try { wg = JSON.parse(readFileSync(new URL("docs/waitgate-evidence.json", root), "utf8")); } catch { wg = []; }
 const wgRefused = wg.find((x) => x.label === "wait7-file-refused");
 const wgCoverId = wg.find((x) => x.label === "cover-after")?.cover_id ?? 0;
 const wgCover = wgCoverId ? J(await canon.view("get_cover", [wgCoverId])) : {};
 
-const scenarios = [
+const allScenarios = [
+  {
+    scenario: "EVIDENCE OUTAGE — a page answering 500 during judging is a RETRY: nothing settles, the claim stays FILED, no refile spent; replaced after the stall window, it is judged and paid",
+    pass: returnedOf("demo-outage-judge-retry").outcome === "RETRY" && returnedOf("demo-outage-judge-retry").judged === false
+      && /answered 500/.test(returnedOf("demo-outage-judge-retry").reason ?? "")
+      && paidOrApproved(outage) && outage.refiles === 1 && outage.stalls === 1,
+    evidence: `claim #${outage.claim_id}: judge → ${returnedOf("demo-outage-judge-retry").outcome} ("${String(returnedOf("demo-outage-judge-retry").reason ?? "").slice(0, 110)}", tx ${txOf("demo-outage-judge-retry")}); stall-settled ${txOf("demo-outage-settle-stalled")}; refiled ${txOf("demo-outage-refile")}; judged ${outage.status}, paid ${gen(outage.payout_wei)} GEN (tx ${txOf("demo-outage-judge-after")})`,
+  },
+  {
+    scenario: "EARLY JUDGING REFUSED — a claim on an incident whose 7-day TVL window has not ended cannot be judged (staging instance, same bytes)",
+    pass: stagingRefusal.status === "REJECTED" && /7-day TVL window/.test(stagingRefusal.reason ?? "") && Number(stagingRefusal.judgeable_at) > 0
+      && stagingClaim.status === "FILED" && stagingClaim.judged_at === 0,
+    evidence: `staging ${seed.staging?.address} claim #${seed.staging?.claim} key ${seed.staging?.key}: "${String(stagingRefusal.reason ?? "").slice(0, 120)}"; judgeable_at ${stagingRefusal.judgeable_at} (${stagingRefusal.judgeable_at ? new Date(stagingRefusal.judgeable_at * 1000).toISOString().slice(0, 10) : "?"}); claim still ${stagingClaim.status}; tx ${txOf("staging-judge-early-refused")}`,
+  },
   {
     scenario: "MIXED EVIDENCE 6 — DNS record, [DNS article, Vyper article]: classified from the DNS page only → EXCLUDED, no payout",
     pass: m6.status === "DENIED_EXCLUDED" && m6.exclusion === "FRONTEND_HIJACK" && m6.gross_wei === "0"
@@ -225,6 +245,12 @@ const scenarios = [
   },
 ];
 
+// A scoped run (round 2) reports only the scenarios it seeded.
+const ROUND2 = ["EVIDENCE OUTAGE", "EARLY JUDGING", "MIXED EVIDENCE", "MULTI-INCIDENT", "CORE NAME", "PRO-RATA",
+  "COVERED —", "CONTESTED", "POOL VERIFICATION —", "ONE PAYOUT", "DRAINED", "Ledger identity"];
+const scenarios = seed.scope === "round2"
+  ? allScenarios.filter((x) => ROUND2.some((p) => x.scenario.startsWith(p)))
+  : allScenarios.filter((x) => !x.scenario.startsWith("EVIDENCE OUTAGE") && !x.scenario.startsWith("EARLY JUDGING"));
 const out = {
   collected_at: new Date().toISOString(),
   demo: { address: dep.CoverClaimDemo.address, config_label: dCfg.label, stats: dStats },
@@ -237,6 +263,10 @@ writeFileSync(new URL("docs/EVIDENCE.json", root), JSON.stringify(out, null, 2) 
 
 const md = [
   "# EVIDENCE — the seeded outcomes, read back from the chain",
+  "",
+  seed.scope === "round2"
+    ? "This run is **scoped** (round-2 review): the full Curve proof, pro-rata, a contest, an evidence-outage retry and the early-judging refusal. The previous deployment's full evidence — every scenario — is archived in [docs/superseded/](superseded/) (and earlier deployments in [docs/previous-deployment/](previous-deployment/))."
+    : "Earlier deployments' evidence: [docs/superseded/](superseded/), [docs/previous-deployment/](previous-deployment/).",
   "",
   `Collected ${out.collected_at} by \`node test/collect.mjs\`, which READS the chain rather than trusting the seed script. Full records: \`docs/EVIDENCE.json\`; every write with its return value: \`docs/seed-evidence.json\`; raw log: \`docs/seed-run.log\`.`,
   "",

@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-29T15:17:30.374Z",
+  "at": "2026-09-29T16:24:19.889Z",
   "pools": [
     {
       "id": 1,
@@ -24,38 +24,6 @@
       "locked_wei": "0",
       "premiums_held_wei": "0",
       "active_covers": 0
-    },
-    {
-      "id": 4,
-      "status": "CLOSED",
-      "capital_wei": "0",
-      "locked_wei": "0",
-      "premiums_held_wei": "0",
-      "active_covers": 0
-    },
-    {
-      "id": 5,
-      "status": "CLOSED",
-      "capital_wei": "0",
-      "locked_wei": "0",
-      "premiums_held_wei": "0",
-      "active_covers": 0
-    },
-    {
-      "id": 6,
-      "status": "CLOSED",
-      "capital_wei": "0",
-      "locked_wei": "0",
-      "premiums_held_wei": "0",
-      "active_covers": 0
-    },
-    {
-      "id": 7,
-      "status": "CLOSED",
-      "capital_wei": "0",
-      "locked_wei": "0",
-      "premiums_held_wei": "0",
-      "active_covers": 0
     }
   ],
   "stats": {
@@ -65,30 +33,12 @@
     "locked_wei": "0",
     "capital_wei": "0",
     "bonds_wei": "0",
-    "chain_balance_wei": "14397066666666666675",
-    "undelivered_wei": "14397066666666666675",
+    "chain_balance_wei": "8951666666666666673",
+    "undelivered_wei": "8951666666666666673",
     "ledger_balanced": true,
     "held_matches_books": true
   },
   "steps": [
-    {
-      "label": "release cover #11",
-      "role": "trigger",
-      "method": "release_cover",
-      "args": [
-        11
-      ],
-      "tx": "0x17b67272af88c5542517d551f1ced5ef3afad2d3a3da911d6fb3d43bf7c54a20",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "cover_id": 11,
-        "premium_earned_wei": "60833333333333334",
-        "status": "OK",
-        "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
-        "unlocked_wei": "500000000000000000"
-      }
-    },
     {
       "label": "release cover #2",
       "role": "trigger",
@@ -96,7 +46,7 @@
       "args": [
         2
       ],
-      "tx": "0xbc3ba7904f1ac30ad0f071264f91d8a80408e77aae1fe5290cefe2f547e5015e",
+      "tx": "0xf35f64dbde3fe354d08d230f2be1b051c308f3aa526f0984b61dcaf3d078dbd8",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -114,7 +64,7 @@
       "args": [
         3
       ],
-      "tx": "0xb52eba76ca3e40875cb2f6dc1832953491768cedfa0fe78a999710efce328bd9",
+      "tx": "0xad2df3ccd865a47b585dc7fcb8da647e53578219a17b2e2f35e5e14d2c6120cf",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -132,7 +82,7 @@
       "args": [
         4
       ],
-      "tx": "0x27cd8af509fae6cf9e9f3a255b752a5059a0710f82cefac7a1ab4e58f3706805",
+      "tx": "0xf388c2f687b6d2accf764f6df90d054f83d9a9eac8d02cef4f44c738894c94af",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -150,7 +100,7 @@
       "args": [
         6
       ],
-      "tx": "0x4410b9824d39f153d54cfa7d210f9b1ffe72ddf0e52562b2e8444f1eee54e29a",
+      "tx": "0x765de2fce46f9b5a94e0dffa764941d91ee935e87ae25a7ef2edcfcf090f77e2",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -162,65 +112,13 @@
       }
     },
     {
-      "label": "release cover #10",
-      "role": "trigger",
-      "method": "release_cover",
-      "args": [
-        10
-      ],
-      "tx": "0x273ba1daed70e1403c779d889cafcce17a7cfcd8c4dd73f9e3722b2217e61187",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "cover_id": 10,
-        "premium_earned_wei": "121666666666666667",
-        "status": "OK",
-        "underwriter": "0xc8E3659467074fCEFd0caA524C6170a04B4CFbfa",
-        "unlocked_wei": "1000000000000000000"
-      }
-    },
-    {
-      "label": "release cover #14",
-      "role": "trigger",
-      "method": "release_cover",
-      "args": [
-        14
-      ],
-      "tx": "0xcea037259b916801b611c5cf9fd8a9326d70cd598e04f8639ae363a73c867f5e",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "cover_id": 14,
-        "premium_earned_wei": "60833333333333334",
-        "status": "OK",
-        "underwriter": "0xc8E3659467074fCEFd0caA524C6170a04B4CFbfa",
-        "unlocked_wei": "500000000000000000"
-      }
-    },
-    {
-      "label": "close pool #1",
-      "role": "uw1",
-      "method": "close_pool",
-      "args": [
-        1
-      ],
-      "tx": "0x3a60c2e4640b16aa4a7b9da240ff5466bebcfd1c65246e5b8ed9142abed8390d",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "pool_id": 1,
-        "returned_wei": "1650000000000000000",
-        "status": "OK"
-      }
-    },
-    {
       "label": "close pool #2",
       "role": "uw2",
       "method": "close_pool",
       "args": [
         2
       ],
-      "tx": "0x5b4dd9acaf4ee4200a88c6ae0ac27616c3e8d4ad0d2e7abbd4807b8e96b813c9",
+      "tx": "0x3d917aeacd39c804c33e2fc592f584153a7852243f3df3d44f3b332a2be0f5da",
       "status": "ACCEPTED",
       "returned": {
         "claim_with": "claim_payout()",
@@ -230,106 +128,16 @@
       }
     },
     {
-      "label": "close pool #3",
-      "role": "uw3",
-      "method": "close_pool",
-      "args": [
-        3
-      ],
-      "tx": "0xf7f02e7f639b5912747552d4c600d0c79af2740608fb4a67c75da6d6492edbcb",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "pool_id": 3,
-        "returned_wei": "2000000000000000000",
-        "status": "OK"
-      }
-    },
-    {
-      "label": "close pool #4",
-      "role": "uw2",
-      "method": "close_pool",
-      "args": [
-        4
-      ],
-      "tx": "0x83b04ad023a3b13d616268aab9a026d891c0b5e379a483ddd0ea0d90af5fe634",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "pool_id": 4,
-        "returned_wei": "0",
-        "status": "OK"
-      }
-    },
-    {
-      "label": "close pool #5",
-      "role": "uw3",
-      "method": "close_pool",
-      "args": [
-        5
-      ],
-      "tx": "0x0072cf96a8f65f2d37ed78688a943132af3dde90d03952858d1311ad6bae1072",
-      "status": "ACCEPTED",
-      "returned": {
-        "claim_with": "claim_payout()",
-        "pool_id": 5,
-        "returned_wei": "1000000000000000000",
-        "status": "OK"
-      }
-    },
-    {
-      "label": "claim_payout uw1 (1.710833 GEN)",
-      "role": "uw1",
-      "method": "claim_payout",
-      "args": [],
-      "tx": "0x41d45347df9ede306292ccd5665dc3046767246b8abcc80904c27c9ad6cbd452",
-      "status": "ACCEPTED",
-      "returned": {
-        "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "1.710833333333333334",
-        "paid_wei": "1710833333333333334",
-        "status": "OK"
-      }
-    },
-    {
       "label": "claim_payout uw2 (3.568333 GEN)",
       "role": "uw2",
       "method": "claim_payout",
       "args": [],
-      "tx": "0xfc835ec4521762c113e115dbdaa5308a18bb773b576387367739685bdd9a2037",
+      "tx": "0x2c518faf02ac700d14a62d31060df89b28a0c9c491b846406a4c2640daed58a1",
       "status": "ACCEPTED",
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
         "paid_gen": "3.568333333333333336",
         "paid_wei": "3568333333333333336",
-        "status": "OK"
-      }
-    },
-    {
-      "label": "claim_payout uw3 (4.182500 GEN)",
-      "role": "uw3",
-      "method": "claim_payout",
-      "args": [],
-      "tx": "0x5b9be17fc5a8635691377e7365877898ab36a8fc91ebc677db02b279e22c19b9",
-      "status": "ACCEPTED",
-      "returned": {
-        "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "4.182500000000000001",
-        "paid_wei": "4182500000000000001",
-        "status": "OK"
-      }
-    },
-    {
-      "label": "claim_payout buyer3 (0.100000 GEN)",
-      "role": "buyer3",
-      "method": "claim_payout",
-      "args": [],
-      "tx": "0x7b579d8bc4876f5a1534a9d770d4137c581ab0d3524ed9f151771173bcaea3bd",
-      "status": "ACCEPTED",
-      "returned": {
-        "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "0.10",
-        "paid_wei": "100000000000000000",
         "status": "OK"
       }
     }

@@ -962,10 +962,12 @@ def _url_key(url: str) -> str:
       - lower-cased; scheme dropped (http and https alike);
       - the #fragment dropped - it is never even sent to the server;
       - trailing slashes dropped;
-      - query parameters in canonical (sorted) order, an empty query dropped;
       - a web.archive.org snapshot is "archive:" + the archived page's key,
         whatever its timestamp: /web/2023.../X and /web/2024.../X are one
         archived source (the archive redirects any timestamp to a capture).
+      - "www." and the bare host are ONE host;
+      - the query string is dropped entirely: no allowlisted evidence page
+        needs one, and `?ref=x` must not make one article two sources.
     So re-submitting the same article cannot re-roll the same reading."""
     t = str(url).strip()
     inner = _archived_target(t)
@@ -975,22 +977,14 @@ def _url_key(url: str) -> str:
     for scheme in ("https://", "http://"):
         if t.startswith(scheme):
             t = t[len(scheme):]
-    k = t.find("#")
-    if k >= 0:
-        t = t[:k]
-    query = ""
-    k = t.find("?")
-    if k >= 0:
-        query = t[k + 1:]
-        t = t[:k]
+    for sep in ("#", "?"):
+        k = t.find(sep)
+        if k >= 0:
+            t = t[:k]
+    if t.startswith("www."):
+        t = t[4:]
     while t.endswith("/"):
         t = t[:-1]
-    parts = []
-    for q in query.split("&"):
-        if q != "":
-            parts.append(q)
-    if len(parts) > 0:
-        t = t + "?" + "&".join(sorted(parts))
     return t
 
 
@@ -1639,12 +1633,13 @@ def _strip_html(html: str) -> str:
 
 
 def _page(url: str) -> tuple:
-    """(ok, text) for an evidence page: a plain GET, HTML stripped to lines,
-    capped. Non-200 is UNREADABLE - which reads as no evidence, never as a
-    verdict."""
+    """(ok, text, status) for an evidence page: a plain GET, HTML stripped to
+    lines, capped. Anything but a 200 with a body - 5xx, 4xx, a timeout, a
+    refused connection - is NOT READ, and `_read_sources` turns it into a
+    RETRY: an outage is never a verdict about the evidence."""
     status, body = _http(url)
     if status != 200 or body == "":
-        return (False, "")
+        return (False, "", status)
     if _host_of(url) == ARCHIVE_HOST:
         # The Wayback toolbar (capture dates, calendars) is archive metadata,
         # not evidence: it must never date a page. Its "FILE ARCHIVED ON"
@@ -1653,7 +1648,7 @@ def _page(url: str) -> tuple:
         b = body.find("<!-- END WAYBACK TOOLBAR INSERT -->")
         if a >= 0 and b > a:
             body = body[:a] + body[b:]
-    return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS])
+    return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS], status)
 
 
 def _select_incident(rows: list, day: int, name: str) -> tuple:
@@ -1877,7 +1872,16 @@ def _read_sources(facts: dict) -> dict:
     pages = []
     name = str(facts.get("protocol_name", ""))
     for url in facts.get("urls", []):
-        ok, text = _page(str(url))
+        ok, text, status = _page(str(url))
+        if not ok:
+            # AN EVIDENCE OUTAGE SETTLES NOTHING, exactly like a DeFi Llama
+            # 5xx: the claim stays FILED, no refile is spent, the page is not
+            # "already judged", and anyone may judge again once it answers.
+            # (A validator agrees with a leader's RETRY only if it sees the
+            # same, so a leader cannot fake an outage.)
+            return {"retry": True, "why": "evidence page " + _short(str(url), 120)
+                    + " answered " + (str(status) if status > 0 else
+                                      "nothing (connection failed)")}
         norm = _norm(text) if ok else ""
         pages.append({"url": str(url), "ok": bool(ok),
                       "named": bool(ok) and _names_protocol(norm, name),
@@ -2475,6 +2479,11 @@ def _coherent(payload: typing.Any, facts: dict) -> bool:
     raw = payload.get("raw")
     if not isinstance(raw, dict):
         return False
+    # A verdict is only ever about pages that were READ. A leader presenting
+    # an unread page as part of a verdict (rather than as a RETRY) is refused.
+    for p in raw.get("pages") or []:
+        if not isinstance(p, dict) or not p.get("ok"):
+            return False
     mine = _derive(facts, raw, payload.get("choice"))
     if not mine.get("ok"):
         return False
@@ -3674,6 +3683,18 @@ class CoverClaim(gl.contract.Contract):
             "prior_bound": int(claim.bound) if mode == "contest" else 0,
         }
 
+    def _mark_read(self, claim: Claim, raw: typing.Any) -> None:
+        """Record the sources a SETTLED judgement actually read (every page of
+        an agreed verdict was read: an unread page makes the round a RETRY).
+        Only these count as "already judged" for refiles and contests."""
+        used = str(claim.used_urls).split(" ")
+        for p in (raw.get("pages") or []) if isinstance(raw, dict) else []:
+            if isinstance(p, dict) and p.get("ok"):
+                k = _url_key(str(p.get("url", "")))
+                if k not in used:
+                    used.append(k)
+        claim.used_urls = " ".join([x for x in used if x])
+
     def _judgeable_at(self, claim: Claim) -> int:
         """When this claim's incident's whole severity window has ended: the
         key's day + JUDGE_AFTER_DAYS. The key's day IS the record's day
@@ -3805,10 +3826,9 @@ class CoverClaim(gl.contract.Contract):
         claim.last_filed_at = u64(now)
         claim.incident_key = key
         claim.urls = " ".join(urls)
-        keys = []
-        for u in urls:
-            keys.append(_url_key(u))
-        claim.used_urls = " ".join(keys)
+        # Nothing is "already judged" until a judgement has READ it
+        # (`_mark_read`): an outage must not use up a source.
+        claim.used_urls = ""
         claim.statement = text
         claim.refile_until = u64(int(cover.claim_deadline))
         self._set_status(claim, CL_FILED)
@@ -3902,11 +3922,6 @@ class CoverClaim(gl.contract.Contract):
             claim.status_before_contest = ""
         claim.incident_key = key
         claim.urls = " ".join(urls)
-        for u in urls:
-            k = _url_key(u)
-            if k not in used:
-                used.append(k)
-        claim.used_urls = " ".join([x for x in used if x])
         claim.statement = _clean(statement, MAX_STATEMENT)
         claim.last_filed_at = u64(now)
         claim.refiles = u32(int(claim.refiles) + 1)
@@ -4073,6 +4088,7 @@ class CoverClaim(gl.contract.Contract):
         # RULE 11: rebuilt from the agreed raw inputs and choice.
         d = _derive(facts, out.get("raw"), out.get("choice"))
         self._record(claim, d, now)
+        self._mark_read(claim, out.get("raw"))
         claim.judging_since = u64(0)
         status, gross = _outcome(str(d["effective"]), int(d["incident_day"]),
                                  int(cover.start), int(cover.end),
@@ -4253,6 +4269,7 @@ class CoverClaim(gl.contract.Contract):
                                 "nothing changed and judge_contest can be retried")
 
         d = _derive(facts, out.get("raw"), out.get("choice"))
+        self._mark_read(claim, out.get("raw"))
         old = str(claim.status)
         claim.contest_classification = str(d["classification"])
         claim.contest_effective = str(d["effective"])

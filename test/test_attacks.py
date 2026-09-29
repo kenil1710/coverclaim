@@ -359,6 +359,7 @@ class Fix4_RefileIdentity(unittest.TestCase):
     def setUp(self):
         self.c = fresh()
         pid = make_pool(self.c, spec=EULER)
+        RENDER[R_EULER + "?b=2&a=1"] = T.TEXT[R_EULER]      # the same article, served
         self.clid = file(self.c, buy(self.c, pid), R_EULER + "?b=2&a=1", key=K_EULER)
         judge(self.c, self.clid, classification="INCONCLUSIVE", peril="NONE")
 
@@ -370,7 +371,8 @@ class Fix4_RefileIdentity(unittest.TestCase):
                          k("https://web.archive.org/web/2024id_/http://rekt.news/euler-rekt#top"))
         self.assertNotEqual(k("https://web.archive.org/web/2024/https://rekt.news/euler-rekt"),
                             k("https://rekt.news/euler-rekt"))
-        self.assertNotEqual(k("https://rekt.news/x?a=1"), k("https://rekt.news/x?a=2"))
+        # round 2: the query string is dropped entirely when comparing sources
+        self.assertEqual(k("https://rekt.news/x?a=1"), k("https://rekt.news/x?a=2"))
 
     def test_query_reordering_and_trailing_slash_are_not_new(self):
         out = send(self.c, ALICE, 0, "refile_claim", self.clid, "", R_EULER + "/?a=1&b=2#z", "same")

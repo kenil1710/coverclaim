@@ -714,12 +714,12 @@ class TestStripHtml(unittest.TestCase):
     def test_page_non_200_unreadable(self):
         install_web()
         WEB[R_EULER] = (404, "<p>Euler reentrancy</p>")
-        self.assertEqual(C._page(R_EULER), (False, ""))
+        self.assertEqual(C._page(R_EULER), (False, "", 404))
 
     def test_page_capped(self):
         install_web()
         WEB[R_EULER] = (200, "<p>" + "a " * 200000 + "</p>")
-        ok, text = C._page(R_EULER)
+        ok, text, _ = C._page(R_EULER)
         self.assertTrue(ok)
         self.assertLessEqual(len(text), C.MAX_PAGE_CHARS)
 
@@ -1175,12 +1175,14 @@ class TestReadSources(unittest.TestCase):
         self.assertFalse(raw["retry"])
         self.assertFalse(raw["tvl"]["ok"])
 
-    def test_page_render_failure_is_unread(self):
+    def test_page_render_failure_is_retry(self):
+        # round 2: an evidence page that fails to load is an OUTAGE - RETRY,
+        # never an unread page inside a verdict
         install_web()
         RENDER[R_EULER] = RuntimeError("WEBPAGE_LOAD_FAILED")
         raw = C._read_sources(euler_facts())
-        self.assertFalse(raw["pages"][0]["ok"])
-        self.assertEqual(raw["pages"][0]["digest"], "")
+        self.assertTrue(raw["retry"])
+        self.assertIn("rekt.news/euler-rekt", raw["why"])
 
     def test_no_tvl_fetch_without_incident(self):
         install_web()
@@ -4020,7 +4022,7 @@ class TestBindingAudit6(unittest.TestCase):
                          "<!-- END WAYBACK TOOLBAR INSERT --><p>Curve was hit.</p>"
                          "<!-- FILE ARCHIVED ON 00:00:00 Jul 31, 2023 AND RETRIEVED --></html>")
         RENDER.pop(url, None)
-        ok_, text = C._page(url)
+        ok_, text, _ = C._page(url)
         self.assertTrue(ok_)
         self.assertEqual(C._dates_in(C._norm(text), 40), [])
 

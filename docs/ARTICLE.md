@@ -69,6 +69,8 @@ So I ran the contract's own code on chain one stage at a time. Stage 1, the inci
 
 **Four holes an independent reviewer found, each with a failing test.** First, a verified pool could be named "Curve DEX" — DeFi Llama's own name — while every article says "Curve Finance", so no evidence would ever name it; now verification stores DeFi Llama's *core* name ("Curve") and evidence is matched on that, whatever the pool is called. Second, a claim could be judged the day after a hack, fixing severity from a two-day TVL window; now nobody can have a claim judged until the incident's whole seven-day window has ended, and a window DeFi Llama has not finished publishing makes the claim inconclusive, never a smaller payout. Third, a griefer approving a tiny claim every 47 hours could keep a settlement batch open forever; now a batch's membership is final when its window closes and late claims settle in their own batch. Fourth, a buyer could re-roll an inconclusive verdict by re-submitting the same article with a `#fragment`; now a source is compared as a source, a key as the record it names, and there are two refiles in all.
 
+**Two more from a second round.** A judgement is permissionless, so an underwriter could trigger it at the moment rekt.news was answering 503: the page read as "unread", the claim came back inconclusive, and — with the first round's rule that a refile needs a *new* source — the buyer could never resubmit that article. Now any evidence page that doesn't answer 200 makes the round a retry that settles nothing, and only pages a judgement actually read count as judged. And `www.rekt.news` or `?ref=x` no longer make one article two sources.
+
 ## What it looks like running
 
 On a demo instance whose covers start 1,521 days before they are bought — same bytes as the real one, one constructor value, labelled DEMO everywhere — the seed replayed real incidents. First, the steward's case: one Curve pool, five covers each spanning **both** of Curve's records, 2022-07-31 to 2023-07-31:
@@ -102,4 +104,4 @@ On the canonical instance, a cover bought today and claimed against Euler's 2023
 
 - App: https://coverclaim.vercel.app
 - Code, probe, audit and evidence: https://github.com/kenil1710/coverclaim
-- 668 offline tests plus the reviewer's 21 regression tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.
+- 668 offline tests plus the reviewer's 32 regression tests (two rounds), every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.

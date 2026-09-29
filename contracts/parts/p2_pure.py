@@ -518,10 +518,12 @@ def _url_key(url: str) -> str:
       - lower-cased; scheme dropped (http and https alike);
       - the #fragment dropped - it is never even sent to the server;
       - trailing slashes dropped;
-      - query parameters in canonical (sorted) order, an empty query dropped;
       - a web.archive.org snapshot is "archive:" + the archived page's key,
         whatever its timestamp: /web/2023.../X and /web/2024.../X are one
         archived source (the archive redirects any timestamp to a capture).
+      - "www." and the bare host are ONE host;
+      - the query string is dropped entirely: no allowlisted evidence page
+        needs one, and `?ref=x` must not make one article two sources.
     So re-submitting the same article cannot re-roll the same reading."""
     t = str(url).strip()
     inner = _archived_target(t)
@@ -531,22 +533,14 @@ def _url_key(url: str) -> str:
     for scheme in ("https://", "http://"):
         if t.startswith(scheme):
             t = t[len(scheme):]
-    k = t.find("#")
-    if k >= 0:
-        t = t[:k]
-    query = ""
-    k = t.find("?")
-    if k >= 0:
-        query = t[k + 1:]
-        t = t[:k]
+    for sep in ("#", "?"):
+        k = t.find(sep)
+        if k >= 0:
+            t = t[:k]
+    if t.startswith("www."):
+        t = t[4:]
     while t.endswith("/"):
         t = t[:-1]
-    parts = []
-    for q in query.split("&"):
-        if q != "":
-            parts.append(q)
-    if len(parts) > 0:
-        t = t + "?" + "&".join(sorted(parts))
     return t
 
 

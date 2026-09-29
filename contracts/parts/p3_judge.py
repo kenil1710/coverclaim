@@ -135,12 +135,13 @@ def _strip_html(html: str) -> str:
 
 
 def _page(url: str) -> tuple:
-    """(ok, text) for an evidence page: a plain GET, HTML stripped to lines,
-    capped. Non-200 is UNREADABLE - which reads as no evidence, never as a
-    verdict."""
+    """(ok, text, status) for an evidence page: a plain GET, HTML stripped to
+    lines, capped. Anything but a 200 with a body - 5xx, 4xx, a timeout, a
+    refused connection - is NOT READ, and `_read_sources` turns it into a
+    RETRY: an outage is never a verdict about the evidence."""
     status, body = _http(url)
     if status != 200 or body == "":
-        return (False, "")
+        return (False, "", status)
     if _host_of(url) == ARCHIVE_HOST:
         # The Wayback toolbar (capture dates, calendars) is archive metadata,
         # not evidence: it must never date a page. Its "FILE ARCHIVED ON"
@@ -149,7 +150,7 @@ def _page(url: str) -> tuple:
         b = body.find("<!-- END WAYBACK TOOLBAR INSERT -->")
         if a >= 0 and b > a:
             body = body[:a] + body[b:]
-    return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS])
+    return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS], status)
 
 
 def _select_incident(rows: list, day: int, name: str) -> tuple:
@@ -373,7 +374,16 @@ def _read_sources(facts: dict) -> dict:
     pages = []
     name = str(facts.get("protocol_name", ""))
     for url in facts.get("urls", []):
-        ok, text = _page(str(url))
+        ok, text, status = _page(str(url))
+        if not ok:
+            # AN EVIDENCE OUTAGE SETTLES NOTHING, exactly like a DeFi Llama
+            # 5xx: the claim stays FILED, no refile is spent, the page is not
+            # "already judged", and anyone may judge again once it answers.
+            # (A validator agrees with a leader's RETRY only if it sees the
+            # same, so a leader cannot fake an outage.)
+            return {"retry": True, "why": "evidence page " + _short(str(url), 120)
+                    + " answered " + (str(status) if status > 0 else
+                                      "nothing (connection failed)")}
         norm = _norm(text) if ok else ""
         pages.append({"url": str(url), "ok": bool(ok),
                       "named": bool(ok) and _names_protocol(norm, name),
@@ -971,6 +981,11 @@ def _coherent(payload: typing.Any, facts: dict) -> bool:
     raw = payload.get("raw")
     if not isinstance(raw, dict):
         return False
+    # A verdict is only ever about pages that were READ. A leader presenting
+    # an unread page as part of a verdict (rather than as a RETRY) is refused.
+    for p in raw.get("pages") or []:
+        if not isinstance(p, dict) or not p.get("ok"):
+            return False
     mine = _derive(facts, raw, payload.get("choice"))
     if not mine.get("ok"):
         return False

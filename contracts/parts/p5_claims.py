@@ -34,6 +34,18 @@
             "prior_bound": int(claim.bound) if mode == "contest" else 0,
         }
 
+    def _mark_read(self, claim: Claim, raw: typing.Any) -> None:
+        """Record the sources a SETTLED judgement actually read (every page of
+        an agreed verdict was read: an unread page makes the round a RETRY).
+        Only these count as "already judged" for refiles and contests."""
+        used = str(claim.used_urls).split(" ")
+        for p in (raw.get("pages") or []) if isinstance(raw, dict) else []:
+            if isinstance(p, dict) and p.get("ok"):
+                k = _url_key(str(p.get("url", "")))
+                if k not in used:
+                    used.append(k)
+        claim.used_urls = " ".join([x for x in used if x])
+
     def _judgeable_at(self, claim: Claim) -> int:
         """When this claim's incident's whole severity window has ended: the
         key's day + JUDGE_AFTER_DAYS. The key's day IS the record's day
@@ -165,10 +177,9 @@
         claim.last_filed_at = u64(now)
         claim.incident_key = key
         claim.urls = " ".join(urls)
-        keys = []
-        for u in urls:
-            keys.append(_url_key(u))
-        claim.used_urls = " ".join(keys)
+        # Nothing is "already judged" until a judgement has READ it
+        # (`_mark_read`): an outage must not use up a source.
+        claim.used_urls = ""
         claim.statement = text
         claim.refile_until = u64(int(cover.claim_deadline))
         self._set_status(claim, CL_FILED)
@@ -262,11 +273,6 @@
             claim.status_before_contest = ""
         claim.incident_key = key
         claim.urls = " ".join(urls)
-        for u in urls:
-            k = _url_key(u)
-            if k not in used:
-                used.append(k)
-        claim.used_urls = " ".join([x for x in used if x])
         claim.statement = _clean(statement, MAX_STATEMENT)
         claim.last_filed_at = u64(now)
         claim.refiles = u32(int(claim.refiles) + 1)
@@ -433,6 +439,7 @@
         # RULE 11: rebuilt from the agreed raw inputs and choice.
         d = _derive(facts, out.get("raw"), out.get("choice"))
         self._record(claim, d, now)
+        self._mark_read(claim, out.get("raw"))
         claim.judging_since = u64(0)
         status, gross = _outcome(str(d["effective"]), int(d["incident_day"]),
                                  int(cover.start), int(cover.end),
@@ -613,6 +620,7 @@
                                 "nothing changed and judge_contest can be retried")
 
         d = _derive(facts, out.get("raw"), out.get("choice"))
+        self._mark_read(claim, out.get("raw"))
         old = str(claim.status)
         claim.contest_classification = str(d["classification"])
         claim.contest_effective = str(d["effective"])

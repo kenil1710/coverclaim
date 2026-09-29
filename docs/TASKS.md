@@ -81,3 +81,12 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] Vercel production env + deploy; live bundle only new addresses
 - [x] README / ARTICLE / NOTES / in-app docs
 - [x] reseeded (27/27 on chain incl. Curve proof on a "Curve DEX" pool, late-approval batch, fragment refile refused); drained to 0; audit 69/0; RESUBMISSION; pushed; GitHub bytes verified
+
+## Independent review, round 2 (test/test_attacks_round2.py)
+- [x] 5 evidence outage: any non-200 page → RETRY (claim FILED, no refile spent, nothing marked judged); only read pages recorded as judged (`_mark_read`); coherence refuses unread pages in a verdict
+- [x] 6 URL identity: www. = bare host; query string dropped
+- [x] round 2 11/11 (Finding 5 precondition updated to the specified fix); round 1 21/21; test_logic 668/668
+- [x] redeployed all three + staging instance (early-judging demo), byte-for-byte vs repo
+- [x] previous full evidence archived in docs/superseded/ and linked from EVIDENCE.md
+- [x] Vercel production env + deploy; live bundle only new addresses; in-app docs, README, ARTICLE
+- [x] scoped seed (17/17 on chain: Curve proof, pro-rata, contest, outage retry, early-judging refusal on staging); demo drained to 0; audit 60/0; RESUBMISSION; pushed; GitHub bytes; ~/Desktop/coverclaim-addresses.txt

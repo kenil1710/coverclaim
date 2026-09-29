@@ -40,6 +40,7 @@ for (const [name, src] of [
   ["CoverClaim", "contracts/CoverClaim.py"],
   ["CoverClaimDemo", "contracts/CoverClaim.py"],
   ["CoverRegistry", "contracts/CoverRegistry.py"],
+  ["CoverClaimStaging", "contracts/CoverClaim.py"],
 ]) {
   if (!dep[name]) continue;
   const local = readFileSync(new URL(src, root));

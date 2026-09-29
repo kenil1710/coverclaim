@@ -8,7 +8,7 @@ DeFi users lose billions to hacks. Cover exists, but claims are usually decided 
 
 - **Live app:** https://coverclaim.vercel.app
 - **Network:** GenLayer Studio Dev, chain 61997
-- **Tests:** 668 offline tests (`python3 test/test_logic.py`) plus the independent review's 21 regression tests (`python3 test/test_attacks.py`); every loophole below has its own test class
+- **Tests:** 668 offline tests (`python3 test/test_logic.py`) plus the independent review's regression tests: round 1 (21, `python3 test/test_attacks.py`) and round 2 (11, `python3 test/test_attacks_round2.py`); every loophole below has its own test class
 - **Resubmission (steward fix):** [RESUBMISSION.md](RESUBMISSION.md)
 - **Audit:** [docs/AUDIT.md](docs/AUDIT.md) · **Probe:** [docs/PROBE.md](docs/PROBE.md) · **Seeded evidence:** [docs/EVIDENCE.md](docs/EVIDENCE.md) · **Design notes:** [contracts/NOTES.md](contracts/NOTES.md) · **Article draft:** [docs/ARTICLE.md](docs/ARTICLE.md)
 
@@ -16,11 +16,11 @@ DeFi users lose billions to hacks. Cover exists, but claims are usually decided 
 
 | contract | address | what it is |
 |---|---|---|
-| `CoverClaim` (canonical) | `0x039BCD3b9a12f81e1069dBbe9122A4B2e73db937` | backdating enforced strictly; 30-day claim window, 72 h settlement, 48 h contest, 24 h stall |
-| `CoverClaimDemo` — **DEMO** | `0x33e464ebF31eEaeD31fDB16D38CCb97FB30A8339` | **same bytes**, one constructor value: `demo_backdate_days = 1521`; windows in minutes |
-| `CoverRegistry` | `0x045C4C2BDE62CA730ceDf9B3ea810fbd645f2c6b` | zero-custody consumer: `is_covered(address, protocol)` — `protocol` is the pool's frozen DeFi Llama slug, id, or `slug:id`, never its display name — and `get_active_cover(address)` |
+| `CoverClaim` (canonical) | `0x71Bf9047F8B2DDFEf086116846fb65d2a974719f` | backdating enforced strictly; 30-day claim window, 72 h settlement, 48 h contest, 24 h stall |
+| `CoverClaimDemo` — **DEMO** | `0x6FaA9942421467BA5A386B455a71f3baB04aDE84` | **same bytes**, one constructor value: `demo_backdate_days = 1521`; windows in minutes |
+| `CoverRegistry` | `0x1e6D0F18F82A1B73C0Afd36799703CA5Ed8A111f` | zero-custody consumer: `is_covered(address, protocol)` — `protocol` is the pool's frozen DeFi Llama slug, id, or `slug:id`, never its display name — and `get_active_cover(address)` |
 
-The source in this repository **is** the source on chain: `node test/verify_onchain.mjs` reads each contract's code back with `gen_getContractCode` and compares it byte for byte (sha256 `d901d871…` for both CoverClaim instances). Earlier deployments are archived in `docs/previous-deployment/` (`1-first/`; `2-waitgate/` — the one the steward reviewed, before the one-event binding; `3-one-event/` — the binding, before undated pages were also kept from the classifier; `4-matched-pages/` — before the binding audit; `5-binding-audit/` — before protocol-domain binding and pool verification; `6-verification-view-bug/` — pool verification, before the view fix that stopped a failed-then-closed pool reading "verified"; `7-before-review-fixes/` — before the independent review's four fixes).
+The source in this repository **is** the source on chain: `node test/verify_onchain.mjs` reads each contract's code back with `gen_getContractCode` and compares it byte for byte (sha256 `f5b18afd…` for both CoverClaim instances). Earlier deployments are archived in `docs/previous-deployment/` (`1-first/`; `2-waitgate/` — the one the steward reviewed, before the one-event binding; `3-one-event/` — the binding, before undated pages were also kept from the classifier; `4-matched-pages/` — before the binding audit; `5-binding-audit/` — before protocol-domain binding and pool verification; `6-verification-view-bug/` — pool verification, before the view fix that stopped a failed-then-closed pool reading "verified"; `7-before-review-fixes/` — before the independent review's four fixes). The full evidence of the deployment before review round 2 — every scenario, 27/27 — is in [`docs/superseded/`](docs/superseded/).
 
 ### About the DEMO instance
 
@@ -46,9 +46,10 @@ Real hacks are in the past, and the canonical instance rejects a claim on any in
 ### Exception paths
 
 - **Waiting period** — a claim cannot be filed until it ends (refused mechanically, "claimable after …"); incidents dated inside it are backdated.
-- **Inconclusive** — `refile_claim(claim_id, incident_key, evidence_urls, statement)` with at least one new source or a different incident, free, until the claim deadline. **Two refiles per claim in all**, whatever the reason (inconclusive, mismatch, stall). "New" means a new *source*: the same page with a `#fragment`, a trailing slash, re-ordered query parameters, or another Wayback timestamp of it is the same source; the same record's key written with or without its name is the same incident.
+- **Inconclusive** — `refile_claim(claim_id, incident_key, evidence_urls, statement)` with at least one new source or a different incident, free, until the claim deadline. **Two refiles per claim in all**, whatever the reason (inconclusive, mismatch, stall). "New" means a new *source*: the same page with `www.`, a `#fragment`, a trailing slash, any query string, or another Wayback timestamp of it is the same source; the same record's key written with or without its name is the same incident. Only pages a judgement actually **read** count as judged sources.
 - **Evidence mismatch** — the evidence is not about the selected incident. No payout, no bond or premium movement, not contestable; the claim is **not consumed**: refile with evidence about that incident or a corrected key (`""` keeps the current one) — within the same two-refile limit.
 - **Pool expiry** — covers must end within the pool's term; `release_cover` credits the premium to the underwriter once a cover's claim window closes; `close_pool` only when no cover is live.
+- **Evidence outage** — if any evidence page answers anything but 200 (503, 403, 404, a timeout, a refused connection), the judgement is a **RETRY**, exactly like a DeFi Llama outage: nothing settles, the claim stays FILED, no refile is spent, and the page is not recorded as judged. Anyone may judge again once it answers. A page that never comes back is replaced through the stall path below.
 - **Stalled consensus** — `settle_stalled` (permissionless, **works while paused**) returns a stuck claim to FILED and lets the buyer refile, or drops a stuck contest and returns the bond. No money is lost either way.
 - **Contest** — the losing side, once, within the contest window, with a bond and **novel** evidence (new URLs, and written grounds that add sentences the claim never said — verbatim, re-punctuated or repeated text is refused before scoring). Flip → bond back; hold → bond to the other side.
 
@@ -74,7 +75,7 @@ Real hacks are in the past, and the canonical instance rejects a claim on any in
 | WAITING-PERIOD GATE | canonical | claim filed on day 0 of a 7-day wait | refused mechanically, "claimable after …"; the cover's one claim is not spent |
 | REGISTRY | canonical | waiting-0 cover on Curve | `CoverRegistry.attest` → covered = true |
 
-Every transaction hash: [RESUBMISSION.md](RESUBMISSION.md) (the multi-incident proof) and [docs/EVIDENCE.md](docs/EVIDENCE.md) (all scenarios, derived by reading the chain, `node test/collect.mjs`). After seeding, the demo instance was drained: every cover released, every pool closed, every balance withdrawn — books at exactly 0 ([docs/drain-evidence.json](docs/drain-evidence.json)).
+**This deployment ran a scoped set** (review round 2): the full Curve proof, pro-rata, a contest, an evidence-outage retry and the early-judging refusal. The table above is the full set as seeded on the previous deployment; its complete evidence is archived in [docs/superseded/](docs/superseded/). Every transaction hash: [RESUBMISSION.md](RESUBMISSION.md) (the multi-incident proof) and [docs/EVIDENCE.md](docs/EVIDENCE.md) (all scenarios, derived by reading the chain, `node test/collect.mjs`). After seeding, the demo instance was drained: every cover released, every pool closed, every balance withdrawn — books at exactly 0 ([docs/drain-evidence.json](docs/drain-evidence.json)).
 
 **Measured delivery gap.** Studio Dev finalizes `claim_payout` transactions and the contract's books drop by exactly the amount withdrawn, but — as measured on earlier deployments and on this one — the network may post the transfer without executing it. `get_stats` publishes the contract's real chain balance beside its books as `undelivered_wei` rather than hiding the gap (figure for this deployment in docs/drain-evidence.json).
 
@@ -98,6 +99,8 @@ Every transaction hash: [RESUBMISSION.md](RESUBMISSION.md) (the multi-incident p
 | 14 | the underwriter judging at once to fix severity from a partial TVL window | `judge_claim` / `judge_contest` refused before incident day + 8; an unpublished window is INCONCLUSIVE, never a lower bucket | `test_attacks.py` Finding2, Fix2 |
 | 15 | late approvals every 47 h holding a settlement batch open | membership final when the window closes; later approvals settle in a new batch | `test_attacks.py` Finding3, Fix3 |
 | 16 | re-rolling the same evidence by re-spelling the URL or the key | source identity (fragment, slash, query order, Wayback timestamp) and canonical incident identity; one combined limit of two refiles | `test_attacks.py` Finding4, Fix4 |
+| 17 | judging at the moment an evidence page is down, to end the claim INCONCLUSIVE and use up its source | any non-200 page makes the round a RETRY that settles nothing; only pages actually read count as judged | `test_attacks_round2.py` Finding5, Fix5 |
+| 18 | `www.` or `?ref=x` making one article a "new" source | `www.` and the bare host are one host; the query string is dropped | `test_attacks_round2.py` Finding6, Fix6 |
 | 9 | owner pausing to freeze money | pause gates only create_pool / add_capacity / buy_cover | `TestLoophole09_…` |
 | 10 | payment that also reads the clock | only `claim_payout` transfers and it reads no clock; everything else credits | `TestLoophole10_…` |
 
@@ -109,7 +112,8 @@ contracts/CoverRegistry.py   the zero-custody consumer
 contracts/_probe*.py         throwaway probes (STEP 1)
 contracts/NOTES.md           design reasoning and hazards
 test/test_logic.py           668 offline tests, stdlib only
-test/test_attacks.py         the independent review's regression tests (21)
+test/test_attacks.py         the independent review's regression tests, round 1 (21)
+test/test_attacks_round2.py  round 2 (11)
 test/*.mjs                   probe, deploy, seed, collect, verify_onchain
 tools/audit.py               STEP 6 audit → docs/AUDIT.md
 frontend/                    Next.js app (obsidian + signal orange)

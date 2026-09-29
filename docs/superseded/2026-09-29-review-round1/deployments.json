@@ -1,0 +1,54 @@
+{
+  "deployments": {
+    "studiodev": {
+      "network": "studiodev",
+      "chain_id": 61997,
+      "CoverClaim": {
+        "address": "0x039BCD3b9a12f81e1069dBbe9122A4B2e73db937",
+        "deploy_tx": "0x81b159036b3e0131ccfae8d97ecbf2c03a448f7d468338a62f8a2f367d73bcfb",
+        "source_bytes": 239268,
+        "source_sha256": "d901d87195097391f5b9ca29a5ec339bb8cb582674f65e14fd57199fcfa1151b",
+        "policy_version": "1.0.0",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "demo": false,
+        "demo_backdate_days": 0,
+        "claim_window_s": 2592000,
+        "settlement_window_s": 259200,
+        "contest_window_s": 172800,
+        "stall_ttl_s": 86400,
+        "buy_cooldown_s": 60,
+        "contest_bond_wei": "100000000000000000",
+        "deployed_at": "2026-09-29T13:57:14.811Z"
+      },
+      "explorer": "https://explorer-studio-dev.genlayer.com/",
+      "CoverClaimDemo": {
+        "address": "0x33e464ebF31eEaeD31fDB16D38CCb97FB30A8339",
+        "deploy_tx": "0x9b2ec2eabe733a8fd1109d226de7d3cecf632ce38809b3957af6ac1820460670",
+        "source_bytes": 239268,
+        "source_sha256": "d901d87195097391f5b9ca29a5ec339bb8cb582674f65e14fd57199fcfa1151b",
+        "policy_version": "1.0.0",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "demo": true,
+        "demo_backdate_days": 1521,
+        "claim_window_s": 2700,
+        "settlement_window_s": 900,
+        "contest_window_s": 900,
+        "stall_ttl_s": 600,
+        "buy_cooldown_s": 10,
+        "contest_bond_wei": "100000000000000000",
+        "deployed_at": "2026-09-29T13:57:25.177Z"
+      },
+      "CoverRegistry": {
+        "address": "0x045C4C2BDE62CA730ceDf9B3ea810fbd645f2c6b",
+        "deploy_tx": "0xe42c25b72bca5f83934a96bd13de6f064f4d2496cbf128d7b033d0a9f901edf4",
+        "source_bytes": 8239,
+        "source_sha256": "7aa733788f6cff508768c0377bc002059dc1ea178dabfb3a2e9d7773193094b1",
+        "coverclaim": "0x039BCD3b9a12f81e1069dBbe9122A4B2e73db937",
+        "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
+        "custody": false,
+        "payable_methods": 0,
+        "deployed_at": "2026-09-29T13:57:33.713Z"
+      }
+    }
+  }
+}

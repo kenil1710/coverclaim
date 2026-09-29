@@ -75,6 +75,14 @@ const VARIANTS = {
   },
 };
 
+// STAGING: same bytes, covers start ONE day before purchase, so a cover
+// bought today can name today's date - the only way to show the
+// early-judging refusal on chain when no real incident is under 8 days old.
+VARIANTS.CoverClaimStaging = {
+  label: "STAGING: covers backdated 1 day; windows in minutes (early-judging demonstration only)",
+  args: [1, 45 * 60, 15 * 60, 15 * 60, 10 * 60, 10, GEN / 10n],
+};
+
 const only = argOf("only");
 const wanted = only ? only.split(",") : ["CoverClaim", "CoverClaimDemo", "CoverRegistry"];
 

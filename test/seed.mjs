@@ -67,6 +67,8 @@ const URL_ = {
   curveVyper: "https://rekt.news/curve-vyper-rekt",
   multichain: "https://rekt.news/multichain-r3kt",
   tornado: "https://rekt.news/tornado-gov-rekt",
+  // answers 500 (rekt.news for a page that does not exist): an evidence outage
+  outage: "https://rekt.news/coverclaim-evidence-outage-probe",
 };
 
 for (const r of Object.keys(acc)) {
@@ -210,6 +212,141 @@ if (part === "euler-covered") {
     const owed = await view(DEMO, "payout_of", [acc[role].address]);
     if (BigInt(owed.owed_wei) > 0n) await step(`demo-payout-${role}-2`, DEMO, role, "claim_payout", []);
   }
+}
+
+if (part === "round2") {
+  // ROUND 2 (scoped): the full Curve proof, pro-rata, a contest, an evidence
+  // outage (RETRY), and - on the staging instance - the early-judging refusal.
+  console.log("\n=== DEMO (round 2)", DEMO);
+  EV.scope = "round2";
+  const P = {};
+  P.euler = await newPool(DEMO, "uw1", "demo-euler-pool", SPEC.euler, 3n * GEN);
+  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, name: "Curve DEX", wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 4n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
+  P.prorata = await newPool(DEMO, "uw2", "demo-euler-prorata-pool", { ...SPEC.euler, wording: "Thin pool: 50% collateral. Claims on one incident beyond capital are paid pro-rata." }, GEN, { coll: 5000, max: GEN });
+  EV.demo = { pools: P, covers: {}, claims: {} };
+  save();
+
+  // MULTI-INCIDENT PROOF, FIRST: one Curve pool, one cover window spanning
+  // both records. Each claim names a record; the evidence must be about it.
+  const M = {};
+  const mc = {};
+  for (const [id, role] of [["m1", "buyer2"], ["m2", "buyer3"], ["m3", "buyer4"], ["m4", "buyer5"], ["m5", "buyer6"], ["m6", "buyer3"], ["m7", "buyer4"]]) {
+    mc[id] = await newCover(DEMO, role, `multi-${id}-cover`, P.curve, GEN / 2n, 365);
+  }
+  const cv = await view(DEMO, "get_cover", [mc.m1]);
+  console.log(`  curve cover window ${new Date(cv.start * 1000).toISOString()} .. ${new Date(cv.end * 1000).toISOString()}, waiting ends ${new Date(cv.waiting_ends * 1000).toISOString()}`);
+  for (const k of [KEY.curveDns, KEY.curveVyper]) {
+    const chk = await view(DEMO, "check_incident", [mc.m1, k]);
+    console.log(`  check_incident ${k}: ok=${chk.ok} ${chk.reason ?? ""}`);
+  }
+  M.m1 = await newClaim(DEMO, "buyer2", "multi-m1-file", mc.m1, KEY.curveVyper, URL_.curveVyper,
+    "Curve pools were drained through the Vyper reentrancy bug on 30 July 2023.");
+  M.m2 = await newClaim(DEMO, "buyer3", "multi-m2-file", mc.m2, KEY.curveDns, URL_.curveVyper,
+    "Vyper evidence filed against the 2022 DNS record.");
+  M.m3 = await newClaim(DEMO, "buyer4", "multi-m3-file", mc.m3, KEY.curveVyper, URL_.curveDns,
+    "DNS evidence filed against the 2023 Vyper record.");
+  M.m4 = await newClaim(DEMO, "buyer5", "multi-m4-file", mc.m4, KEY.curveDns, URL_.curveDns,
+    "Curve's front end was hijacked through DNS on 9 August 2022.");
+  M.m5 = await newClaim(DEMO, "buyer6", "multi-m5-file", mc.m5, KEY.curveVyper, URL_.curveDns,
+    "Wrong evidence first; refiled with the right article.");
+  // MIXED EVIDENCE: two pages, only one about the selected record. Only the
+  // bound page may reach the classifier.
+  M.m6 = await newClaim(DEMO, "buyer3", "multi-m6-file", mc.m6, KEY.curveDns, `${URL_.curveDns} ${URL_.curveVyper}`,
+    "DNS record; the DNS article and the Vyper article both attached.");
+  M.m7 = await newClaim(DEMO, "buyer4", "multi-m7-file", mc.m7, KEY.curveVyper, `${URL_.curveVyper} ${URL_.curveDns}`,
+    "Vyper record; the Vyper article and the DNS article both attached.");
+  EV.demo.multi = { covers: mc, claims: M };
+  save();
+  // M5 first: a mismatch, then a refile inside the claim window.
+  await step("multi-m5-judge-mismatch", DEMO, "trigger", "judge_claim", [M.m5]);
+  // The same DNS page with a #fragment is not a new source (review fix 4).
+  await step("multi-m5-refile-same-page-refused", DEMO, "buyer6", "refile_claim", [M.m5, "", URL_.curveDns + "#again",
+    "The same article, re-spelled."]);
+  await step("multi-m5-refile", DEMO, "buyer6", "refile_claim", [M.m5, "", URL_.curveVyper,
+    "Refiled with the rekt.news report of the Vyper incident itself."]);
+  await step("multi-m1-judge", DEMO, "trigger", "judge_claim", [M.m1]);
+  await step("multi-m2-judge", DEMO, "trigger", "judge_claim", [M.m2]);
+  await step("multi-m3-judge", DEMO, "trigger", "judge_claim", [M.m3]);
+  await step("multi-m4-judge", DEMO, "trigger", "judge_claim", [M.m4]);
+  await step("multi-m5-judge-after-refile", DEMO, "trigger", "judge_claim", [M.m5]);
+  await step("multi-m6-judge", DEMO, "trigger", "judge_claim", [M.m6]);
+  await step("multi-m7-judge", DEMO, "trigger", "judge_claim", [M.m7]);
+
+  const C = {}, K = {};
+  C.covered = await newCover(DEMO, "buyer1", "demo-covered-cover", P.euler, GEN, 365);
+  C.outage = await newCover(DEMO, "buyer4", "demo-outage-cover", P.euler, GEN / 2n, 365);
+  C.prorataA = await newCover(DEMO, "buyer5", "demo-prorata-cover-a", P.prorata, GEN, 365);
+  C.prorataB = await newCover(DEMO, "buyer6", "demo-prorata-cover-b", P.prorata, GEN, 365);
+  K.covered = await newClaim(DEMO, "buyer1", "demo-covered-claim", C.covered, KEY.euler, URL_.euler,
+    "Euler V1 was drained on 13 March 2023 via the donateToReserves flaw.");
+  K.prorataA = await newClaim(DEMO, "buyer5", "demo-prorata-claim-a", C.prorataA, KEY.euler, URL_.euler, "Euler exploit, March 2023.");
+  K.prorataB = await newClaim(DEMO, "buyer6", "demo-prorata-claim-b", C.prorataB, KEY.euler + ":Euler V1", URL_.eulerArchive, "Euler exploit (archived report).");
+  // EVIDENCE OUTAGE: the page answers 500. The judgement must be a RETRY.
+  K.outage = await newClaim(DEMO, "buyer4", "demo-outage-claim", C.outage, KEY.euler, URL_.outage,
+    "Filed with a page that is answering 500 right now.");
+  EV.demo.covers = C;
+  EV.demo.claims = K;
+  save();
+
+  await step("demo-outage-judge-retry", DEMO, "trigger", "judge_claim", [K.outage]);
+  await step("demo-covered-judge", DEMO, "trigger", "judge_claim", [K.covered]);
+  const bond = BigInt((await view(DEMO, "get_config")).contest_bond_wei);
+  await step("demo-contest", DEMO, "uw1", "contest", [K.covered, URL_.eulerPM,
+    "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it."], bond);
+  await step("demo-contest-judge", DEMO, "trigger", "judge_contest", [K.covered]);
+  await step("demo-prorata-judge-a", DEMO, "trigger", "judge_claim", [K.prorataA]);
+  await step("demo-prorata-judge-b", DEMO, "trigger", "judge_claim", [K.prorataB]);
+
+  // The outage claim was never consumed: once the stall window passes the
+  // buyer replaces the dead page with the real article and it is judged.
+  const ttl = (await view(DEMO, "get_config")).stall_ttl_s;
+  await waitUntil("stall window on the outage claim", async () => {
+    const cl = await view(DEMO, "get_claim", [K.outage]);
+    const cfg = await view(DEMO, "get_config");
+    return cfg.now - cl.last_filed_at >= ttl + 5;
+  });
+  await step("demo-outage-settle-stalled", DEMO, "trigger", "settle_stalled", [K.outage]);
+  await step("demo-outage-refile", DEMO, "buyer4", "refile_claim", [K.outage, "", URL_.euler,
+    "The page that was down is replaced by the rekt.news article."]);
+  await step("demo-outage-judge-after", DEMO, "trigger", "judge_claim", [K.outage]);
+  save();
+
+  await waitUntil("settlement windows", async () => {
+    const b = await view(DEMO, "get_batches", [0, 100]);
+    const cfg = await view(DEMO, "get_config");
+    const open = b.items.filter((x) => x.status === "OPEN");
+    if (open.length === 0) return true;
+    let all = true;
+    for (const x of open) {
+      const members = await Promise.all(x.claim_ids.map((id) => view(DEMO, "get_claim", [id])));
+      const ready = cfg.now >= x.closes_at && members.every((m) => m.status !== "APPROVED" || m.contest_status !== "" || cfg.now > m.contest_window_closes);
+      if (ready) await step(`demo-finalize-batch-${x.batch_id}`, DEMO, "trigger", "finalize_incident", [x.batch_id]);
+      else all = false;
+    }
+    return all;
+  });
+  for (const role of ["buyer1", "buyer2", "buyer4", "buyer5", "buyer6", "uw1", "uw2"]) {
+    const owed = await view(DEMO, "payout_of", [acc[role].address]);
+    if (BigInt(owed.owed_wei) > 0n) await step(`demo-payout-${role}`, DEMO, role, "claim_payout", []);
+  }
+  save();
+}
+
+if (part === "round2" && dep.CoverClaimStaging) {
+  // EARLY-JUDGING REFUSAL, on the staging instance (same bytes, covers start
+  // ONE day before purchase, so a cover bought now can name today's date).
+  // No real incident is 8 days old inside a cover today, so the refusal is
+  // shown on a key dated today: the gate fires before any source is read.
+  const ST = dep.CoverClaimStaging.address;
+  console.log("\n=== STAGING (early judging)", ST);
+  const pool = await newPool(ST, "uw1", "staging-euler-pool", SPEC.euler, GEN, { wait: 0, term: 30 });
+  const cover = await newCover(ST, "buyer1", "staging-cover", pool, GEN / 100n, 30);
+  const today = new Date((await view(ST, "get_config")).now * 1000).toISOString().slice(0, 10);
+  const claim = await newClaim(ST, "buyer1", "staging-claim-today", cover, "1183:" + today, URL_.euler,
+    "Filed on the incident day: judging must wait for the whole 7-day window.");
+  await step("staging-judge-early-refused", ST, "trigger", "judge_claim", [claim]);
+  EV.staging = { address: ST, pool, cover, claim, key: "1183:" + today };
+  save();
 }
 
 if (part === "all" || part === "demo") {

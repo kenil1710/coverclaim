@@ -1,0 +1,157 @@
+{
+  "at": "2026-09-29T16:18:27.360Z",
+  "pools": [
+    {
+      "id": 1,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 2,
+      "status": "OPEN",
+      "capital_wei": "3325000000000000000",
+      "locked_wei": "2000000000000000000",
+      "premiums_held_wei": "243333333333333336",
+      "active_covers": 4
+    },
+    {
+      "id": 3,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    }
+  ],
+  "stats": {
+    "balance_wei": "3568333333333333336",
+    "held_wei": "3568333333333333336",
+    "payable_wei": "0",
+    "locked_wei": "2000000000000000000",
+    "capital_wei": "3325000000000000000",
+    "bonds_wei": "0",
+    "chain_balance_wei": "8951666666666666673",
+    "undelivered_wei": "5383333333333333337",
+    "ledger_balanced": true,
+    "held_matches_books": true
+  },
+  "steps": [
+    {
+      "label": "release cover #2",
+      "role": "trigger",
+      "method": "release_cover",
+      "args": [
+        2
+      ],
+      "tx": "0xaa3f10de909e05d832b130ccdaadaf0966fccffd2b7c7a32ea05444834560b03",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_deadline": 1790698799,
+        "claim_with": "claim_payout()",
+        "reason": "cover #2 can still be claimed on for 169s",
+        "refunded_wei": "0",
+        "status": "REJECTED"
+      }
+    },
+    {
+      "label": "release cover #3",
+      "role": "trigger",
+      "method": "release_cover",
+      "args": [
+        3
+      ],
+      "tx": "0xeb26d7110936bbf4bf01e0401566db3c19aab6061c4fffe15c8b74132fbc752f",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_deadline": 1790698813,
+        "claim_with": "claim_payout()",
+        "reason": "cover #3 can still be claimed on for 172s",
+        "refunded_wei": "0",
+        "status": "REJECTED"
+      }
+    },
+    {
+      "label": "release cover #4",
+      "role": "trigger",
+      "method": "release_cover",
+      "args": [
+        4
+      ],
+      "tx": "0x642a9dba885adee171b5d08cb4f7be12cf1eb68acddf9ce67f989e4b741784e6",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_deadline": 1790698825,
+        "claim_with": "claim_payout()",
+        "reason": "cover #4 can still be claimed on for 177s",
+        "refunded_wei": "0",
+        "status": "REJECTED"
+      }
+    },
+    {
+      "label": "release cover #6",
+      "role": "trigger",
+      "method": "release_cover",
+      "args": [
+        6
+      ],
+      "tx": "0x93989856a2a9bc80278c15995b94a5a14dcc047356797493a1c6df988f7003c8",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_deadline": 1790698850,
+        "claim_with": "claim_payout()",
+        "reason": "cover #6 can still be claimed on for 194s",
+        "refunded_wei": "0",
+        "status": "REJECTED"
+      }
+    },
+    {
+      "label": "close pool #1",
+      "role": "uw1",
+      "method": "close_pool",
+      "args": [
+        1
+      ],
+      "tx": "0x769161254db0b609d60eb202341345fd5a05186dbb8377c2be6959806118a854",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_with": "claim_payout()",
+        "pool_id": 1,
+        "returned_wei": "1650000000000000000",
+        "status": "OK"
+      }
+    },
+    {
+      "label": "close pool #3",
+      "role": "uw2",
+      "method": "close_pool",
+      "args": [
+        3
+      ],
+      "tx": "0xd040bbeb9ed23bea8af178b9583d0a9b39a279848a7ef21000c6b30ade7701d7",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_with": "claim_payout()",
+        "pool_id": 3,
+        "returned_wei": "0",
+        "status": "OK"
+      }
+    },
+    {
+      "label": "claim_payout uw1 (1.650000 GEN)",
+      "role": "uw1",
+      "method": "claim_payout",
+      "args": [],
+      "tx": "0x6a51d7d5ffb45b3025d9ccec61558b4f1bd6a733b2ad0bede8af1327dfe0d939",
+      "status": "ACCEPTED",
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "1.65",
+        "paid_wei": "1650000000000000000",
+        "status": "OK"
+      }
+    }
+  ]
+}
