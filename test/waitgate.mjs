@@ -22,7 +22,7 @@ const q = await v.view("quote", [pid, GEN / 10n, 30]);
 await step("wait7-cover", "outsider", "buy_cover", [pid, GEN / 10n, 30], BigInt(q.premium_wei));
 const covers = await v.view("get_covers_by_buyer", [JSON.parse(readFileSync(new URL("./.accounts.json", import.meta.url))).outsider.address]);
 const cid = covers.items[covers.items.length - 1].cover_id;
-await step("wait7-file-refused", "outsider", "file_claim", [cid, "https://rekt.news/euler-rekt", "filed inside the waiting period"]);
+await step("wait7-file-refused", "outsider", "file_claim", [cid, "1183:2023-03-13", "https://rekt.news/euler-rekt", "filed inside the waiting period"]);
 const after = await v.view("get_cover", [cid]);
 log.push({ label: "cover-after", cover_id: cid, claim_id: after.claim_id, claimable: after.claimable, in_waiting_period: after.in_waiting_period, waiting_ends: after.waiting_ends });
 console.log("cover after:", JSON.stringify(log[log.length - 1]));

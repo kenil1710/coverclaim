@@ -41,10 +41,10 @@ for (const p of (await v.view("get_pools", [0, 100])).items) {
   if (Number(p.active_covers) > 0) { console.log(`  pool #${p.pool_id}: ${p.active_covers} live cover(s), cannot close`); continue; }
   await step(`close pool #${p.pool_id}`, roleOf[p.underwriter.toLowerCase()], "close_pool", [p.pool_id]);
 }
-console.log("\n== withdraw underwriter balances");
-for (const uw of new Set(pools.map((p) => p.underwriter.toLowerCase()))) {
-  const owed = await v.view("payout_of", [uw]);
-  if (BigInt(owed.owed_wei) > 0n) await step(`claim_payout ${roleOf[uw]} (${gen(owed.owed_wei)} GEN)`, roleOf[uw], "claim_payout", []);
+console.log("\n== withdraw every balance still owed (underwriters, buyers, bond holders, overpayments)");
+for (const [role, a] of Object.entries(acc)) {
+  const owed = await v.view("payout_of", [a.address]);
+  if (BigInt(owed.owed_wei) > 0n) await step(`claim_payout ${role} (${gen(owed.owed_wei)} GEN)`, role, "claim_payout", []);
 }
 const s = await v.view("get_stats");
 const out = { at: new Date().toISOString(), pools: (await v.view("get_pools", [0, 100])).items.map((p) => ({ id: p.pool_id, status: p.status, capital_wei: p.capital_wei, locked_wei: p.locked_wei, premiums_held_wei: p.premiums_held_wei, active_covers: p.active_covers })), stats: { balance_wei: s.balance_wei, held_wei: s.held_wei, payable_wei: s.payable_wei, locked_wei: s.locked_wei, capital_wei: s.capital_wei, bonds_wei: s.bonds_wei, chain_balance_wei: s.chain_balance_wei, undelivered_wei: s.undelivered_wei, ledger_balanced: s.ledger_balanced, held_matches_books: s.held_matches_books }, steps: log };

@@ -7,7 +7,7 @@ import { CANONICAL_ADDRESS, DEMO_ADDRESS, REGISTRY_ADDRESS } from "@/lib/genlaye
 import { BUCKET_LABELS, duration, gen, pct } from "@/lib/format";
 
 const LOOPHOLES = [
-  ["Buying cover after an incident is public", "The incident date comes from DeFi Llama's record, never from the claimant. Incident < cover start + waiting period → REJECTED_BACKDATED, and the premium is not refunded. A claim cannot even be filed until the waiting period has ended, so the one claim is never wasted on an incident the cover could not pay."],
+  ["Buying cover after an incident is public", "A claim names one DeFi Llama incident record by key (id:YYYY-MM-DD). The date is the record's, never the claimant's: a key dated before cover start + waiting period is refused at filing, before any validator is asked, and the cover keeps its one claim. Typing an in-window date for an older incident names no record and pays nothing. The premium is not refunded."],
   ["Fake evidence from a random blog", "Every URL must be https on the pool's frozen allowlist (subdomain-exact, no userinfo, no ports). An archive snapshot counts only if the archived page is itself allowlisted. Refused in file_claim before any validator runs."],
   ["Underwriter withdrawing before a claim", "Each cover locks collateral until it expires and its claim window closes. withdraw_capacity can only take the unlocked part; close_pool is refused while any cover is live."],
   ["Same cover claimed twice", "One claim per cover, stored on the cover. An INCONCLUSIVE claim is refiled on the same record — never filed again."],
@@ -15,13 +15,14 @@ const LOOPHOLES = [
   ["Evidence edited after judging", "The claim stores the salient text it was judged on and a content hash over it, the DeFi Llama record and the TVL figures. verify_claim recomputes it; a contest re-reads the stored text, not the live page."],
   ["Contest copying old evidence", "Contest URLs must be new to the claim and the written grounds must add ≥20 characters of sentences the claim never said (verbatim, re-punctuated or repeated text refused). Inside consensus, new pages count only for their novel sentences — none → NOT_NOVEL, verdict held."],
   ["Protocol B's incident on protocol A's cover", "The incident record is looked up by the pool's own DeFi Llama id, and at least one evidence page must name the pool's protocol; otherwise INCONCLUSIVE without a model call."],
+  ["Evidence about a different incident of the same protocol", "The record is the one the key names — exact day (and name), never the latest in the window, and the feed's order changes nothing. An evidence page counts only if it names the protocol and dates the event within 3 days of that record; the validators also answer SAME / DIFFERENT / UNCLEAR, compared exactly. Anything but a bound page and SAME is EVIDENCE_MISMATCH: no payout, refile allowed twice. The TVL window is anchored on the same record, and one content hash covers key, record, evidence and window."],
   ["Owner pausing to freeze money", "Pause gates create_pool, add_capacity and buy_cover only. Filing, judging, contesting, finalizing, releasing, cancelling, withdrawing, settle_stalled and claim_payout all work while paused — proved by test and on chain."],
   ["Payment that also reads the clock", "Only claim_payout transfers, and it reads no clock. Every clock-reading method only credits a payable balance — the finalize + claim_payout split that keeps Studio Dev's fee simulator honest."],
 ];
 
 const FAQ = [
   ["Is this real insurance?", "No. It is a parametric protocol on a test network. It pays by incident severity measured from TVL, not by proven personal loss."],
-  ["What does the model decide?", "Only the classification: which covered peril or which exclusion the evidence shows, from a bracket the contract computes first. It never sees money, dates or the claimant's statement."],
+  ["What does the model decide?", "Only the classification — which covered peril or which exclusion the evidence shows, from a bracket the contract computes first — and whether the evidence is about the SAME incident as the record the claim names. It never sees money, dates or the claimant's statement."],
   ["What if the validators can't agree?", "Nothing changes. The judgement can be retried by anyone; if a claim sits unjudged past the stall window, settle_stalled returns it to FILED and lets the buyer refile — while paused, too."],
   ["Why is there a DEMO instance?", "Real hacks are in the past, and the canonical instance rejects backdated claims. The demo is the same bytes with one constructor value: covers start 1,521 days before purchase, so 2022–2023 incidents can be replayed. It is labelled on every page."],
   ["Where does the premium go?", "It is held until the cover ends. Then it is the underwriter's — whether the cover expired unclaimed, was denied, rejected as backdated, or paid."],

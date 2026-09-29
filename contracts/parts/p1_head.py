@@ -25,10 +25,20 @@ import typing
 #
 #   THE MODEL ANSWERS ONE QUESTION - does this incident match a covered peril
 #   or an exclusion - and only from inside a bracket this file computes first.
-#   The incident DATE comes from DeFi Llama's incident record, the SEVERITY
-#   from DeFi Llama's TVL history, and every wei from integer arithmetic. NOT
-#   ONE WEI IS MOVED BY A MODEL. A model that answered nonsense could at worst
-#   produce INCONCLUSIVE, which changes nothing and can be refiled.
+#   Beside it, one bounded check: is the evidence about the SAME event as the
+#   incident record the claimant selected (SAME / DIFFERENT / UNCLEAR)?
+#
+#   ONE EVENT BINDS EVERYTHING. The claimant names ONE DeFi Llama incident
+#   record by its key (protocol id : day [: name]). That record - and no
+#   other, whatever else the feed contains - supplies the incident DATE; the
+#   TVL window for SEVERITY is anchored on that date; an evidence page counts
+#   only if it names the protocol and carries a date within BIND_WINDOW_DAYS
+#   of it; and the content hash covers the key, the record, the evidence and
+#   the TVL window points together. Evidence about a different event is
+#   EVIDENCE_MISMATCH: no payout, nothing moves, the claim may be refiled.
+#   Every wei comes from integer arithmetic. NOT ONE WEI IS MOVED BY A MODEL.
+#   A model that answered nonsense could at worst produce INCONCLUSIVE or
+#   EVIDENCE_MISMATCH, which change nothing and can be refiled.
 #
 # Design notes and hazards: contracts/NOTES.md. Probe measurements that fixed
 # the evidence allowlist: docs/PROBE.md.
@@ -43,11 +53,12 @@ import typing
 # written down so that it cannot happen again.
 #
 #   1. CONSENSUS BINDS EVERY STORED VALUE. The compared axis is the WHOLE
-#      VERDICT VECTOR: classification, matched peril, matched exclusion,
-#      incident date, protocol match, severity bucket (with the TVL figures and
-#      drop it came from), evidence strength, the bracket, and the content hash
-#      of the normalised text every node read. Nothing is stored that was not
-#      compared or re-derived from what was (rule 11).
+#      VERDICT VECTOR: classification, event match, matched peril, matched
+#      exclusion, incident key and date, the evidence binding, protocol match,
+#      severity bucket (with the TVL window points and drop it came from),
+#      evidence strength, the bracket, and the content hash of everything
+#      every node read. Nothing is stored that was not compared or re-derived
+#      from what was (rule 11).
 #
 #   2. NO PUBLIC WRITE EVER RAISES. There is not one `raise` statement in this
 #      file. A revert rolls back storage but NOT the value that came with the
@@ -245,6 +256,44 @@ COVERED = "COVERED"
 EXCLUDED = "EXCLUDED"
 INCONCLUSIVE = "INCONCLUSIVE"
 CLASSIFICATIONS = (COVERED, EXCLUDED, INCONCLUSIVE)
+# The EFFECTIVE classification when the evidence is not about the selected
+# incident. Never a model option: it follows from `event_match` or from the
+# deterministic date binding.
+EVIDENCE_MISMATCH = "EVIDENCE_MISMATCH"
+
+# --- the event binding ----------------------------------------------------------
+#
+# The claimant selects ONE incident record by key: "<llama id>:<YYYY-MM-DD>",
+# plus ":<record name>" when two records of the protocol share a day. The
+# record is selected by exact match on those fields - never by position in the
+# feed and never as "the latest in the window".
+#
+# An evidence page is BOUND to the record when it names the protocol and a
+# date written in it falls within BIND_WINDOW_DAYS of the record's date. A
+# page with no date at all is read alongside a bound page but cannot bind on
+# its own; a dated page with no date near the record is not read at all. No
+# bound page -> EVIDENCE_MISMATCH without a model call.
+BIND_WINDOW_DAYS = 3
+EVENT_SAME = "SAME"
+EVENT_DIFFERENT = "DIFFERENT"
+EVENT_UNCLEAR = "UNCLEAR"
+EVENT_MATCHES = (EVENT_SAME, EVENT_DIFFERENT, EVENT_UNCLEAR)
+EVENT_NOT_ASKED = "NOT_ASKED"
+PAGE_BOUND = "BOUND"
+PAGE_UNDATED = "UNDATED"
+PAGE_UNBOUND = "UNBOUND"
+PAGE_UNREAD = "UNREAD"
+MAX_PAGE_DATES = 40
+MAX_KEY = 120
+MAX_KEY_NAME = 80
+# How many times a claim may come back from EVIDENCE_MISMATCH with new
+# evidence or a corrected key. INCONCLUSIVE refiles are not counted here.
+MAX_MISMATCH_REFILES = 2
+MONTHS = {"jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3,
+          "march": 3, "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
+          "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9,
+          "september": 9, "oct": 10, "october": 10, "nov": 11,
+          "november": 11, "dec": 12, "december": 12}
 
 # --- severity (rule 11: from DeFi Llama TVL, by arithmetic) ---------------------
 #
@@ -253,6 +302,9 @@ CLASSIFICATIONS = (COVERED, EXCLUDED, INCONCLUSIVE)
 # here and published by `get_config`; a pool chooses only the PAYOUT per bucket.
 SEVERITY_EDGES_BPS = (1000, 3000, 6000, 9000)      # 10%, 30%, 60%, 90%
 SEVERITY_WINDOW_DAYS = 7
+# Window points written into the TVL line (and so into the content hash). A
+# daily series has at most eight in the window.
+MAX_TVL_POINTS = 24
 BUCKETS = 5
 DEFAULT_PAYOUT_TABLE = (0, 2500, 5000, 7500, 10000)
 
@@ -330,9 +382,15 @@ CL_DENIED = "DENIED_EXCLUDED"
 CL_BACKDATED = "REJECTED_BACKDATED"
 CL_AFTER_END = "REJECTED_AFTER_COVER_END"
 CL_PAID = "PAID"
-CLAIM_STATUSES = (CL_FILED, CL_JUDGING, CL_INCONCLUSIVE, CL_APPROVED,
-                  CL_NO_PAYOUT, CL_DENIED, CL_BACKDATED, CL_AFTER_END, CL_PAID)
-# A verdict the losing side may contest. INCONCLUSIVE is not one: it is refiled.
+# The evidence is not about the selected incident. Pays nothing, moves
+# nothing, and - like INCONCLUSIVE - is refiled rather than contested, at most
+# MAX_MISMATCH_REFILES times.
+CL_MISMATCH = "EVIDENCE_MISMATCH"
+CLAIM_STATUSES = (CL_FILED, CL_JUDGING, CL_INCONCLUSIVE, CL_MISMATCH,
+                  CL_APPROVED, CL_NO_PAYOUT, CL_DENIED, CL_BACKDATED,
+                  CL_AFTER_END, CL_PAID)
+# A verdict the losing side may contest. INCONCLUSIVE and EVIDENCE_MISMATCH
+# are not: they are refiled.
 CL_CONTESTABLE = (CL_APPROVED, CL_NO_PAYOUT, CL_DENIED, CL_BACKDATED,
                   CL_AFTER_END)
 # Verdicts that end a claim with nothing owed by the pool.

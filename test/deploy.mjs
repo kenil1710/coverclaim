@@ -53,10 +53,13 @@ const code = readFileSync(new URL("../contracts/CoverClaim.py", import.meta.url)
 const regCode = readFileSync(new URL("../contracts/CoverRegistry.py", import.meta.url));
 const GEN = 10n ** 18n;
 
-// Covers bought on the demo instance on 2026-09-26 start on 2022-07-28: that
-// puts Curve's DNS hijack (2022-08-09), Euler (2023-03-13), Tornado Cash's
-// governance takeover (2023-05-20) and Multichain (2023-07-07) inside a
-// 365-day cover with a 7-day waiting period. FIXED HERE, AT DEPLOY, FOREVER.
+// Covers bought on the demo instance on 2026-09-29 start on 2022-07-31, so a
+// 365-day cover with a 7-day waiting period covers 2022-08-07 .. 2023-07-31.
+// That puts BOTH of Curve's recorded incidents - the DNS hijack (2022-08-09)
+// and the Vyper reentrancy (2023-07-30) - inside ONE cover, which is what the
+// multi-incident proof needs, with Euler (2023-03-13), Tornado Cash's
+// governance takeover (2023-05-20) and Multichain (2023-07-07). A cover bought
+// up to 2026-09-30 still spans both. FIXED HERE, AT DEPLOY, FOREVER.
 const DEMO_BACKDATE_DAYS = 1521;
 
 // (demo_backdate_days, claim_window_s, settlement_window_s, contest_window_s,

@@ -122,3 +122,27 @@ refiled with another source.
   per lane.
 - Studio intermittently answers `Server busy: all 8 execution slots occupied`
   and rate-limits reads at 30/min; every script retries those.
+
+## Event binding (2026-09-29, before the steward-fix redeploy)
+
+The fix binds each evidence page to the claim's selected DeFi Llama record by a
+date written in the page (±3 days). Before deploying it, every page the seed
+uses was fetched live with a plain GET and run through the contract's own
+`_strip_html`, `_dates_in` and `_bind` (not a re-implementation):
+
+| page | record | dates found | binding |
+|---|---|---|---|
+| rekt.news/euler-rekt | 1183:2023-03-13 | 2023-03-14 | BOUND |
+| web.archive.org/…/rekt.news/euler-rekt | 1183:2023-03-13 | 2023-03-14 | BOUND |
+| euler.finance/blog/war-peace-… | 1183:2023-03-13 | 2023-03-13, 03-09, 03-14 … | BOUND |
+| euler.finance (homepage) | 1183:2023-03-13 | none | UNDATED |
+| rekt.news/curve-finance-rekt | 3:2022-08-09 | 2022-08-10 | BOUND |
+| rekt.news/curve-vyper-rekt | 3:2023-07-30 | 2023-07-31 | BOUND |
+| rekt.news/multichain-r3kt | 591:2023-07-07 | 2023-07-14, 05-21, 05-23, **07-07**, 06-01, 07-06 | BOUND (yearless "July 7th" takes the page's 2023) |
+| rekt.news/tornado-gov-rekt | 148:2023-05-20 | 2023-05-22 | BOUND |
+
+Each Curve article carries exactly one date, a day after its own incident and
+nowhere near the other, so the two cross pairings are EVIDENCE_MISMATCH by
+arithmetic before any model call. `api.llama.fi/hacks` (1,289 rows) carries
+both Curve DEX records under `defillamaId` 3: 2022-08-09 "Frontend &
+Infrastructure / DNS Hijack" and 2023-07-30 "Reentrancy / Vyper Compiler Bug".

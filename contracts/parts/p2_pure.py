@@ -737,6 +737,182 @@ def _policy_text(name: str, slug: str, llama_id: str, chain: str,
         rows.append(edges[i] + " TVL drop -> " + _pct(table[i]))
     lines.append("Payout by severity: " + "; ".join(rows))
     lines.append("Evidence allowlist: " + ", ".join(domains))
+    lines.append("Claims: a claim names ONE DeFi Llama incident record of this "
+                 "protocol by key (id:YYYY-MM-DD[:name]) dated inside the cover "
+                 "after the waiting period; the evidence must name the protocol "
+                 "and date the same event within " + str(BIND_WINDOW_DAYS)
+                 + " days of that record, or the claim is EVIDENCE_MISMATCH")
     if wording:
         lines.append("Underwriter's notes: " + wording)
     return "\n".join(lines)
+
+
+# --- the event binding: dates, keys, the TVL window (pure) -----------------------
+
+
+def _day_token(t: str) -> int:
+    """1..31 from "7", "07", "7th", "31st"; 0 for anything else."""
+    k = 0
+    while k < len(t) and t[k].isdigit():
+        k += 1
+    if k == 0 or k > 2:
+        return 0
+    rest = t[k:]
+    if rest not in ("", "st", "nd", "rd", "th"):
+        return 0
+    d = int(t[:k])
+    return d if d >= 1 and d <= 31 else 0
+
+
+def _year_token(t: str) -> int:
+    if len(t) != 4 or not t.isdigit():
+        return 0
+    y = int(t)
+    return y if y >= 1990 and y <= 2099 else 0
+
+
+def _civil_ok(y: int, m: int, d: int) -> bool:
+    """Is (y, m, d) a real calendar day? February 30th round-trips to March."""
+    if y <= 0 or m < 1 or m > 12 or d < 1 or d > 31:
+        return False
+    return _civil_from_days(_days_from_civil(y, m, d)) == (y, m, d)
+
+
+def _dates_in(norm_text: str, cap: int) -> list:
+    """Every calendar date WRITTEN in a normalised text, as midnight-UTC epochs,
+    distinct, in page order, at most `cap`. PURE and hand-written: it is on the
+    consensus axis, because it decides which evidence pages are about the
+    selected incident.
+
+    Forms read (after `_norm`, which has already dropped the punctuation):
+      "july 31 2023", "jul 31st", "31 july 2023", "2023 07 31" (ISO).
+    A date written WITHOUT a year ("on July 7th") takes the year of the last
+    dated mention before it in the page - rekt.news heads every article with
+    its full publication date - or, if none precedes it, the first year the
+    page writes. A page that never writes a year contributes no dates."""
+    w = norm_text.split(" ")
+    n = len(w)
+    found = []
+    i = 0
+    while i < n:
+        t = w[i]
+        m = MONTHS.get(t, 0)
+        if m > 0 and i + 1 < n and _day_token(w[i + 1]) > 0:
+            y = _year_token(w[i + 2]) if i + 2 < n else 0
+            found.append((y, m, _day_token(w[i + 1])))
+            i += 3 if y > 0 else 2
+            continue
+        d = _day_token(t)
+        if d > 0 and i + 1 < n and MONTHS.get(w[i + 1], 0) > 0:
+            y = _year_token(w[i + 2]) if i + 2 < n else 0
+            found.append((y, MONTHS[w[i + 1]], d))
+            i += 3 if y > 0 else 2
+            continue
+        y = _year_token(t)
+        if y > 0 and i + 2 < n and len(w[i + 1]) == 2 and len(w[i + 2]) == 2 \
+                and w[i + 1].isdigit() and w[i + 2].isdigit():
+            found.append((y, int(w[i + 1]), int(w[i + 2])))
+            i += 3
+            continue
+        i += 1
+    first_year = 0
+    for f in found:
+        if f[0] > 0:
+            first_year = f[0]
+            break
+    out = []
+    ctx = first_year
+    for f in found:
+        y = f[0]
+        if y > 0:
+            ctx = y
+        else:
+            y = ctx
+        if not _civil_ok(y, f[1], f[2]):
+            continue
+        e = _days_from_civil(y, f[1], f[2]) * DAY
+        if e not in out:
+            out.append(e)
+            if len(out) >= cap:
+                break
+    return out
+
+
+def _nearest(days: list, target: int) -> int:
+    """The date in `days` closest to `target` (the earlier on a tie), or -1."""
+    best = -1
+    gap = -1
+    for d in days:
+        g = d - target if d >= target else target - d
+        if gap < 0 or g < gap:
+            best = d
+            gap = g
+    return best
+
+
+def _parse_key(text: typing.Any) -> tuple:
+    """(canonical key, llama id, incident day epoch, record name, why) from an
+    incident key "<llama id>:<YYYY-MM-DD>[:<record name>]". `why` is "" when
+    the key is well formed. The key names ONE DeFi Llama hacks record: the id
+    is the record's `defillamaId`, the date its day, and the name - optional -
+    tells apart two records of one protocol on one day."""
+    t = _clean(text, MAX_KEY)
+    if t == "":
+        return ("", "", 0, "", "an incident key is required: <DeFi Llama id>:"
+                "<YYYY-MM-DD>[:<record name>], naming one record of "
+                "api.llama.fi/hacks")
+    k = t.find(":")
+    if k <= 0:
+        return ("", "", 0, "", "incident key " + _short(t, 60) + " is not "
+                "<id>:<YYYY-MM-DD>[:<name>]")
+    lid = t[:k].strip()
+    rest = t[k + 1:]
+    k2 = rest.find(":")
+    date = (rest if k2 < 0 else rest[:k2]).strip()
+    name = "" if k2 < 0 else _clean(rest[k2 + 1:], MAX_KEY_NAME)
+    if lid == "" or not lid.isdigit() or len(lid) > 20:
+        return ("", "", 0, "", "the incident key's id must be the numeric "
+                "DeFi Llama id")
+    ok = len(date) == 10 and date[4] == "-" and date[7] == "-" \
+        and date[:4].isdigit() and date[5:7].isdigit() and date[8:].isdigit()
+    if not ok or not _civil_ok(int(date[:4]), int(date[5:7]), int(date[8:])):
+        return ("", "", 0, "", "the incident key's date must be a real day "
+                "written YYYY-MM-DD")
+    day = _days_from_civil(int(date[:4]), int(date[5:7]), int(date[8:])) * DAY
+    key = lid + ":" + date + (":" + name if name else "")
+    return (key, lid, day, name, "")
+
+
+def _parse_tvl_line(line: str) -> dict:
+    """The TVL window read back out of a stored `tvl_line`, so `verify_claim`
+    can recompute severity from the points the claim was judged on. {} when
+    the line records no TVL history."""
+    w = str(line).split(" ")
+    if len(w) < 12 or w[0] != "TVL" or w[1] != "id":
+        return {}
+    out = {"doc_id": w[2], "anchor": "", "before_day": "", "before": -1,
+           "points": [], "low": -1, "count": 0}
+    i = 3
+    while i + 1 < len(w):
+        tag = w[i]
+        val = w[i + 1]
+        if tag == "anchor":
+            out["anchor"] = val
+        elif tag == "before":
+            k = val.find("=")
+            out["before_day"] = val[:k] if k > 0 else ""
+            out["before"] = _as_int(val[k + 1:] if k > 0 else val, -1)
+        elif tag == "window":
+            pts = []
+            if val != "-":
+                for item in val.split(";"):
+                    k = item.find("=")
+                    if k > 0:
+                        pts.append([item[:k], _as_int(item[k + 1:], -1)])
+            out["points"] = pts
+        elif tag == "low":
+            out["low"] = _as_int(val, -1)
+        elif tag == "points":
+            out["count"] = _as_int(val, 0)
+        i += 2
+    return out

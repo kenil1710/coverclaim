@@ -17,6 +17,7 @@ export function toneOf(status: string): Tone {
     case "NO_PAYOUT":
       return "excluded";
     case "INCONCLUSIVE":
+    case "EVIDENCE_MISMATCH":
       return "inconclusive";
     default:
       return "pending";
@@ -34,6 +35,7 @@ const LABEL: Record<string, string> = {
   FILED: "Filed",
   JUDGING: "Judging",
   INCONCLUSIVE: "Inconclusive",
+  EVIDENCE_MISMATCH: "Evidence mismatch",
   APPROVED: "Covered · approved",
   NO_PAYOUT: "Covered · 0% bucket",
   DENIED_EXCLUDED: "Excluded",

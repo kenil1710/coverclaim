@@ -36,22 +36,24 @@ A fixed vocabulary matters more than it looks. A free-text peril puts the meanin
 
 ## Mechanical rejection first
 
-Most bad claims never reach a validator. Buying cover checks capacity, the per-buyer cap and the exact premium. Filing a claim checks one claim per cover, the claim window, and that **every evidence URL is on the pool's frozen allowlist**: https only, subdomain-exact (`evilrekt.news` is not `rekt.news`), no `user@host` tricks, no ports. A `web.archive.org` snapshot is allowed as a fallback — but only of a page that is itself on the allowlist, or the archive would launder every blog on the internet.
+Most bad claims never reach a validator. Buying cover checks capacity, the per-buyer cap and the exact premium. Filing a claim checks one claim per cover, the claim window, that the claim's **incident key** — one DeFi Llama record, `id:YYYY-MM-DD` — belongs to this protocol and is dated inside the cover after its waiting period, and that **every evidence URL is on the pool's frozen allowlist**: https only, subdomain-exact (`evilrekt.news` is not `rekt.news`), no `user@host` tricks, no ports. A `web.archive.org` snapshot is allowed as a fallback — but only of a page that is itself on the allowlist, or the archive would launder every blog on the internet.
 
 ## GenLayer last, and inside a bracket
 
 When anyone triggers a judgement, each validator independently:
 
-1. reads DeFi Llama's incident list and finds this protocol's record **by the pool's DeFi Llama id** — that is where the incident date comes from, not from the article and not from the model;
-2. reads the protocol's TVL history and measures the drop from the day before the incident to the lowest point in the next seven days — that is the severity bucket;
-3. fetches the evidence pages and keeps only the sentences that name the protocol or a risk;
+1. reads DeFi Llama's incident list and selects **the one record the claim's key names** — exact day, exact protocol id, never "the latest" — which is where the incident date comes from, not from the article and not from the model;
+2. reads the protocol's TVL history and measures the drop from the day before **that record's** date to the lowest point in the next seven days — that is the severity bucket;
+3. fetches the evidence pages and **binds each one to that record**: a page counts only if it names the protocol and writes a date within three days of it; then keeps only the sentences that name the protocol or a risk;
 4. computes the **bracket**: which of the pool's covered perils and exclusions the evidence actually names, and what evidence strength the sources can support.
 
-If the evidence names no risk, or never names the protocol, the answer is INCONCLUSIVE and **no model is called at all**. Otherwise the model chooses — but only from inside the bracket. A validator checks the leader's choice against the leader's own inputs by arithmetic before it spends an inference, then fetches everything itself and compares the whole vector: classification, peril, exclusion, incident date, protocol match, severity bucket, TVL figures and the hash of the text it read, all exactly.
+If no page is about the selected incident, the answer is EVIDENCE_MISMATCH; if the evidence names no risk, INCONCLUSIVE — in both cases **no model is called at all**. Otherwise the model answers inside the bracket, and also says whether the evidence describes the SAME incident as the record (SAME / DIFFERENT / UNCLEAR). A validator checks the leader's choice against the leader's own inputs by arithmetic before it spends an inference, then fetches everything itself and compares the whole vector: event match, classification, peril, exclusion, incident key and date, which pages were bound, severity bucket, the TVL window and the hash of all of it, exactly.
 
-Then the contract, not the model, applies the policy. Incident before the cover's start plus waiting period: rejected as backdated, premium kept, because the cover was valid and the incident predates it. Excluded: denied. Covered: `cover × table[bucket] × (1 − deductible)`. Claims on the same incident wait for a settlement window and are paid together, scaled by one factor if the pool is short.
+Then the contract, not the model, applies the policy. Evidence about another event: EVIDENCE_MISMATCH — nothing paid, nothing moved, and the buyer may refile with the right evidence or key, twice. Excluded: denied. Covered: `cover × table[bucket] × (1 − deductible)`. Claims on the same incident wait for a settlement window and are paid together, scaled by one factor if the pool is short.
 
 ## What went wrong, and how it was fixed
+
+**Evidence for one hack, paid against another.** A review steward found this one, and it was the most important. The first version chose the incident itself: the *latest* DeFi Llama record for the protocol inside the cover window — independently of the evidence. Curve has two records a year apart: a DNS hijack on 9 August 2022 (a front-end attack, excluded by most policies) and the Vyper reentrancy on 30 July 2023 (a code flaw, covered). With a cover spanning both, a claim carrying the DNS article would have been dated, and its severity measured, on the Vyper record — the evidence, the date and the TVL window could describe three different things. Now the claimant names one record by key, every validator selects exactly that row, the TVL window is anchored on it, a page counts only if it dates the same event, the model is asked whether it is the same event, and one hash covers the key, the record, the evidence and the window. The on-chain proof is below.
 
 **The render that never finished.** The source probe said every evidence page rendered fine: rekt.news in 26 seconds, Euler's own post-mortem in 38, byte-identical on independent validators, even hours apart. The first real judgement then sat in GenVM execution for over twenty-five minutes and never produced a result. The model answered in 11 seconds on its own. The TVL history parsed in 18.
 
@@ -65,23 +67,30 @@ So I ran the contract's own code on chain one stage at a time. Stage 1, the inci
 
 ## What it looks like running
 
-On a demo instance whose covers start 1,521 days before they are bought — same bytes as the real one, one constructor value, labelled DEMO everywhere — the seed replayed real incidents:
+On a demo instance whose covers start 1,521 days before they are bought — same bytes as the real one, one constructor value, labelled DEMO everywhere — the seed replayed real incidents. First, the steward's case: one Curve pool, five covers each spanning **both** of Curve's records, 2022-07-31 to 2023-07-31:
+
+- **Vyper article + the 2023-07-30 record** — COVERED, `SMART_CONTRACT_BUG`, the validators said SAME event; TVL fell 49.52% in the Vyper window, bucket 2, paid.
+- **Vyper article + the 2022-08-09 record** — EVIDENCE_MISMATCH. The article is dated 31 July 2023, nowhere near 9 August 2022; no model was asked, nothing paid.
+- **DNS article + the 2023-07-30 record** — EVIDENCE_MISMATCH, the same way round.
+- **DNS article + the 2022-08-09 record** — EXCLUDED, `FRONTEND_HIJACK`, SAME event, bucket 0 in the DNS window.
+- **DNS article on the 2023 record, then refiled with the Vyper article** — EVIDENCE_MISMATCH, then COVERED: the claim was not spent by the mistake.
+
+Then the rest:
 
 - **Euler, 2023-03-13** — COVERED, `SMART_CONTRACT_BUG`, TVL drop 95.85%, bucket 4, paid 0.9 GEN on a 1 GEN cover after a 10% deductible. The underwriter contested with Euler's own post-mortem as new evidence; the validators re-read it and the verdict held, so the bond went to the buyer.
-- **Curve, 2022-08-09** — EXCLUDED, `FRONTEND_HIJACK`. The article also mentions a "vulnerability" (in the registrar, not the code), so COVERED was in the bracket — and the validators chose the root cause.
 - **Multichain, 2023-07-07** — EXCLUDED, `USER_KEY_COMPROMISE`, despite an 89.8% TVL drop.
 - **Euler, claimed with its homepage** — INCONCLUSIVE, no model called; the buyer can refile.
 - **Two Euler covers on a 50%-collateral pool** — both approved, both scaled by the same factor.
 - **Tornado Cash** — a claim left unjudged while the owner paused the contract, unstuck by `settle_stalled` while still paused, then judged.
 
-On the canonical instance, a cover bought today and claimed with Euler's 2023 exploit was classified COVERED — and rejected as backdated by arithmetic, which is exactly the point.
+On the canonical instance, a cover bought today and claimed against Euler's 2023 record was refused at filing — before any source was read or any validator asked — and kept its one claim. That is exactly the point.
 
 ## Honest limitations
 
 - **Parametric.** It pays by incident severity measured from TVL, not by proven personal loss. TVL also falls when prices fall.
 - **Evidence is only as good as the allowlisted sources**, and pages are read without JavaScript.
 - **Classification is subjective.** The bracket bounds it; inside it, a model still chooses.
-- **The incident must be in DeFi Llama's list** before a claim can be decided.
+- **The incident must be in DeFi Llama's list** before a claim can be decided, and at least one evidence page must **date** it (within three days); an undated post-mortem can support a dated article but cannot carry a claim alone.
 - **The demo replays history with a fixed backdate.** It is not insurance.
 - **Studio Dev may queue a value transfer without executing it**; `get_stats` publishes the gap as `undelivered_wei` rather than hiding it.
 
@@ -89,4 +98,4 @@ On the canonical instance, a cover bought today and claimed with Euler's 2023 ex
 
 - App: https://coverclaim.vercel.app
 - Code, probe, audit and evidence: https://github.com/kenil1710/coverclaim
-- 598 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.
+- 628 offline tests, every loophole in its own test class, and a script that reads the deployed bytes back off the chain and compares them with the repository.

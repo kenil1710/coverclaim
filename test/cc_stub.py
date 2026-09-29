@@ -379,9 +379,11 @@ class _Model:
         self.raise_next = 0
         self.calls = 0
 
-    def serve(self, classification, peril="NONE", exclusion="NONE", strength=5):
+    def serve(self, classification, peril="NONE", exclusion="NONE", strength=5,
+              event_match="SAME"):
         self.sticky = {"classification": classification, "peril": peril,
-                       "exclusion": exclusion, "evidence_strength": strength}
+                       "exclusion": exclusion, "evidence_strength": strength,
+                       "event_match": event_match}
         self.queue = []
 
     def serve_raw(self, payload):
@@ -401,10 +403,27 @@ class _Model:
             self.raise_next -= 1
             raise RuntimeError("the model endpoint refused the connection")
         if self.queue:
-            return self.queue.pop(0)
+            return self._same(self.queue.pop(0))
         if self.sticky is None:
             raise AssertionError("model call with no configured answer")
-        return self.sticky
+        return self._same(self.sticky)
+
+    @staticmethod
+    def _same(answer):
+        """An answer that says nothing about the event is an honest model's
+        answer about the right incident: event_match SAME. A test that wants
+        to exercise DIFFERENT, UNCLEAR or a missing field says so explicitly
+        (a key set to None is removed)."""
+        if isinstance(answer, dict) and "event_match" not in answer:
+            out = type(answer).__new__(type(answer))
+            dict.__init__(out, answer)
+            out["event_match"] = "SAME"
+            return out
+        if isinstance(answer, dict) and answer.get("event_match") is None:
+            out = dict(answer)
+            del out["event_match"]
+            return out
+        return answer
 
 
 MODEL = _Model()

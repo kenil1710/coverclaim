@@ -85,15 +85,19 @@ export type Claim = {
   deductible_bps: number;
   filed_at: number;
   last_filed_at: number;
+  incident_key: string;
   evidence_urls: string[];
   statement: string;
   status: string;
   refiles: number;
+  mismatch_refiles: number;
+  mismatch_refiles_left: number;
   refile_until: number;
   attempts: number;
   stalls: number;
   judged_at: number;
   classification: string;
+  event_match: string;
   effective: string;
   peril: string;
   exclusion: string;
@@ -102,7 +106,10 @@ export type Claim = {
   incident_day: number;
   incident_date: string;
   protocol_match: boolean;
+  evidence_binding: string;
+  bound_pages: number;
   llama_record: string;
+  tvl_window: string;
   tvl_before_usd: string;
   tvl_low_usd: string;
   drop_bps: number;
@@ -250,6 +257,25 @@ export type EvidenceCheck = {
   reason: string;
   items: { url: string; ok: boolean; reason: string }[];
   allowlist: string[];
+};
+
+export type IncidentCheck = {
+  ok: boolean;
+  incident_key: string;
+  reason: string;
+  llama_id: string;
+  window: [string, string];
+  format: string;
+};
+
+/** One row of api.llama.fi/hacks, as the claim form lists it. */
+export type LlamaIncident = {
+  key: string;
+  date: string;
+  name: string;
+  classification: string;
+  technique: string;
+  amount: number;
 };
 
 export type Policy = { found: boolean; text: string; policy_hash: string; hash_matches: boolean };

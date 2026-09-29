@@ -8,6 +8,9 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
     values after consensus, never by a model.
 
     The order is the policy's:
+      EVIDENCE_MISMATCH   - the evidence is not about the selected incident;
+                            nothing is decided about it, nothing pays, and the
+                            claim may be refiled;
       INCONCLUSIVE        - nothing was decided; refile with new evidence;
       incident before start + waiting period  -> REJECTED_BACKDATED
                             (the premium is NOT refunded: the cover was valid,
@@ -19,6 +22,8 @@ def _outcome(eff: str, incident_day: int, start: int, end: int, waiting_s: int,
                           damage", so the claim stays refileable;
       COVERED             -> cover x table[bucket] x (1 - deductible), which is
                             NO_PAYOUT when the severity bucket pays nothing."""
+    if eff == EVIDENCE_MISMATCH:
+        return (CL_MISMATCH, 0)
     if eff != COVERED and eff != EXCLUDED:
         return (CL_INCONCLUSIVE, 0)
     if incident_day < start + waiting_s:
@@ -129,6 +134,10 @@ class Claim:
     claimant: Address
     filed_at: u64
     last_filed_at: u64
+    # The ONE DeFi Llama incident record this claim is about, by key. Set at
+    # filing; changed only by a refile.
+    incident_key: str
+    mismatch_refiles: u32
     urls: str
     used_urls: str
     statement: str
@@ -142,6 +151,7 @@ class Claim:
     # --- verdict
     judged_at: u64
     classification: str
+    event_match: str
     effective: str
     peril: str
     exclusion: str
@@ -150,6 +160,8 @@ class Claim:
     strength_hi: u32
     incident_day: u64
     protocol_match: bool
+    bind_line: str
+    bound: u32
     llama_line: str
     tvl_line: str
     tvl_before: u256
@@ -917,7 +929,10 @@ class CoverClaim(gl.contract.Contract):
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " on this cover is " + st.lower()
                                         + " and must settle first")
-                if st == CL_INCONCLUSIVE and int(claim.refile_until) >= now:
+                refileable = st == CL_INCONCLUSIVE or (
+                    st == CL_MISMATCH
+                    and int(claim.mismatch_refiles) < MAX_MISMATCH_REFILES)
+                if refileable and int(claim.refile_until) >= now:
                     return self._refuse("claim #" + str(int(claim.claim_id))
                                         + " may still be refiled")
                 if str(claim.contest_status) in CT_OPEN:

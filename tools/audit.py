@@ -170,6 +170,36 @@ def main() -> int:
           "verify_claim" in CC and "content_hash" in ast.unparse(CC["_record"]),
           "_record writes content_hash; verify_claim recomputes it from stored digest + record + TVL line")
 
+    # THE STEWARD'S FINDING: one event binds evidence, record and TVL window.
+    sel = FUNCS.get("_select_incident")
+    ordered = [ast.unparse(n) for n in ast.walk(sel) if isinstance(n, ast.Compare)
+               and any(isinstance(o, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)) for o in n.ops)] if sel else ["missing"]
+    row_calls = calls_in(FUNCS["_llama_row"])
+    no_latest = ("_pick_incident" not in SRC and sel is not None and not ordered
+                 and "_select_incident" in row_calls
+                 and not any(isinstance(n, ast.Call) and ast.unparse(n.func) in ("max", "min", "sorted")
+                             and "date" in ast.unparse(n) for n in ast.walk(FUNCS["_llama_row"])))
+    check("patterns", "no \"latest row\" selection: the incident record is the one the claim's key names, "
+          "by exact match, feed order irrelevant", no_latest,
+          "_pick_incident absent; _select_incident uses no ordering comparison ("
+          + (", ".join(ordered) or "none") + "); _llama_row selects only through it")
+
+    ch = FUNCS.get("_content_hash")
+    ch_args = [a.arg for a in ch.args.args] if ch else []
+    ch_used = {n.id for n in ast.walk(ch) if isinstance(n, ast.Name)} if ch else set()
+    reading_call = [ast.unparse(n) for n in ast.walk(FUNCS["_reading"]) if isinstance(n, ast.Call)
+                    and ast.unparse(n.func) == "_content_hash"]
+    verify_call = "_content_hash" in calls_in(CC["verify_claim"])
+    binds = (ch_args == ["key", "dnorm", "bind_line", "llama_line", "tvl_line"] and set(ch_args) <= ch_used
+             and len(reading_call) == 1 and verify_call
+             and "window" in ast.unparse(FUNCS["_tvl_line"]) and "anchor" in ast.unparse(FUNCS["_tvl_line"]))
+    t_ok, t_ev = run_tests("TestOneEventBindsEverything", "TestSelectIncident", "TestDatesAndKeys")
+    check("patterns", "content hash binds incident key + evidence (digest and page binding) + selected record + "
+          "TVL window points; verify_claim re-derives all of it", binds and t_ok,
+          (reading_call[0] if reading_call else "no call") + "; verify_claim recomputes; " + t_ev)
+    check("patterns", "multi-incident: mismatched evidence cannot pay, matching evidence selects the intended "
+          "event (steward tests a-g)", t_ok, t_ev)
+
     gated = sorted({n for n, m in CC.items() if is_write(m) and any(
         isinstance(x, ast.If) and "self.paused" in ast.unparse(x.test) for x in ast.walk(m))})
     check("patterns", "pause gates only new business; settle_stalled works while paused",
@@ -214,6 +244,14 @@ def main() -> int:
           f"demo_backdate_days demo={demo.get('demo_backdate_days')} canonical={canon.get('demo_backdate_days')}")
 
     readme = read("README.md") if (ROOT / "README.md").exists() else ""
+    import re as _re
+    live = {dep[n]["address"].lower() for n in ("CoverClaim", "CoverClaimDemo", "CoverRegistry") if n in dep}
+    owners = {str(dep[n].get("owner", "")).lower() for n in dep if isinstance(dep[n], dict)}
+    in_readme = {a.lower() for a in _re.findall(r"0x[0-9a-fA-F]{40}(?![0-9a-fA-F])", readme)}
+    stale = sorted(in_readme - live - owners)
+    check("patterns", "README addresses match deployments.json", live <= in_readme and not stale,
+          "deployed in README: " + str(len(live & in_readme)) + "/" + str(len(live))
+          + "; addresses in README not deployed: " + (", ".join(stale) or "none"))
     sentence = ("GenLayer reads public incident evidence and classifies it against the frozen policy's covered "
                 "perils and exclusions. Deterministic contract logic enforces capacity, waiting periods, "
                 "backdating checks, premium accounting, severity payouts, deductibles, and pro-rata splits.")

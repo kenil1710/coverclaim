@@ -18,33 +18,79 @@ the model's hands:
 
 | field | who decides |
 |---|---|
-| incident date | DeFi Llama's incident record, looked up by the pool's DeFi Llama id |
+| which incident | the CLAIMANT names one DeFi Llama record by key (`id:YYYY-MM-DD[:name]`); code selects exactly that row |
+| incident date | that record's day — never the claimant's, never "the latest" |
+| evidence ↔ incident | code: a page counts only if it names the protocol and dates the event within ±3 days of the record; the model then answers SAME / DIFFERENT / UNCLEAR, compared exactly |
 | protocol match | code: does an evidence page name the pool's protocol, word-aligned |
-| severity bucket | code: TVL drop from DeFi Llama history, integer bps, fixed edges |
-| content hash | code: FNV-1a over the normalised digest + record + TVL line |
+| severity bucket | code: TVL drop in the window anchored on the selected record's day, integer bps, fixed edges |
+| content hash | code: FNV-1a over key + normalised digest + page binding + record + TVL window points |
 | which perils / exclusions are *possible* | code: the bracket (indicator phrases ∩ the pool's frozen lists) |
 | evidence-strength range | code: sources that name a risk, and whether DeFi Llama's own class agrees |
-| classification, peril, exclusion, strength | **the model, inside the bracket** |
+| classification, peril, exclusion, strength, event match | **the model, inside the bracket** |
 
 So a leader that wanted to forge a payout would have to forge an incident
 record, a TVL history and a page's text — all of which every validator fetches
 itself and compares exactly.
 
-## 2. Why the incident date is not extracted from the article
+## 2. Which incident: the claimant names it, and one event binds everything
 
 Articles are dated when they are published (rekt.news dates Euler's exploit
 "March 14" — the day after), mention several dates, and a model asked "when did
-this happen" is a model asked a second question the brief did not give it.
-DeFi Llama records one row per incident with a day-precision date and the
-protocol's numeric id. A protocol can have several rows (Multichain has four),
-so `_pick_incident` chooses deterministically: the latest incident inside the
-covered window, else the latest before it (which the backdating check then
-rejects), else the earliest after it. A claimant cannot pick a better incident
-than the record puts in their window, and cannot hide an old incident behind
-a later one outside it.
+this happen" is a model asked a second question. DeFi Llama records one row per
+incident with a day-precision date and the protocol's numeric id, so the date
+comes from there.
+
+**Correction (steward review).** The first version chose the row itself: the
+LATEST row of the protocol inside the cover window, independently of the
+evidence. With two incidents in one window — Curve's DNS hijack (2022-08-09)
+and Vyper reentrancy (2023-07-30) — evidence about one was measured against the
+other's date and TVL window, and a claim could be paid for an event its
+evidence did not describe. That selection (`_pick_incident`) is gone.
+
+Now:
+
+1. `file_claim` takes an incident key `"<llama id>:<YYYY-MM-DD>[:<name>]"`.
+   Mechanically, before anything is fetched: the key is well formed, names
+   this pool's id, and its day is inside `[start + waiting, end]` and not in
+   the future. A historical incident on a cover bought after it is refused
+   HERE — which is why the canonical backdating demonstration is now a filing
+   refusal, not a `REJECTED_BACKDATED` verdict (the verdict path still exists
+   in `_outcome`, defence in depth).
+2. Every validator selects the row whose day (and, if given, name) equals the
+   key's — `_select_incident`, equality only. No match → pinned INCONCLUSIVE
+   (the key names no record; refile with a real one). Two matches → pinned,
+   "add the record's name"; a tie is refused, never broken by feed position.
+   The feed's order cannot change the answer (tested by shuffling).
+3. The TVL window is anchored on that row's day (`_tvl(facts, day)`), and the
+   window's points go into `tvl_line`.
+4. Each evidence page is bound (`_bind`): BOUND if it names the protocol and
+   writes a date within ±3 days of the record; UNDATED if it writes no date;
+   UNBOUND if its dates are all elsewhere (or it names another protocol).
+   Only BOUND and UNDATED pages are read. Dated evidence with no bound page →
+   EVIDENCE_MISMATCH (DIFFERENT) without a model call; undated-only evidence
+   that would otherwise reach the model → EVIDENCE_MISMATCH (UNCLEAR). A
+   claim never pays without a page that dates the event.
+5. When the model is asked, it answers `event_match` SAME / DIFFERENT /
+   UNCLEAR beside the classification, compared exactly. Anything but SAME is
+   EVIDENCE_MISMATCH, whatever it classified.
+6. `content_hash = fnv(key | digest | page binding | record | TVL window)`,
+   and `verify_claim` recomputes it and checks that the stored record is the
+   key's, that the window is anchored on the key's day, and that the lowest
+   point, drop and bucket recompute from the stored points.
+
+EVIDENCE_MISMATCH pays nothing, moves nothing, is not contestable, and the
+cover's one claim is not spent: it may be refiled with other evidence or a
+corrected key (at least one of the two must change), at most twice.
+
+**Why ±3 days.** rekt.news publishes the day after (Euler, Curve DNS, Vyper)
+or two days after (Tornado Cash); Multichain's article is dated a week later
+but writes "July 7th" in the text. Yearless dates take the page's year from
+the last dated mention before them (rekt heads each article with a full
+date). Measured on every seeded page, live, with the contract's own GET, strip
+and parser before deploying (docs/TASKS.md).
 
 **Consequence, stated in the README:** an incident DeFi Llama has not recorded
-yet is INCONCLUSIVE until it has.
+yet cannot be claimed until it has.
 
 ## 3. The bracket, and why it is built from the BUYER's evidence only
 

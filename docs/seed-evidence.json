@@ -24,11 +24,11 @@
         "Euler V1 lending markets on Ethereum."
       ],
       "value": "2000000000000000000",
-      "tx": "0x014f3f5ee827b187248c23380fdd0ae9d5c71b6d521ca4892435de638f3a24e5",
+      "tx": "0x71c9f09f5cbf155df7c4efb1e900ca6c0cfbae4a2c96ecb6ac8eab0d5fa3f455",
       "status": "ACCEPTED",
       "seconds": 10,
       "returned": null,
-      "at": "2026-09-26T09:06:26.568Z"
+      "at": "2026-09-29T05:21:56.878Z"
     },
     {
       "label": "canon-backdated-cover",
@@ -42,78 +42,49 @@
         "30"
       ],
       "value": "10000000000000000",
-      "tx": "0x723dd275207a17ba60724cb8b21bfffa48392f872c776f8ddb96b4610901524e",
+      "tx": "0xdf6a9b3d794f6af8ed466806511bd6715b59755c3cad105887afdaa5c15d9f6d",
       "status": "ACCEPTED",
-      "seconds": 21,
+      "seconds": 11,
       "returned": {
-        "claim_deadline": 1795597602,
+        "claim_deadline": 1795843323,
         "cover_id": 1,
         "demo_backdated_days": 0,
-        "end": 1793005602,
+        "end": 1793251323,
         "lock_wei": "1000000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 1,
         "premium_gen": "0.01",
         "premium_wei": "10000000000000000",
-        "start": 1790413602,
+        "start": 1790659323,
         "status": "OK",
-        "waiting_ends": 1790413602
+        "waiting_ends": 1790659323
       },
-      "at": "2026-09-26T09:06:49.430Z"
+      "at": "2026-09-29T05:22:10.190Z"
     },
     {
-      "label": "canon-backdated-claim",
+      "label": "canon-backdated-file-refused",
       "contract": "canonical",
       "role": "buyer2",
       "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
       "method": "file_claim",
       "args": [
         "1",
+        "1183:2023-03-13",
         "https://rekt.news/euler-rekt",
         "Euler was exploited through donateToReserves; I hold cover on it."
       ],
       "value": "0",
-      "tx": "0xd2fa06403c9721320a4fdeda1eaf8046b1304c70fc4e37fdd356dff945b3a6fb",
+      "tx": "0x7eef0f81ccdca5ff9258709dc831077774d2f997fddda7c0f18569f138547d07",
       "status": "ACCEPTED",
-      "seconds": 15,
-      "returned": null,
-      "at": "2026-09-26T09:07:04.240Z"
-    },
-    {
-      "label": "canon-backdated-judge",
-      "contract": "canonical",
-      "role": "trigger",
-      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
-      "method": "judge_claim",
-      "args": [
-        "1"
-      ],
-      "value": "0",
-      "tx": "0x5db7a99808d1587c6c79a1885d5c34850bf63605f5d43bfc199ea6971e35b1ac",
-      "status": "ACCEPTED",
-      "seconds": 31,
+      "seconds": 7,
       "returned": {
-        "batch_id": 0,
-        "claim_id": 1,
-        "classification": "COVERED",
-        "content_hash": "4a9acc9c5131dbe3",
-        "drop_bps": 9585,
-        "effective": "COVERED",
-        "evidence_strength": 4,
-        "exclusion": "NONE",
-        "gross_payout_wei": "0",
-        "incident_date": "2023-03-13",
-        "judged": true,
-        "model_called": true,
-        "outcome": "REJECTED_BACKDATED",
-        "peril": "SMART_CONTRACT_BUG",
-        "protocol_match": true,
-        "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
-        "severity_bucket": 4,
-        "status": "OK"
+        "claim_with": "claim_payout()",
+        "reason": "incident refused before judging: incident 1183:2023-03-13 predates this cover's start plus its waiting period (2026-09-29); it is not covered and is refused before judging",
+        "refunded_wei": "0",
+        "status": "REJECTED"
       },
-      "at": "2026-09-26T09:07:36.620Z"
+      "at": "2026-09-29T05:22:16.895Z"
     },
     {
       "label": "canon-curve-pool-wait0",
@@ -139,11 +110,11 @@
         "Curve DEX pools on Ethereum."
       ],
       "value": "2000000000000000000",
-      "tx": "0x538059a5ab82b284b7414896efddf04eb678ee376cb9a922024996c027af8e4c",
+      "tx": "0xe678ca014b689cb67c89b711d11f249540693d0780a97c7dc2104677ef101ee0",
       "status": "ACCEPTED",
-      "seconds": 9,
+      "seconds": 13,
       "returned": null,
-      "at": "2026-09-26T09:07:45.524Z"
+      "at": "2026-09-29T05:22:30.531Z"
     },
     {
       "label": "canon-registry-cover",
@@ -157,25 +128,25 @@
         "60"
       ],
       "value": "10000000000000000",
-      "tx": "0x01c54d76f3a202b3dbe1c868b98e2985bf4fb81947ab973c8b395c667565e521",
+      "tx": "0x9b78e58fa13266126622c8f416a81af7a0f90092032882c578dff8459d803235",
       "status": "ACCEPTED",
-      "seconds": 11,
+      "seconds": 13,
       "returned": {
-        "claim_deadline": 1798189671,
+        "claim_deadline": 1798435356,
         "cover_id": 2,
         "demo_backdated_days": 0,
-        "end": 1795597671,
+        "end": 1795843356,
         "lock_wei": "500000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 2,
         "premium_gen": "0.01",
         "premium_wei": "10000000000000000",
-        "start": 1790413671,
+        "start": 1790659356,
         "status": "OK",
-        "waiting_ends": 1790413671
+        "waiting_ends": 1790659356
       },
-      "at": "2026-09-26T09:07:58.922Z"
+      "at": "2026-09-29T05:22:45.417Z"
     },
     {
       "label": "registry-attest",
@@ -188,16 +159,16 @@
         "curve-dex"
       ],
       "value": "0",
-      "tx": "0x333e9b1082b989c00423daba9054529802cb7ab907d8e9237b559bb886d25c3e",
+      "tx": "0x5ddfee9c68ca66bd7d7ce91d464514485b38570be7068541d566de621bc1eb85",
       "status": "ACCEPTED",
-      "seconds": 14,
+      "seconds": 13,
       "returned": {
         "cover_id": 2,
         "covered": true,
         "index": 0,
         "status": "OK"
       },
-      "at": "2026-09-26T09:08:12.652Z"
+      "at": "2026-09-29T05:22:58.524Z"
     },
     {
       "label": "demo-euler-pool",
@@ -223,11 +194,11 @@
         "Euler V1 lending markets on Ethereum."
       ],
       "value": "3000000000000000000",
-      "tx": "0x9fe68fe069db54ad39295d56692dcd9c9857e198ec21e034347cce7ae6b02654",
+      "tx": "0x0cd6685ac20397cbc58c71ced692427eb7c6b704a236dbbb6c85e6606c2af070",
       "status": "ACCEPTED",
-      "seconds": 7,
+      "seconds": 9,
       "returned": null,
-      "at": "2026-09-26T09:08:20.115Z"
+      "at": "2026-09-29T05:23:07.329Z"
     },
     {
       "label": "demo-curve-pool",
@@ -250,14 +221,14 @@
         "10000",
         "",
         "curve.finance",
-        "Curve DEX pools on Ethereum."
+        "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded."
       ],
-      "value": "2000000000000000000",
-      "tx": "0x07caf1cf3184499bb021532e7beb16d7f086a71e4bd5df43a954def1417a7f72",
+      "value": "3000000000000000000",
+      "tx": "0xf61f135b5929829edc4339900dc7f0f9c5b95f275a5f142a2420c260e38b0351",
       "status": "ACCEPTED",
-      "seconds": 12,
+      "seconds": 11,
       "returned": null,
-      "at": "2026-09-26T09:08:33.128Z"
+      "at": "2026-09-29T05:23:19.291Z"
     },
     {
       "label": "demo-multichain-pool",
@@ -283,11 +254,11 @@
         "Multichain router and bridge deposits."
       ],
       "value": "2000000000000000000",
-      "tx": "0x8280eb06b749ad438806cd1761ac6648eff2a22126b522558dea9b59bf113fe4",
+      "tx": "0x76b55766cd95f6e0bfc92095a95295f4bd40846903a939a38cdc2c23404eb08d",
       "status": "ACCEPTED",
-      "seconds": 9,
+      "seconds": 13,
       "returned": null,
-      "at": "2026-09-26T09:08:44.388Z"
+      "at": "2026-09-29T05:23:33.033Z"
     },
     {
       "label": "demo-euler-prorata-pool",
@@ -313,11 +284,11 @@
         "Thin pool: 50% collateral. Claims on one incident beyond capital are paid pro-rata."
       ],
       "value": "1000000000000000000",
-      "tx": "0xc7149f75ec73424444f9baf5815e45b2dba77cdd19bed595fa9cf1c7bd59fcce",
+      "tx": "0x9f7062f55ec2c27d90c84a63774464b8dd1ed727518408162ad1fd131f1e29ff",
       "status": "ACCEPTED",
-      "seconds": 12,
+      "seconds": 7,
       "returned": null,
-      "at": "2026-09-26T09:08:57.137Z"
+      "at": "2026-09-29T05:23:41.320Z"
     },
     {
       "label": "demo-tornado-pool",
@@ -343,11 +314,520 @@
         "Tornado Cash pools and governance."
       ],
       "value": "1000000000000000000",
-      "tx": "0xe089b37ed6ab5b01f350bd99ebecec7663bc3b14ec4fa96725f695c07cf49d07",
+      "tx": "0xf341cc370ea539e2124ad4570f708873f775351496f4d3cf7cf1d4ca725b7d70",
+      "status": "ACCEPTED",
+      "seconds": 12,
+      "returned": null,
+      "at": "2026-09-29T05:23:54.939Z"
+    },
+    {
+      "label": "multi-m1-cover",
+      "contract": "demo",
+      "role": "buyer2",
+      "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
+      "method": "buy_cover",
+      "args": [
+        "2",
+        "500000000000000000",
+        "365"
+      ],
+      "value": "60833333333333334",
+      "tx": "0x902d4fa2aaeef2dd51c5b9a372aed9514021b01e2fc391d6117d5e7742f6b2e2",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": {
+        "claim_deadline": 1790662141,
+        "cover_id": 1,
+        "demo_backdated_days": 1521,
+        "end": 1690781041,
+        "lock_wei": "500000000000000000",
+        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
+        "overpaid_wei": "0",
+        "pool_id": 2,
+        "premium_gen": "0.060833333333333334",
+        "premium_wei": "60833333333333334",
+        "start": 1659245041,
+        "status": "OK",
+        "waiting_ends": 1659849841
+      },
+      "at": "2026-09-29T05:24:08.565Z"
+    },
+    {
+      "label": "multi-m2-cover",
+      "contract": "demo",
+      "role": "buyer3",
+      "from": "0x091787D68ba16Cbc5a05568785801A2F932E6D80",
+      "method": "buy_cover",
+      "args": [
+        "2",
+        "500000000000000000",
+        "365"
+      ],
+      "value": "60833333333333334",
+      "tx": "0x0011961cd336479d21054a01c36c377579984d4a80d39c50189053caa668e504",
+      "status": "ACCEPTED",
+      "seconds": 9,
+      "returned": {
+        "claim_deadline": 1790662153,
+        "cover_id": 2,
+        "demo_backdated_days": 1521,
+        "end": 1690781053,
+        "lock_wei": "500000000000000000",
+        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
+        "overpaid_wei": "0",
+        "pool_id": 2,
+        "premium_gen": "0.060833333333333334",
+        "premium_wei": "60833333333333334",
+        "start": 1659245053,
+        "status": "OK",
+        "waiting_ends": 1659849853
+      },
+      "at": "2026-09-29T05:24:18.527Z"
+    },
+    {
+      "label": "multi-m3-cover",
+      "contract": "demo",
+      "role": "buyer4",
+      "from": "0x102980c6f5343663e8e4E16B5CF1a34aa34bf973",
+      "method": "buy_cover",
+      "args": [
+        "2",
+        "500000000000000000",
+        "365"
+      ],
+      "value": "60833333333333334",
+      "tx": "0x0a5cc152c20c80f9d4a28efc04b7f7b85821c1bd86edeab6e30f2327f2d6bbc3",
+      "status": "ACCEPTED",
+      "seconds": 13,
+      "returned": {
+        "claim_deadline": 1790662163,
+        "cover_id": 3,
+        "demo_backdated_days": 1521,
+        "end": 1690781063,
+        "lock_wei": "500000000000000000",
+        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
+        "overpaid_wei": "0",
+        "pool_id": 2,
+        "premium_gen": "0.060833333333333334",
+        "premium_wei": "60833333333333334",
+        "start": 1659245063,
+        "status": "OK",
+        "waiting_ends": 1659849863
+      },
+      "at": "2026-09-29T05:24:32.166Z"
+    },
+    {
+      "label": "multi-m4-cover",
+      "contract": "demo",
+      "role": "buyer5",
+      "from": "0x7d727D1cA0481a9d6335D5A4e24b187eae3ca048",
+      "method": "buy_cover",
+      "args": [
+        "2",
+        "500000000000000000",
+        "365"
+      ],
+      "value": "60833333333333334",
+      "tx": "0x2b11abf60e03f6bc28e8a72e434384a64444c56495d5ec354f4dd8352e5e6660",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": {
+        "claim_deadline": 1790662176,
+        "cover_id": 4,
+        "demo_backdated_days": 1521,
+        "end": 1690781076,
+        "lock_wei": "500000000000000000",
+        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
+        "overpaid_wei": "0",
+        "pool_id": 2,
+        "premium_gen": "0.060833333333333334",
+        "premium_wei": "60833333333333334",
+        "start": 1659245076,
+        "status": "OK",
+        "waiting_ends": 1659849876
+      },
+      "at": "2026-09-29T05:24:43.789Z"
+    },
+    {
+      "label": "multi-m5-cover",
+      "contract": "demo",
+      "role": "buyer6",
+      "from": "0x25f6Ce26323EDB040fe3f3a5e55F4E6958053D12",
+      "method": "buy_cover",
+      "args": [
+        "2",
+        "500000000000000000",
+        "365"
+      ],
+      "value": "60833333333333334",
+      "tx": "0x6ba9f8ce6ec1c32359e35425cc83d9b47827b8b276d338e52e384357ac61c952",
+      "status": "ACCEPTED",
+      "seconds": 9,
+      "returned": {
+        "claim_deadline": 1790662188,
+        "cover_id": 5,
+        "demo_backdated_days": 1521,
+        "end": 1690781088,
+        "lock_wei": "500000000000000000",
+        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
+        "overpaid_wei": "0",
+        "pool_id": 2,
+        "premium_gen": "0.060833333333333334",
+        "premium_wei": "60833333333333334",
+        "start": 1659245088,
+        "status": "OK",
+        "waiting_ends": 1659849888
+      },
+      "at": "2026-09-29T05:24:53.668Z"
+    },
+    {
+      "label": "multi-m1-file",
+      "contract": "demo",
+      "role": "buyer2",
+      "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
+      "method": "file_claim",
+      "args": [
+        "1",
+        "3:2023-07-30",
+        "https://rekt.news/curve-vyper-rekt",
+        "Curve pools were drained through the Vyper reentrancy bug on 30 July 2023."
+      ],
+      "value": "0",
+      "tx": "0x38b12cedbfc9919574a6474757ff4261f1d04522aa0df825ea5b1766580c4bb7",
       "status": "ACCEPTED",
       "seconds": 9,
       "returned": null,
-      "at": "2026-09-26T09:09:08.038Z"
+      "at": "2026-09-29T05:25:05.746Z"
+    },
+    {
+      "label": "multi-m2-file",
+      "contract": "demo",
+      "role": "buyer3",
+      "from": "0x091787D68ba16Cbc5a05568785801A2F932E6D80",
+      "method": "file_claim",
+      "args": [
+        "2",
+        "3:2022-08-09",
+        "https://rekt.news/curve-vyper-rekt",
+        "Vyper evidence filed against the 2022 DNS record."
+      ],
+      "value": "0",
+      "tx": "0x261863c4ad86cacaf404d07d7f63d32833228d4d85af3722f76edf1979d13474",
+      "status": "ACCEPTED",
+      "seconds": 15,
+      "returned": null,
+      "at": "2026-09-29T05:25:21.968Z"
+    },
+    {
+      "label": "multi-m3-file",
+      "contract": "demo",
+      "role": "buyer4",
+      "from": "0x102980c6f5343663e8e4E16B5CF1a34aa34bf973",
+      "method": "file_claim",
+      "args": [
+        "3",
+        "3:2023-07-30",
+        "https://rekt.news/curve-finance-rekt",
+        "DNS evidence filed against the 2023 Vyper record."
+      ],
+      "value": "0",
+      "tx": "0xc8923f3000f9177229f0d0725f7439466bae730c0c2385dd3c22d478f21379d8",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": null,
+      "at": "2026-09-29T05:25:34.025Z"
+    },
+    {
+      "label": "multi-m4-file",
+      "contract": "demo",
+      "role": "buyer5",
+      "from": "0x7d727D1cA0481a9d6335D5A4e24b187eae3ca048",
+      "method": "file_claim",
+      "args": [
+        "4",
+        "3:2022-08-09",
+        "https://rekt.news/curve-finance-rekt",
+        "Curve's front end was hijacked through DNS on 9 August 2022."
+      ],
+      "value": "0",
+      "tx": "0xe8bb5b66a63d94f17d64b9d2f418b16c783779d9c4b512ab3ffa08717aa9d88d",
+      "status": "ACCEPTED",
+      "seconds": 9,
+      "returned": null,
+      "at": "2026-09-29T05:25:43.981Z"
+    },
+    {
+      "label": "multi-m5-file",
+      "contract": "demo",
+      "role": "buyer6",
+      "from": "0x25f6Ce26323EDB040fe3f3a5e55F4E6958053D12",
+      "method": "file_claim",
+      "args": [
+        "5",
+        "3:2023-07-30",
+        "https://rekt.news/curve-finance-rekt",
+        "Wrong evidence first; refiled with the right article."
+      ],
+      "value": "0",
+      "tx": "0x7ea8b5fef0e2d41337fa4fafa42f781c83ccc0096f8931d2cd3d72aea50b80b7",
+      "status": "ACCEPTED",
+      "seconds": 11,
+      "returned": null,
+      "at": "2026-09-29T05:25:55.879Z"
+    },
+    {
+      "label": "multi-m5-judge-mismatch",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "5"
+      ],
+      "value": "0",
+      "tx": "0x4c20224aaabf591d6177e152c8ce5316ca09ae26bbf74dfd6da1bd5414e407d0",
+      "status": "ACCEPTED",
+      "seconds": 43,
+      "returned": {
+        "batch_id": 0,
+        "claim_id": 5,
+        "classification": "INCONCLUSIVE",
+        "content_hash": "b6bc02b93277364b",
+        "drop_bps": 4952,
+        "effective": "EVIDENCE_MISMATCH",
+        "event_match": "DIFFERENT",
+        "evidence_binding": "rekt.news/curve-finance-rekt UNBOUND 2022-08-10",
+        "evidence_strength": 0,
+        "exclusion": "NONE",
+        "gross_payout_wei": "0",
+        "incident_date": "2023-07-30",
+        "incident_key": "3:2023-07-30",
+        "judged": true,
+        "model_called": false,
+        "outcome": "EVIDENCE_MISMATCH",
+        "peril": "NONE",
+        "protocol_match": false,
+        "reason": "EVIDENCE_MISMATCH without a model call: no evidence page both names Curve and dates the event within 3 days of the selected record (2023-07-30); the evidence is not about incident 3:2023-07-30 [rekt.news/curve-finance-rekt UNBOUND 2022-08-10]. Nothing was lost; the claim can be refiled with new evidence or a corrected incident key.",
+        "severity_bucket": 2,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:26:39.557Z"
+    },
+    {
+      "label": "multi-m5-refile",
+      "contract": "demo",
+      "role": "buyer6",
+      "from": "0x25f6Ce26323EDB040fe3f3a5e55F4E6958053D12",
+      "method": "refile_claim",
+      "args": [
+        "5",
+        "",
+        "https://rekt.news/curve-vyper-rekt",
+        "Refiled with the rekt.news report of the Vyper incident itself."
+      ],
+      "value": "0",
+      "tx": "0xae9aee3959aa31ddacd71c08597619aa4b04fd5cb22cd04655a87cee792d79ea",
+      "status": "ACCEPTED",
+      "seconds": 9,
+      "returned": {
+        "claim_id": 5,
+        "incident_key": "3:2023-07-30",
+        "mismatch_refiles_left": 1,
+        "note": "refiled; call judge_claim(5)",
+        "refiles": 1,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:26:48.718Z"
+    },
+    {
+      "label": "multi-m1-judge",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "1"
+      ],
+      "value": "0",
+      "tx": "0xa790c297f2a00ca8455a57a67f186314a2539d7d0c3f7c1648037e53158be974",
+      "status": "ACCEPTED",
+      "seconds": 53,
+      "returned": {
+        "batch_id": 1,
+        "claim_id": 1,
+        "classification": "COVERED",
+        "content_hash": "7b244fb5a5ef1dbd",
+        "drop_bps": 4952,
+        "effective": "COVERED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/curve-vyper-rekt BOUND 2023-07-31",
+        "evidence_strength": 4,
+        "exclusion": "NONE",
+        "gross_payout_wei": "225000000000000000",
+        "incident_date": "2023-07-30",
+        "incident_key": "3:2023-07-30",
+        "judged": true,
+        "model_called": true,
+        "outcome": "APPROVED",
+        "peril": "SMART_CONTRACT_BUG",
+        "protocol_match": true,
+        "reason": "Curve: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-07-30 per DeFi Llama; TVL drop 49.52% (bucket 2).",
+        "severity_bucket": 2,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:27:41.954Z"
+    },
+    {
+      "label": "multi-m2-judge",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "2"
+      ],
+      "value": "0",
+      "tx": "0xf68f42dcd00d03bc4b5733734dccf11053ec9e5abdff4d7106cd8311480fc8be",
+      "status": "ACCEPTED",
+      "seconds": 42,
+      "returned": {
+        "batch_id": 0,
+        "claim_id": 2,
+        "classification": "INCONCLUSIVE",
+        "content_hash": "e4db574b4f52ad5e",
+        "drop_bps": 148,
+        "effective": "EVIDENCE_MISMATCH",
+        "event_match": "DIFFERENT",
+        "evidence_binding": "rekt.news/curve-vyper-rekt UNBOUND 2023-07-31",
+        "evidence_strength": 0,
+        "exclusion": "NONE",
+        "gross_payout_wei": "0",
+        "incident_date": "2022-08-09",
+        "incident_key": "3:2022-08-09",
+        "judged": true,
+        "model_called": false,
+        "outcome": "EVIDENCE_MISMATCH",
+        "peril": "NONE",
+        "protocol_match": false,
+        "reason": "EVIDENCE_MISMATCH without a model call: no evidence page both names Curve and dates the event within 3 days of the selected record (2022-08-09); the evidence is not about incident 3:2022-08-09 [rekt.news/curve-vyper-rekt UNBOUND 2023-07-31]. Nothing was lost; the claim can be refiled with new evidence or a corrected incident key.",
+        "severity_bucket": 0,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:28:24.405Z"
+    },
+    {
+      "label": "multi-m3-judge",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "3"
+      ],
+      "value": "0",
+      "tx": "0x4933d14e83df225024c2e69dc7c6aa2e1bc0c155c54d6c5ffed2a7bef73650de",
+      "status": "ACCEPTED",
+      "seconds": 45,
+      "returned": {
+        "batch_id": 0,
+        "claim_id": 3,
+        "classification": "INCONCLUSIVE",
+        "content_hash": "b6bc02b93277364b",
+        "drop_bps": 4952,
+        "effective": "EVIDENCE_MISMATCH",
+        "event_match": "DIFFERENT",
+        "evidence_binding": "rekt.news/curve-finance-rekt UNBOUND 2022-08-10",
+        "evidence_strength": 0,
+        "exclusion": "NONE",
+        "gross_payout_wei": "0",
+        "incident_date": "2023-07-30",
+        "incident_key": "3:2023-07-30",
+        "judged": true,
+        "model_called": false,
+        "outcome": "EVIDENCE_MISMATCH",
+        "peril": "NONE",
+        "protocol_match": false,
+        "reason": "EVIDENCE_MISMATCH without a model call: no evidence page both names Curve and dates the event within 3 days of the selected record (2023-07-30); the evidence is not about incident 3:2023-07-30 [rekt.news/curve-finance-rekt UNBOUND 2022-08-10]. Nothing was lost; the claim can be refiled with new evidence or a corrected incident key.",
+        "severity_bucket": 2,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:29:09.491Z"
+    },
+    {
+      "label": "multi-m4-judge",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "4"
+      ],
+      "value": "0",
+      "tx": "0x4cec88e87eb3dd56dde9ba9ee6799b75052498d4973f190e3d1f198a48e07b3d",
+      "status": "ACCEPTED",
+      "seconds": 51,
+      "returned": {
+        "batch_id": 0,
+        "claim_id": 4,
+        "classification": "EXCLUDED",
+        "content_hash": "8e3568c652f64ccc",
+        "drop_bps": 148,
+        "effective": "EXCLUDED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/curve-finance-rekt BOUND 2022-08-10",
+        "evidence_strength": 4,
+        "exclusion": "FRONTEND_HIJACK",
+        "gross_payout_wei": "0",
+        "incident_date": "2022-08-09",
+        "incident_key": "3:2022-08-09",
+        "judged": true,
+        "model_called": true,
+        "outcome": "DENIED_EXCLUDED",
+        "peril": "NONE",
+        "protocol_match": true,
+        "reason": "Curve: evidence matches exclusion FRONTEND_HIJACK (strength 4/7). Incident 2022-08-09 per DeFi Llama; TVL drop 1.48% (bucket 0).",
+        "severity_bucket": 0,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:30:00.873Z"
+    },
+    {
+      "label": "multi-m5-judge-after-refile",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "judge_claim",
+      "args": [
+        "5"
+      ],
+      "value": "0",
+      "tx": "0xeeaaffb0a33bd08080765cdc0c84a52ae63b92e1aa52428878f971fd2309dbf2",
+      "status": "ACCEPTED",
+      "seconds": 54,
+      "returned": {
+        "batch_id": 1,
+        "claim_id": 5,
+        "classification": "COVERED",
+        "content_hash": "7b244fb5a5ef1dbd",
+        "drop_bps": 4952,
+        "effective": "COVERED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/curve-vyper-rekt BOUND 2023-07-31",
+        "evidence_strength": 4,
+        "exclusion": "NONE",
+        "gross_payout_wei": "225000000000000000",
+        "incident_date": "2023-07-30",
+        "incident_key": "3:2023-07-30",
+        "judged": true,
+        "model_called": true,
+        "outcome": "APPROVED",
+        "peril": "SMART_CONTRACT_BUG",
+        "protocol_match": true,
+        "reason": "Curve: evidence matches covered peril SMART_CONTRACT_BUG (strength 4/7). Incident 2023-07-30 per DeFi Llama; TVL drop 49.52% (bucket 2).",
+        "severity_bucket": 2,
+        "status": "OK"
+      },
+      "at": "2026-09-29T05:30:54.871Z"
     },
     {
       "label": "demo-expired-cover",
@@ -361,25 +841,25 @@
         "1"
       ],
       "value": "66666666666667",
-      "tx": "0x0ef520c3545acfddf74f5a44b750cb2575cd981cc9aea6a15efa9dd0b282c7de",
+      "tx": "0xbd9190b5ae8aa60664e365032f4e7914d2fe1f73282936f069ef58e07cb1b5f1",
       "status": "ACCEPTED",
-      "seconds": 10,
+      "seconds": 11,
       "returned": {
-        "claim_deadline": 1790416455,
-        "cover_id": 1,
+        "claim_deadline": 1790662559,
+        "cover_id": 6,
         "demo_backdated_days": 1521,
-        "end": 1659085755,
+        "end": 1659331859,
         "lock_wei": "200000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 1,
         "premium_gen": "0.000066666666666667",
         "premium_wei": "66666666666667",
-        "start": 1658999355,
+        "start": 1659245459,
         "status": "OK",
-        "waiting_ends": 1659604155
+        "waiting_ends": 1659850259
       },
-      "at": "2026-09-26T09:09:20.958Z"
+      "at": "2026-09-29T05:31:07.159Z"
     },
     {
       "label": "demo-covered-cover",
@@ -393,57 +873,25 @@
         "365"
       ],
       "value": "121666666666666667",
-      "tx": "0xa9f8e44e5bb559968350e2584f5663cde268ff260eed5f4fb8faa6b863a94409",
+      "tx": "0x9b3cc35ce8d4ef2ab0025cc46ba499907e7e84af0ea9c1bd189cd936fa38b653",
       "status": "ACCEPTED",
-      "seconds": 10,
+      "seconds": 11,
       "returned": {
-        "claim_deadline": 1790416466,
-        "cover_id": 2,
+        "claim_deadline": 1790662571,
+        "cover_id": 7,
         "demo_backdated_days": 1521,
-        "end": 1690535366,
+        "end": 1690781471,
         "lock_wei": "1000000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 1,
         "premium_gen": "0.121666666666666667",
         "premium_wei": "121666666666666667",
-        "start": 1658999366,
+        "start": 1659245471,
         "status": "OK",
-        "waiting_ends": 1659604166
+        "waiting_ends": 1659850271
       },
-      "at": "2026-09-26T09:09:31.857Z"
-    },
-    {
-      "label": "demo-curve-cover",
-      "contract": "demo",
-      "role": "buyer2",
-      "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
-      "method": "buy_cover",
-      "args": [
-        "2",
-        "1000000000000000000",
-        "365"
-      ],
-      "value": "121666666666666667",
-      "tx": "0x3afee18d3c5ff2800293b9179f3bf14f148787dfca62721858d506e39791bf9e",
-      "status": "ACCEPTED",
-      "seconds": 10,
-      "returned": {
-        "claim_deadline": 1790416478,
-        "cover_id": 3,
-        "demo_backdated_days": 1521,
-        "end": 1690535378,
-        "lock_wei": "1000000000000000000",
-        "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
-        "overpaid_wei": "0",
-        "pool_id": 2,
-        "premium_gen": "0.121666666666666667",
-        "premium_wei": "121666666666666667",
-        "start": 1658999378,
-        "status": "OK",
-        "waiting_ends": 1659604178
-      },
-      "at": "2026-09-26T09:09:42.767Z"
+      "at": "2026-09-29T05:31:18.982Z"
     },
     {
       "label": "demo-multichain-cover",
@@ -457,25 +905,25 @@
         "365"
       ],
       "value": "121666666666666667",
-      "tx": "0x9a4e1b717d5ad0c8660dfa9d99d0cc7eb75f85e173da7996bb53b60cef92f4d0",
+      "tx": "0x8b5e667a3328e0d52b0562e3ba7006fd46887948ae27088a79508f7cb36aea72",
       "status": "ACCEPTED",
       "seconds": 11,
       "returned": {
-        "claim_deadline": 1790416488,
-        "cover_id": 4,
+        "claim_deadline": 1790662583,
+        "cover_id": 8,
         "demo_backdated_days": 1521,
-        "end": 1690535388,
+        "end": 1690781483,
         "lock_wei": "1000000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 3,
         "premium_gen": "0.121666666666666667",
         "premium_wei": "121666666666666667",
-        "start": 1658999388,
+        "start": 1659245483,
         "status": "OK",
-        "waiting_ends": 1659604188
+        "waiting_ends": 1659850283
       },
-      "at": "2026-09-26T09:09:54.889Z"
+      "at": "2026-09-29T05:31:30.724Z"
     },
     {
       "label": "demo-inconclusive-cover",
@@ -489,25 +937,25 @@
         "365"
       ],
       "value": "60833333333333334",
-      "tx": "0xf8a376e2c414a7bc5b17756cd236c9ccace82e412c7a67e803d5579672bac3a2",
+      "tx": "0xee9051db92401ef0978269019e03a4e0e07ed85e7f8f8938a45147fbec8f069d",
       "status": "ACCEPTED",
-      "seconds": 11,
+      "seconds": 9,
       "returned": {
-        "claim_deadline": 1790416503,
-        "cover_id": 5,
+        "claim_deadline": 1790662595,
+        "cover_id": 9,
         "demo_backdated_days": 1521,
-        "end": 1690535403,
+        "end": 1690781495,
         "lock_wei": "500000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 1,
         "premium_gen": "0.060833333333333334",
         "premium_wei": "60833333333333334",
-        "start": 1658999403,
+        "start": 1659245495,
         "status": "OK",
-        "waiting_ends": 1659604203
+        "waiting_ends": 1659850295
       },
-      "at": "2026-09-26T09:10:07.316Z"
+      "at": "2026-09-29T05:31:40.757Z"
     },
     {
       "label": "demo-prorata-cover-a",
@@ -521,25 +969,25 @@
         "365"
       ],
       "value": "121666666666666667",
-      "tx": "0x5e7a80969cdb471e6819c0807cdd22860928589db1feb2fc53fa98bd9edf7e14",
+      "tx": "0x4b8257a43a1caebb3ffd3cf2f12a221e78ab1f43cdc5b677373788b46db15e39",
       "status": "ACCEPTED",
-      "seconds": 10,
+      "seconds": 11,
       "returned": {
-        "claim_deadline": 1790416514,
-        "cover_id": 6,
+        "claim_deadline": 1790662605,
+        "cover_id": 10,
         "demo_backdated_days": 1521,
-        "end": 1690535414,
+        "end": 1690781505,
         "lock_wei": "500000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 4,
         "premium_gen": "0.121666666666666667",
         "premium_wei": "121666666666666667",
-        "start": 1658999414,
+        "start": 1659245505,
         "status": "OK",
-        "waiting_ends": 1659604214
+        "waiting_ends": 1659850305
       },
-      "at": "2026-09-26T09:10:18.856Z"
+      "at": "2026-09-29T05:31:52.610Z"
     },
     {
       "label": "demo-prorata-cover-b",
@@ -553,25 +1001,25 @@
         "365"
       ],
       "value": "121666666666666667",
-      "tx": "0xe4955324d71eb5892c908cdbe9881636307ac90660b32ab23c228085108b3330",
+      "tx": "0xf1bf4e41abdd2329b6aa3af6c6167f871708bede3907569453710532f08a211d",
       "status": "ACCEPTED",
-      "seconds": 15,
+      "seconds": 11,
       "returned": {
-        "claim_deadline": 1790416532,
-        "cover_id": 7,
+        "claim_deadline": 1790662617,
+        "cover_id": 11,
         "demo_backdated_days": 1521,
-        "end": 1690535432,
+        "end": 1690781517,
         "lock_wei": "500000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 4,
         "premium_gen": "0.121666666666666667",
         "premium_wei": "121666666666666667",
-        "start": 1658999432,
+        "start": 1659245517,
         "status": "OK",
-        "waiting_ends": 1659604232
+        "waiting_ends": 1659850317
       },
-      "at": "2026-09-26T09:10:35.551Z"
+      "at": "2026-09-29T05:32:04.591Z"
     },
     {
       "label": "demo-stalled-cover",
@@ -585,25 +1033,25 @@
         "365"
       ],
       "value": "60833333333333334",
-      "tx": "0x920adfbf091f26caefe09854050ba978f6a4a620f6764903c93843040ac106ad",
+      "tx": "0x7fe45a5be121629596650f71549cb25925e7ca7f8bc7321fc5aa5c9970aaddac",
       "status": "ACCEPTED",
-      "seconds": 17,
+      "seconds": 9,
       "returned": {
-        "claim_deadline": 1790416549,
-        "cover_id": 8,
+        "claim_deadline": 1790662629,
+        "cover_id": 12,
         "demo_backdated_days": 1521,
-        "end": 1690535449,
+        "end": 1690781529,
         "lock_wei": "500000000000000000",
         "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
         "overpaid_wei": "0",
         "pool_id": 5,
         "premium_gen": "0.060833333333333334",
         "premium_wei": "60833333333333334",
-        "start": 1658999449,
+        "start": 1659245529,
         "status": "OK",
-        "waiting_ends": 1659604249
+        "waiting_ends": 1659850329
       },
-      "at": "2026-09-26T09:10:53.886Z"
+      "at": "2026-09-29T05:32:14.696Z"
     },
     {
       "label": "demo-covered-claim",
@@ -612,34 +1060,17 @@
       "from": "0xaf0ddCE698cFAe7e851BB32f7C73b205C15cDe05",
       "method": "file_claim",
       "args": [
-        "2",
+        "7",
+        "1183:2023-03-13",
         "https://rekt.news/euler-rekt",
         "Euler V1 was drained on 13 March 2023 via the donateToReserves flaw."
       ],
       "value": "0",
-      "tx": "0x1d0f8a1cbe00d453415370b233f4de9627ad382bdfc0c7b5b460253d4f4770ab",
+      "tx": "0x3c9a9c531317ec5dc06aa5c72333ad69272404893c276718ad7c65b46de49c22",
       "status": "ACCEPTED",
-      "seconds": 13,
+      "seconds": 7,
       "returned": null,
-      "at": "2026-09-26T09:11:07.321Z"
-    },
-    {
-      "label": "demo-curve-claim",
-      "contract": "demo",
-      "role": "buyer2",
-      "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
-      "method": "file_claim",
-      "args": [
-        "3",
-        "https://rekt.news/curve-finance-rekt",
-        "Curve users lost funds on 9 August 2022."
-      ],
-      "value": "0",
-      "tx": "0xbd2632a3947287099ecedf341a85a4860569fa5a8720deac2c088e0eba1f72d1",
-      "status": "ACCEPTED",
-      "seconds": 18,
-      "returned": null,
-      "at": "2026-09-26T09:11:26.675Z"
+      "at": "2026-09-29T05:32:21.380Z"
     },
     {
       "label": "demo-multichain-claim",
@@ -648,16 +1079,17 @@
       "from": "0x091787D68ba16Cbc5a05568785801A2F932E6D80",
       "method": "file_claim",
       "args": [
-        "4",
+        "8",
+        "591:2023-07-07",
         "https://rekt.news/multichain-r3kt",
         "Multichain funds were drained in July 2023."
       ],
       "value": "0",
-      "tx": "0x0d6c78eeb7d1cdcc562f53f5f8c82ccedb33f8903d7366512d679b4eb3867854",
+      "tx": "0xac1337aef56ff8f52b7683c4574aa822b8c54bc68b2af2b5e60a29c7a2232431",
       "status": "ACCEPTED",
-      "seconds": 10,
+      "seconds": 9,
       "returned": null,
-      "at": "2026-09-26T09:11:37.791Z"
+      "at": "2026-09-29T05:32:31.237Z"
     },
     {
       "label": "demo-inconclusive-claim",
@@ -666,16 +1098,17 @@
       "from": "0x102980c6f5343663e8e4E16B5CF1a34aa34bf973",
       "method": "file_claim",
       "args": [
-        "5",
+        "9",
+        "1183:2023-03-13",
         "https://www.euler.finance/",
         "Euler lost funds; see the official site."
       ],
       "value": "0",
-      "tx": "0x72e2f2e1226fd5049b493632af82f3e662510839971df8e037768b19d745a831",
+      "tx": "0x590a337622df63ae2a379acf3d2d3a380516ab8fe80b30f4fb609fabb373e7e8",
       "status": "ACCEPTED",
       "seconds": 11,
       "returned": null,
-      "at": "2026-09-26T09:11:50.465Z"
+      "at": "2026-09-29T05:32:43.408Z"
     },
     {
       "label": "demo-prorata-claim-a",
@@ -684,16 +1117,17 @@
       "from": "0x7d727D1cA0481a9d6335D5A4e24b187eae3ca048",
       "method": "file_claim",
       "args": [
-        "6",
+        "10",
+        "1183:2023-03-13",
         "https://rekt.news/euler-rekt",
         "Euler exploit, March 2023."
       ],
       "value": "0",
-      "tx": "0x6e68c1ebfbecdcfa0f30b86c6671fa8a09a3e64fe8672739a4be9801be5a830f",
+      "tx": "0x75396eea29c0fa3f2fe4d3dc4cbaeaf5a814374a14b0dd445eb6473f6b7437bc",
       "status": "ACCEPTED",
-      "seconds": 14,
+      "seconds": 11,
       "returned": null,
-      "at": "2026-09-26T09:12:05.417Z"
+      "at": "2026-09-29T05:32:55.197Z"
     },
     {
       "label": "demo-prorata-claim-b",
@@ -702,16 +1136,17 @@
       "from": "0x25f6Ce26323EDB040fe3f3a5e55F4E6958053D12",
       "method": "file_claim",
       "args": [
-        "7",
+        "11",
+        "1183:2023-03-13",
         "https://web.archive.org/web/20231217192546/https://rekt.news/euler-rekt/",
         "Euler exploit (archived report)."
       ],
       "value": "0",
-      "tx": "0x7d63bc39a2f6e18afb21efb993c38fa5e071e493e064bac27a7a97d936945589",
+      "tx": "0xbb3cedd3763ef207ce560b6a31098685258764233533bd9500cdd2f5cac7eb99",
       "status": "ACCEPTED",
-      "seconds": 21,
+      "seconds": 9,
       "returned": null,
-      "at": "2026-09-26T09:12:27.701Z"
+      "at": "2026-09-29T05:33:04.926Z"
     },
     {
       "label": "demo-covered-judge",
@@ -720,23 +1155,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "1"
+        "6"
       ],
       "value": "0",
-      "tx": "0xaa97278468cde69db1d9a5456966e743f5f9866ba0bdcb39b30fa3ec7acd0b0b",
+      "tx": "0x2a164168892318c0b4317a9f0b4791a9d375790577c102536a411032d3bf088a",
       "status": "ACCEPTED",
-      "seconds": 28,
+      "seconds": 30,
       "returned": {
-        "batch_id": 1,
-        "claim_id": 1,
+        "batch_id": 2,
+        "claim_id": 6,
         "classification": "COVERED",
-        "content_hash": "4a9acc9c5131dbe3",
+        "content_hash": "1a86f5532cf16402",
         "drop_bps": 9585,
         "effective": "COVERED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/euler-rekt BOUND 2023-03-14",
         "evidence_strength": 4,
         "exclusion": "NONE",
         "gross_payout_wei": "900000000000000000",
         "incident_date": "2023-03-13",
+        "incident_key": "1183:2023-03-13",
         "judged": true,
         "model_called": true,
         "outcome": "APPROVED",
@@ -746,7 +1184,7 @@
         "severity_bucket": 4,
         "status": "OK"
       },
-      "at": "2026-09-26T09:12:57.286Z"
+      "at": "2026-09-29T05:33:35.550Z"
     },
     {
       "label": "demo-contest",
@@ -755,22 +1193,22 @@
       "from": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
       "method": "contest",
       "args": [
-        "1",
+        "6",
         "https://www.euler.finance/blog/war-peace-behind-the-scenes-of-eulers-240m-exploit-recovery",
         "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it."
       ],
       "value": "100000000000000000",
-      "tx": "0xd60f97c0de0224ce4cc12048f9550ee05791d77e83b747c102c2e2df2f2efea6",
+      "tx": "0xb610c4c4aca43085c5106a8f7822dfd3ec8889bcbc97bd967e778e067640c55b",
       "status": "ACCEPTED",
-      "seconds": 11,
+      "seconds": 13,
       "returned": {
         "bond_wei": "100000000000000000",
-        "claim_id": 1,
-        "note": "contest filed; anyone may call judge_contest(1). If the outcome flips the bond comes back; if it holds, the bond goes to the other side.",
+        "claim_id": 6,
+        "note": "contest filed; anyone may call judge_contest(6). If the outcome flips the bond comes back; if it holds, the bond goes to the other side.",
         "overpaid_wei": "0",
         "status": "OK"
       },
-      "at": "2026-09-26T09:13:09.358Z"
+      "at": "2026-09-29T05:33:49.447Z"
     },
     {
       "label": "demo-contest-judge",
@@ -779,57 +1217,22 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_contest",
       "args": [
-        "1"
+        "6"
       ],
       "value": "0",
-      "tx": "0xf6e9ff12a657fc7e9f7e9a04ba35dab474b4b18a6909b8938c7d14ce37a77cbb",
+      "tx": "0x966d586671f61f951a74391b4fcd066ac873d16281b3ebc46ef8e0de7199c151",
       "status": "ACCEPTED",
       "seconds": 28,
       "returned": {
         "bond_to": "0xaf0ddCE698cFAe7e851BB32f7C73b205C15cDe05",
-        "claim_id": 1,
+        "claim_id": 6,
         "contest": "UPHELD",
         "outcome": "APPROVED",
         "reason": "Euler: evidence matches covered peril SMART_CONTRACT_BUG (strength 7/7). Incident 2023-03-13 per DeFi Llama; TVL drop 95.85% (bucket 4).",
         "rejudged_as": "APPROVED",
         "status": "OK"
       },
-      "at": "2026-09-26T09:13:37.160Z"
-    },
-    {
-      "label": "demo-curve-judge",
-      "contract": "demo",
-      "role": "trigger",
-      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
-      "method": "judge_claim",
-      "args": [
-        "2"
-      ],
-      "value": "0",
-      "tx": "0x2816656b2e171a1d4c04fb926e5317b1b4f943950741f8a35a8f2c43cd69987b",
-      "status": "ACCEPTED",
-      "seconds": 55,
-      "returned": {
-        "batch_id": 0,
-        "claim_id": 2,
-        "classification": "EXCLUDED",
-        "content_hash": "ff36629b12a323a1",
-        "drop_bps": 148,
-        "effective": "EXCLUDED",
-        "evidence_strength": 4,
-        "exclusion": "FRONTEND_HIJACK",
-        "gross_payout_wei": "0",
-        "incident_date": "2022-08-09",
-        "judged": true,
-        "model_called": true,
-        "outcome": "DENIED_EXCLUDED",
-        "peril": "NONE",
-        "protocol_match": true,
-        "reason": "Curve: evidence matches exclusion FRONTEND_HIJACK (strength 4/7). Incident 2022-08-09 per DeFi Llama; TVL drop 1.48% (bucket 0).",
-        "severity_bucket": 0,
-        "status": "OK"
-      },
-      "at": "2026-09-26T09:14:31.706Z"
+      "at": "2026-09-29T05:34:17.758Z"
     },
     {
       "label": "demo-multichain-judge",
@@ -838,23 +1241,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "3"
+        "7"
       ],
       "value": "0",
-      "tx": "0x61ed8472de732591b899897ff57e6541c26fb15669bf602fbd4fae2e6f345ab3",
+      "tx": "0x3f407a30547b53c0c8f2f5447b54ea2f1e1b3866a7d7af905e6b0eab816f8a2a",
       "status": "ACCEPTED",
-      "seconds": 42,
+      "seconds": 64,
       "returned": {
         "batch_id": 0,
-        "claim_id": 3,
+        "claim_id": 7,
         "classification": "EXCLUDED",
-        "content_hash": "b5357357dd59d42a",
+        "content_hash": "34176f41865d6887",
         "drop_bps": 8979,
         "effective": "EXCLUDED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/multichain-r3kt BOUND 2023-07-07",
         "evidence_strength": 4,
         "exclusion": "USER_KEY_COMPROMISE",
         "gross_payout_wei": "0",
         "incident_date": "2023-07-07",
+        "incident_key": "591:2023-07-07",
         "judged": true,
         "model_called": true,
         "outcome": "DENIED_EXCLUDED",
@@ -864,7 +1270,7 @@
         "severity_bucket": 3,
         "status": "OK"
       },
-      "at": "2026-09-26T09:15:14.041Z"
+      "at": "2026-09-29T05:35:21.328Z"
     },
     {
       "label": "demo-inconclusive-judge",
@@ -873,23 +1279,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "4"
+        "8"
       ],
       "value": "0",
-      "tx": "0x7848b157a8da8bead18ffc034bf30c06fe2196d2faf7c1393fd65e6657147f35",
+      "tx": "0x619565777c7c7084a1d9dd98841641579d2e110483bd8b580f4d71efff1c9b08",
       "status": "ACCEPTED",
-      "seconds": 33,
+      "seconds": 16,
       "returned": {
         "batch_id": 0,
-        "claim_id": 4,
+        "claim_id": 8,
         "classification": "INCONCLUSIVE",
-        "content_hash": "b03315447e55fca9",
+        "content_hash": "196b5ea9db315453",
         "drop_bps": 9585,
         "effective": "INCONCLUSIVE",
+        "event_match": "NOT_ASKED",
+        "evidence_binding": "www.euler.finance UNDATED -",
         "evidence_strength": 0,
         "exclusion": "NONE",
         "gross_payout_wei": "0",
         "incident_date": "2023-03-13",
+        "incident_key": "1183:2023-03-13",
         "judged": true,
         "model_called": false,
         "outcome": "INCONCLUSIVE",
@@ -899,7 +1308,7 @@
         "severity_bucket": 4,
         "status": "OK"
       },
-      "at": "2026-09-26T09:15:46.680Z"
+      "at": "2026-09-29T05:35:37.443Z"
     },
     {
       "label": "demo-prorata-judge-a",
@@ -908,23 +1317,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "5"
+        "9"
       ],
       "value": "0",
-      "tx": "0x7105638ff6f36f7a820dc3829ef07667ac06904384e7d7dbde03faa8d4ff27bd",
+      "tx": "0xc6184294309e632748fd65ec9e3d7bc9aaa483054357c40ff4e72fcde1b5a36d",
       "status": "ACCEPTED",
-      "seconds": 30,
+      "seconds": 26,
       "returned": {
-        "batch_id": 2,
-        "claim_id": 5,
+        "batch_id": 3,
+        "claim_id": 9,
         "classification": "COVERED",
-        "content_hash": "4a9acc9c5131dbe3",
+        "content_hash": "1a86f5532cf16402",
         "drop_bps": 9585,
         "effective": "COVERED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/euler-rekt BOUND 2023-03-14",
         "evidence_strength": 4,
         "exclusion": "NONE",
         "gross_payout_wei": "900000000000000000",
         "incident_date": "2023-03-13",
+        "incident_key": "1183:2023-03-13",
         "judged": true,
         "model_called": true,
         "outcome": "APPROVED",
@@ -934,7 +1346,7 @@
         "severity_bucket": 4,
         "status": "OK"
       },
-      "at": "2026-09-26T09:16:16.652Z"
+      "at": "2026-09-29T05:36:03.164Z"
     },
     {
       "label": "demo-prorata-judge-b",
@@ -943,23 +1355,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "6"
+        "10"
       ],
       "value": "0",
-      "tx": "0xe5726777de33d05437333505fede4b4d0b4cf6f4ba600355d926be77586a7222",
+      "tx": "0x615aedaa8f183822d1c0c64d46c05aa9ffeafa5ade575face77614861f0d532d",
       "status": "ACCEPTED",
-      "seconds": 28,
+      "seconds": 31,
       "returned": {
-        "batch_id": 2,
-        "claim_id": 6,
+        "batch_id": 3,
+        "claim_id": 10,
         "classification": "COVERED",
-        "content_hash": "912b860d3c97f56b",
+        "content_hash": "039b5c66144fe003",
         "drop_bps": 9585,
         "effective": "COVERED",
+        "event_match": "SAME",
+        "evidence_binding": "web.archive.org/web/20231217192546/https://rekt.news/euler-rekt BOUND 2023-03-14",
         "evidence_strength": 4,
         "exclusion": "NONE",
         "gross_payout_wei": "900000000000000000",
         "incident_date": "2023-03-13",
+        "incident_key": "1183:2023-03-13",
         "judged": true,
         "model_called": true,
         "outcome": "APPROVED",
@@ -969,7 +1384,7 @@
         "severity_bucket": 4,
         "status": "OK"
       },
-      "at": "2026-09-26T09:16:45.058Z"
+      "at": "2026-09-29T05:36:33.723Z"
     },
     {
       "label": "demo-stalled-claim",
@@ -978,16 +1393,17 @@
       "from": "0x102980c6f5343663e8e4E16B5CF1a34aa34bf973",
       "method": "file_claim",
       "args": [
-        "8",
+        "12",
+        "148:2023-05-20",
         "https://rekt.news/tornado-gov-rekt",
         "Tornado Cash governance was taken over in May 2023."
       ],
       "value": "0",
-      "tx": "0xd0b3ec9563bc3b792fea37e886e6bd982bf86fdf332a28e603d26403964de0ba",
+      "tx": "0x76c5961b0c5b100cc83b9701f4dbc9b3008bb8971c80bb21ffad14d43d185d2c",
       "status": "ACCEPTED",
-      "seconds": 16,
+      "seconds": 7,
       "returned": null,
-      "at": "2026-09-26T09:17:01.061Z"
+      "at": "2026-09-29T05:36:40.785Z"
     },
     {
       "label": "demo-pause",
@@ -999,15 +1415,15 @@
         "true"
       ],
       "value": "0",
-      "tx": "0x1b3b430edda68a35ce6e976ee6dab1eacee5bdb363fbbd786e58d646bfe1d78e",
+      "tx": "0xde26bf624e544bd4ef3352c63fe9e58dc5af5ab3ec1892339e80fc89ed3c926e",
       "status": "ACCEPTED",
-      "seconds": 9,
+      "seconds": 11,
       "returned": {
         "note": "claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open",
         "paused": true,
         "status": "OK"
       },
-      "at": "2026-09-26T09:17:11.273Z"
+      "at": "2026-09-29T05:36:52.668Z"
     },
     {
       "label": "demo-settle-stalled-while-paused",
@@ -1016,21 +1432,21 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "settle_stalled",
       "args": [
-        "7"
+        "11"
       ],
       "value": "0",
-      "tx": "0x9b958a67c03b175e9b15c2e20154b5528a7df23907d9de51700f883c637a19d3",
+      "tx": "0xd197d1a3bfe226ec46bda65ba344e82f032d863dfdeddce214e10f894a2aca55",
       "status": "ACCEPTED",
       "seconds": 12,
       "returned": {
-        "claim_id": 7,
-        "note": "back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790416549",
+        "claim_id": 11,
+        "note": "back to FILED: judge_claim may be retried, and the claimant may refile with different evidence until 1790662929",
         "outcome": "FILED",
-        "refile_until": 1790416549,
+        "refile_until": 1790662929,
         "settled": "CLAIM",
         "status": "OK"
       },
-      "at": "2026-09-26T09:27:39.493Z"
+      "at": "2026-09-29T06:12:17.981Z"
     },
     {
       "label": "demo-stalled-judge-while-paused",
@@ -1039,23 +1455,26 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "judge_claim",
       "args": [
-        "7"
+        "11"
       ],
       "value": "0",
-      "tx": "0x9b9f2d9f64eb53f48ec4d5ebc545377ad8ef5aaf359b138ca980249ff490aee3",
+      "tx": "0xc4908a33f37cd675e2b004437c2f9660abc74585d90f49d471825ff836db0d18",
       "status": "ACCEPTED",
-      "seconds": 34,
+      "seconds": 24,
       "returned": {
         "batch_id": 0,
-        "claim_id": 7,
+        "claim_id": 11,
         "classification": "EXCLUDED",
-        "content_hash": "3ca5dee94cebdfeb",
+        "content_hash": "ac3d72dd718832b7",
         "drop_bps": 70,
         "effective": "EXCLUDED",
+        "event_match": "SAME",
+        "evidence_binding": "rekt.news/tornado-gov-rekt BOUND 2023-05-22",
         "evidence_strength": 4,
         "exclusion": "GOVERNANCE_ATTACK",
         "gross_payout_wei": "0",
         "incident_date": "2023-05-20",
+        "incident_key": "148:2023-05-20",
         "judged": true,
         "model_called": true,
         "outcome": "DENIED_EXCLUDED",
@@ -1065,7 +1484,7 @@
         "severity_bucket": 0,
         "status": "OK"
       },
-      "at": "2026-09-26T09:28:13.911Z"
+      "at": "2026-09-29T06:12:42.382Z"
     },
     {
       "label": "demo-unpause",
@@ -1077,15 +1496,15 @@
         "false"
       ],
       "value": "0",
-      "tx": "0xebd1672e9f4e2b6e796e3a7247ff9111b90d461d6dfa3e8c8df8c9d9467030f3",
+      "tx": "0x4c18b1164c450b14abc646a889931260102a388d8a6e352f11dcd7d673e17dcf",
       "status": "ACCEPTED",
-      "seconds": 10,
+      "seconds": 12,
       "returned": {
         "note": "claims, judgements, contests, settlements, releases, withdrawals, settle_stalled and payouts remain open",
         "paused": false,
         "status": "OK"
       },
-      "at": "2026-09-26T09:28:23.430Z"
+      "at": "2026-09-29T06:12:54.575Z"
     },
     {
       "label": "demo-finalize-batch-1",
@@ -1097,22 +1516,22 @@
         "1"
       ],
       "value": "0",
-      "tx": "0x5cac57b69c6f4e7102b85ef845761c069709ee1cb089372ed6c3034fb3b5e141",
+      "tx": "0xf560cdb9ee58d6aba2c7c334acff3d1513982855c9608b8fdbb74c3a340af266",
       "status": "ACCEPTED",
-      "seconds": 14,
+      "seconds": 52,
       "returned": {
         "available_wei": "1000000000000000000",
         "batch_id": 1,
         "claim_with": "claim_payout()",
-        "claims_paid": 1,
+        "claims_paid": 2,
         "dust_to_underwriter_wei": "0",
         "factor_bps": 10000,
-        "gross_total_wei": "900000000000000000",
-        "paid_total_wei": "900000000000000000",
+        "gross_total_wei": "450000000000000000",
+        "paid_total_wei": "450000000000000000",
         "scaled": false,
         "status": "OK"
       },
-      "at": "2026-09-26T09:28:40.974Z"
+      "at": "2026-09-29T06:13:50.251Z"
     },
     {
       "label": "demo-finalize-batch-2",
@@ -1124,12 +1543,39 @@
         "2"
       ],
       "value": "0",
-      "tx": "0xa5098f3f8a5de38b53f9ebc752885d166eb3c499a221d4b84f1198d03469b24f",
+      "tx": "0xc664fa56612d5c3bb1b8e55989c2b7f51fc2f0fd782893a040efecbc42edb47f",
       "status": "ACCEPTED",
-      "seconds": 7,
+      "seconds": 11,
       "returned": {
         "available_wei": "1000000000000000000",
         "batch_id": 2,
+        "claim_with": "claim_payout()",
+        "claims_paid": 1,
+        "dust_to_underwriter_wei": "0",
+        "factor_bps": 10000,
+        "gross_total_wei": "900000000000000000",
+        "paid_total_wei": "900000000000000000",
+        "scaled": false,
+        "status": "OK"
+      },
+      "at": "2026-09-29T06:14:02.634Z"
+    },
+    {
+      "label": "demo-finalize-batch-3",
+      "contract": "demo",
+      "role": "trigger",
+      "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
+      "method": "finalize_incident",
+      "args": [
+        "3"
+      ],
+      "value": "0",
+      "tx": "0x4794e8589d136187d5b371577ce5921b7fc13ae75d026bd62378023ce8b4e854",
+      "status": "ACCEPTED",
+      "seconds": 12,
+      "returned": {
+        "available_wei": "1000000000000000000",
+        "batch_id": 3,
         "claim_with": "claim_payout()",
         "claims_paid": 2,
         "dust_to_underwriter_wei": "0",
@@ -1139,7 +1585,7 @@
         "scaled": true,
         "status": "OK"
       },
-      "at": "2026-09-26T09:34:31.281Z"
+      "at": "2026-09-29T06:14:16.599Z"
     },
     {
       "label": "demo-release-expired",
@@ -1148,21 +1594,21 @@
       "from": "0xD7017a9aa0907A82A892BAB005661E76CA4BA66d",
       "method": "release_cover",
       "args": [
-        "1"
+        "6"
       ],
       "value": "0",
-      "tx": "0x00d6c959909a68a088defe03b8e46c7bcd1a7f4acb2504b38ca63370ff55ca6d",
+      "tx": "0x1d0ed16f4b5c2828bad35fd8bf4a2cb8b23c8cf12bdf3e538ff8fb8db3b9486e",
       "status": "ACCEPTED",
-      "seconds": 15,
+      "seconds": 10,
       "returned": {
         "claim_with": "claim_payout()",
-        "cover_id": 1,
+        "cover_id": 6,
         "premium_earned_wei": "66666666666667",
         "status": "OK",
         "underwriter": "0xDA75CBccB80CC529e555ecC503c009446f1FA78a",
         "unlocked_wei": "200000000000000000"
       },
-      "at": "2026-09-26T09:54:37.763Z"
+      "at": "2026-09-29T06:17:32.730Z"
     },
     {
       "label": "demo-payout-buyer1",
@@ -1172,16 +1618,35 @@
       "method": "claim_payout",
       "args": [],
       "value": "0",
-      "tx": "0x01c101461229f944e025252bfd55611861829b642ee840b80f0b9026e59c4174",
+      "tx": "0x4730e3586ae21910dd659136962c56fea01e4bfd7095d1fe6bc9c2265e89c64d",
       "status": "ACCEPTED",
-      "seconds": 12,
+      "seconds": 11,
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
         "paid_gen": "1.00",
         "paid_wei": "1000000000000000000",
         "status": "OK"
       },
-      "at": "2026-09-26T09:54:50.221Z"
+      "at": "2026-09-29T06:17:44.731Z"
+    },
+    {
+      "label": "demo-payout-buyer2",
+      "contract": "demo",
+      "role": "buyer2",
+      "from": "0xE4a71c7288F618609B0e01C55CCd12701EAbC1aC",
+      "method": "claim_payout",
+      "args": [],
+      "value": "0",
+      "tx": "0x56cc0fab47aa4c0ff666ca0cbcfba64206553d7ef0cdd4db20f92b44eb62448f",
+      "status": "ACCEPTED",
+      "seconds": 13,
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "0.225",
+        "paid_wei": "225000000000000000",
+        "status": "OK"
+      },
+      "at": "2026-09-29T06:17:58.367Z"
     },
     {
       "label": "demo-payout-buyer5",
@@ -1191,16 +1656,16 @@
       "method": "claim_payout",
       "args": [],
       "value": "0",
-      "tx": "0x2f13bd30a9f6e01e71927e1285568938263271b9c233a94bb0d2865a93df7dab",
+      "tx": "0x0cd8b14ab5e261abdfb78baefe49dd09a22685dbc0885dedd0fdbdcde509b931",
       "status": "ACCEPTED",
-      "seconds": 12,
+      "seconds": 19,
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
         "paid_gen": "0.50",
         "paid_wei": "500000000000000000",
         "status": "OK"
       },
-      "at": "2026-09-26T09:55:03.001Z"
+      "at": "2026-09-29T06:18:18.490Z"
     },
     {
       "label": "demo-payout-buyer6",
@@ -1210,16 +1675,16 @@
       "method": "claim_payout",
       "args": [],
       "value": "0",
-      "tx": "0xb56ffe778dc37a11aace980d4ee29f9c94fa345b89b79d279f4f5d17d624d57a",
+      "tx": "0x8b6ea2654b354f4428b1ee04b9d78d3f1eb9fb2a9d97301813c875801cdffda5",
       "status": "ACCEPTED",
-      "seconds": 6,
+      "seconds": 13,
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "0.50",
-        "paid_wei": "500000000000000000",
+        "paid_gen": "0.725",
+        "paid_wei": "725000000000000000",
         "status": "OK"
       },
-      "at": "2026-09-26T09:55:10.331Z"
+      "at": "2026-09-29T06:18:32.511Z"
     },
     {
       "label": "demo-payout-uw1",
@@ -1229,16 +1694,16 @@
       "method": "claim_payout",
       "args": [],
       "value": "0",
-      "tx": "0x8c504c0f961507c777e99fbafe7a695972332e2dc743e7e42549ca687f1d5dc2",
+      "tx": "0x4158f7cf0b33ecd8462a7c9fb0294066474d41121b4df4be946c54aa00ce4040",
       "status": "ACCEPTED",
-      "seconds": 12,
+      "seconds": 14,
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
         "paid_gen": "0.121733333333333334",
         "paid_wei": "121733333333333334",
         "status": "OK"
       },
-      "at": "2026-09-26T09:55:23.773Z"
+      "at": "2026-09-29T06:18:47.942Z"
     },
     {
       "label": "demo-payout-uw2",
@@ -1248,22 +1713,22 @@
       "method": "claim_payout",
       "args": [],
       "value": "0",
-      "tx": "0x597724907a64b07699acbdb5053a2152baa11e5ca9b2c1be720ed3c1feee8116",
+      "tx": "0x8ac35809560ebfd72508b53c00eb4b44031918c798d508874adf71d7355fa7b3",
       "status": "ACCEPTED",
-      "seconds": 6,
+      "seconds": 7,
       "returned": {
         "note": "the transfer is posted on finalisation of this transaction",
-        "paid_gen": "0.243333333333333334",
-        "paid_wei": "243333333333333334",
+        "paid_gen": "0.365000000000000002",
+        "paid_wei": "365000000000000002",
         "status": "OK"
       },
-      "at": "2026-09-26T09:55:30.559Z"
+      "at": "2026-09-29T06:18:56.435Z"
     }
   ],
   "canonical": {
     "pool_backdated": 1,
     "cover_backdated": 1,
-    "claim_backdated": 1,
+    "claim_backdated": 0,
     "pool_registry": 2
   },
   "demo": {
@@ -1274,24 +1739,38 @@
       "prorata": 4,
       "tornado": 5
     },
+    "multi": {
+      "covers": {
+        "m1": 1,
+        "m2": 2,
+        "m3": 3,
+        "m4": 4,
+        "m5": 5
+      },
+      "claims": {
+        "m1": 1,
+        "m2": 2,
+        "m3": 3,
+        "m4": 4,
+        "m5": 5
+      }
+    },
     "covers": {
-      "expired": 1,
-      "covered": 2,
-      "curve": 3,
-      "multichain": 4,
-      "inconclusive": 5,
-      "prorataA": 6,
-      "prorataB": 7,
-      "stalled": 8
+      "expired": 6,
+      "covered": 7,
+      "multichain": 8,
+      "inconclusive": 9,
+      "prorataA": 10,
+      "prorataB": 11,
+      "stalled": 12
     },
     "claims": {
-      "covered": 1,
-      "curve": 2,
-      "multichain": 3,
-      "inconclusive": 4,
-      "prorataA": 5,
-      "prorataB": 6,
-      "stalled": 7
+      "covered": 6,
+      "multichain": 7,
+      "inconclusive": 8,
+      "prorataA": 9,
+      "prorataB": 10,
+      "stalled": 11
     }
   }
 }

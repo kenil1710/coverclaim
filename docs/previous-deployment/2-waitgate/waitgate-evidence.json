@@ -2,42 +2,42 @@
   {
     "label": "wait7-pool",
     "method": "create_pool",
-    "tx": "0x4bd5db34f06ba7e5a81cd43855033bea975308deab5455b734fd297b1630364f",
+    "tx": "0x144e5d0f3523863f733b3a85a9b1cc876dbb764e7bcef052569b7b6204f1624d",
     "status": "ACCEPTED",
     "returned": null
   },
   {
     "label": "wait7-cover",
     "method": "buy_cover",
-    "tx": "0xc6b5d3844cea0d75fea0a187a17ebd99379e8e3114ffbfc8f58185c5ae082553",
+    "tx": "0x515de404d66b7b531267be1452c03152e5db442d6cb2436ea4c1a0065c6c4969",
     "status": "ACCEPTED",
     "returned": {
-      "claim_deadline": 1795846769,
+      "claim_deadline": 1795598016,
       "cover_id": 3,
       "demo_backdated_days": 0,
-      "end": 1793254769,
+      "end": 1793006016,
       "lock_wei": "100000000000000000",
       "note": "incidents before start + waiting period are not covered; any overpayment is yours via claim_payout()",
       "overpaid_wei": "0",
       "pool_id": 3,
       "premium_gen": "0.001",
       "premium_wei": "1000000000000000",
-      "start": 1790662769,
+      "start": 1790414016,
       "status": "OK",
-      "waiting_ends": 1791267569
+      "waiting_ends": 1791018816
     }
   },
   {
     "label": "wait7-file-refused",
     "method": "file_claim",
-    "tx": "0x0fcbed7bad7ed945a1a8446e23b4e445b5f97e143f9bae26e796abad8a78ac72",
+    "tx": "0x4d72a84d41178416413755a706ec32ff3531591814f2c0c9e9d54d6d0817682f",
     "status": "ACCEPTED",
     "returned": {
       "claim_with": "claim_payout()",
-      "claimable_after": 1791267569,
-      "reason": "cover waiting period has not ended yet, claimable after 1791267569",
+      "claimable_after": 1791018816,
+      "reason": "cover waiting period has not ended yet, claimable after 1791018816",
       "refunded_wei": "0",
-      "seconds_remaining": 604788,
+      "seconds_remaining": 604787,
       "status": "REJECTED"
     }
   },
@@ -47,6 +47,6 @@
     "claim_id": 0,
     "claimable": false,
     "in_waiting_period": true,
-    "waiting_ends": 1791267569
+    "waiting_ends": 1791018816
   }
 ]

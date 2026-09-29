@@ -10,13 +10,23 @@
  * outcome table by READING THE CHAIN, because a script's memory is not
  * evidence (GrantJudge's lesson).
  *
+ * Every claim names ONE DeFi Llama incident record by key (id:YYYY-MM-DD).
+ *
  * Canonical (backdating strict):
- *   REJECTED_BACKDATED  cover bought today, claimed with Euler's 2023 exploit
+ *   BACKDATED           cover bought today, claim keyed to Euler's 2023 record:
+ *                       refused AT FILING, before any fetch or model call
  *   REGISTRY            a waiting-period-0 cover, attested in force by CoverRegistry
- * Demo (covers start 1,521 days before purchase):
+ * Demo (covers start 1,521 days before purchase: 2022-07-31 for a cover bought
+ * 2026-09-29, so one 365-day cover spans BOTH of Curve's incidents):
+ *   MULTI-INCIDENT      Curve, one pool, one window, two records:
+ *                         M1 Vyper evidence + 2023 record -> COVERED, paid at its severity
+ *                         M2 Vyper evidence + 2022 record -> EVIDENCE_MISMATCH
+ *                         M3 DNS evidence   + 2023 record -> EVIDENCE_MISMATCH
+ *                         M4 DNS evidence   + 2022 record -> EXCLUDED (FRONTEND_HIJACK)
+ *                         M5 DNS evidence   + 2023 record -> EVIDENCE_MISMATCH, then
+ *                            refiled with the Vyper evidence -> COVERED
  *   COVERED + CONTESTED Euler V1, 2023-03-13 — underwriter contests with Euler's
  *                       own post-mortem; verdict held; paid at bucket 4
- *   EXCLUDED            Curve DNS hijack, 2022-08-09 (FRONTEND_HIJACK)
  *   EXCLUDED            Multichain keys, 2023-07-07 (USER_KEY_COMPROMISE)
  *   INCONCLUSIVE        Euler claimed with its homepage — no peril named
  *   PRO-RATA            two covers on a 50%-collateral Euler pool, both scaled
@@ -40,12 +50,21 @@ const save = () => writeFileSync(evPath, JSON.stringify(EV, null, 2) + "\n");
 
 const ALL_P = "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT,BRIDGE_COMPROMISE";
 const ALL_X = "PHISHING,FRONTEND_HIJACK,USER_KEY_COMPROMISE,RUG_BY_TEAM,GOVERNANCE_ATTACK";
+// The incident records, by key: "<DeFi Llama id>:<YYYY-MM-DD>".
+const KEY = {
+  euler: "1183:2023-03-13",
+  curveDns: "3:2022-08-09",
+  curveVyper: "3:2023-07-30",
+  multichain: "591:2023-07-07",
+  tornado: "148:2023-05-20",
+};
 const URL_ = {
   euler: "https://rekt.news/euler-rekt",
   eulerArchive: "https://web.archive.org/web/20231217192546/https://rekt.news/euler-rekt/",
   eulerPM: "https://www.euler.finance/blog/war-peace-behind-the-scenes-of-eulers-240m-exploit-recovery",
   eulerHome: "https://www.euler.finance/",
   curveDns: "https://rekt.news/curve-finance-rekt",
+  curveVyper: "https://rekt.news/curve-vyper-rekt",
   multichain: "https://rekt.news/multichain-r3kt",
   tornado: "https://rekt.news/tornado-gov-rekt",
 };
@@ -87,8 +106,8 @@ async function newCover(address, role, label, pool, amount, days) {
   return mine.items[mine.items.length - 1].cover_id;
 }
 
-async function newClaim(address, role, label, cover, urls, statement) {
-  const { ret } = await step(label, address, role, "file_claim", [cover, urls, statement]);
+async function newClaim(address, role, label, cover, key, urls, statement) {
+  const { ret } = await step(label, address, role, "file_claim", [cover, key, urls, statement]);
   if (ret?.claim_id) return ret.claim_id;
   return (await view(address, "get_cover", [cover])).claim_id;
 }
@@ -120,11 +139,13 @@ if (part === "all" || part === "canonical") {
   // Waiting period 0: a claim may not be FILED inside a waiting period (it
   // could only ever be backdated). The backdating check still bites here: the
   // 2023 incident predates a cover that starts today.
+  // The key names Euler's 2023 record; the cover starts today. Refused at
+  // filing - no fetch, no model - and the cover keeps its one claim.
   const p = await newPool(CANON, "uw1", "canon-euler-pool", SPEC.euler, 2n * GEN, { wait: 0 });
   const c = await newCover(CANON, "buyer2", "canon-backdated-cover", p, GEN, 30);
-  const cl = await newClaim(CANON, "buyer2", "canon-backdated-claim", c, URL_.euler,
-    "Euler was exploited through donateToReserves; I hold cover on it.");
-  await step("canon-backdated-judge", CANON, "trigger", "judge_claim", [cl]);
+  await step("canon-backdated-file-refused", CANON, "buyer2", "file_claim", [c, KEY.euler, URL_.euler,
+    "Euler was exploited through donateToReserves; I hold cover on it."]);
+  const cl = (await view(CANON, "get_cover", [c])).claim_id;
   const p2 = await newPool(CANON, "uw3", "canon-curve-pool-wait0", SPEC.curve, 2n * GEN, { wait: 0, term: 90 });
   await newCover(CANON, "buyer3", "canon-registry-cover", p2, GEN / 2n, 60);
   await step("registry-attest", REG, "trigger", "attest", [acc.buyer3.address, "curve-dex"]);
@@ -136,17 +157,51 @@ if (part === "all" || part === "demo") {
   console.log("\n=== DEMO", DEMO);
   const P = {};
   P.euler = await newPool(DEMO, "uw1", "demo-euler-pool", SPEC.euler, 3n * GEN);
-  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", SPEC.curve, 2n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
+  P.curve = await newPool(DEMO, "uw2", "demo-curve-pool", { ...SPEC.curve, wording: "Curve DEX pools on Ethereum. Covers the protocol's own code; the front end is excluded." }, 3n * GEN, { perils: "SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT" });
   P.multichain = await newPool(DEMO, "uw3", "demo-multichain-pool", SPEC.multichain, 2n * GEN);
   P.prorata = await newPool(DEMO, "uw2", "demo-euler-prorata-pool", { ...SPEC.euler, wording: "Thin pool: 50% collateral. Claims on one incident beyond capital are paid pro-rata." }, GEN, { coll: 5000, max: GEN });
   P.tornado = await newPool(DEMO, "uw3", "demo-tornado-pool", SPEC.tornado, GEN);
   EV.demo = { pools: P };
   save();
 
+  // MULTI-INCIDENT PROOF, FIRST: one Curve pool, one cover window spanning
+  // both records. Each claim names a record; the evidence must be about it.
+  const M = {};
+  const mc = {};
+  for (const [id, role] of [["m1", "buyer2"], ["m2", "buyer3"], ["m3", "buyer4"], ["m4", "buyer5"], ["m5", "buyer6"]]) {
+    mc[id] = await newCover(DEMO, role, `multi-${id}-cover`, P.curve, GEN / 2n, 365);
+  }
+  const cv = await view(DEMO, "get_cover", [mc.m1]);
+  console.log(`  curve cover window ${new Date(cv.start * 1000).toISOString()} .. ${new Date(cv.end * 1000).toISOString()}, waiting ends ${new Date(cv.waiting_ends * 1000).toISOString()}`);
+  for (const k of [KEY.curveDns, KEY.curveVyper]) {
+    const chk = await view(DEMO, "check_incident", [mc.m1, k]);
+    console.log(`  check_incident ${k}: ok=${chk.ok} ${chk.reason ?? ""}`);
+  }
+  M.m1 = await newClaim(DEMO, "buyer2", "multi-m1-file", mc.m1, KEY.curveVyper, URL_.curveVyper,
+    "Curve pools were drained through the Vyper reentrancy bug on 30 July 2023.");
+  M.m2 = await newClaim(DEMO, "buyer3", "multi-m2-file", mc.m2, KEY.curveDns, URL_.curveVyper,
+    "Vyper evidence filed against the 2022 DNS record.");
+  M.m3 = await newClaim(DEMO, "buyer4", "multi-m3-file", mc.m3, KEY.curveVyper, URL_.curveDns,
+    "DNS evidence filed against the 2023 Vyper record.");
+  M.m4 = await newClaim(DEMO, "buyer5", "multi-m4-file", mc.m4, KEY.curveDns, URL_.curveDns,
+    "Curve's front end was hijacked through DNS on 9 August 2022.");
+  M.m5 = await newClaim(DEMO, "buyer6", "multi-m5-file", mc.m5, KEY.curveVyper, URL_.curveDns,
+    "Wrong evidence first; refiled with the right article.");
+  EV.demo.multi = { covers: mc, claims: M };
+  save();
+  // M5 first: a mismatch, then a refile inside the claim window.
+  await step("multi-m5-judge-mismatch", DEMO, "trigger", "judge_claim", [M.m5]);
+  await step("multi-m5-refile", DEMO, "buyer6", "refile_claim", [M.m5, "", URL_.curveVyper,
+    "Refiled with the rekt.news report of the Vyper incident itself."]);
+  await step("multi-m1-judge", DEMO, "trigger", "judge_claim", [M.m1]);
+  await step("multi-m2-judge", DEMO, "trigger", "judge_claim", [M.m2]);
+  await step("multi-m3-judge", DEMO, "trigger", "judge_claim", [M.m3]);
+  await step("multi-m4-judge", DEMO, "trigger", "judge_claim", [M.m4]);
+  await step("multi-m5-judge-after-refile", DEMO, "trigger", "judge_claim", [M.m5]);
+
   const C = {};
   C.expired = await newCover(DEMO, "buyer1", "demo-expired-cover", P.euler, GEN / 5n, 1);
   C.covered = await newCover(DEMO, "buyer1", "demo-covered-cover", P.euler, GEN, 365);
-  C.curve = await newCover(DEMO, "buyer2", "demo-curve-cover", P.curve, GEN, 365);
   C.multichain = await newCover(DEMO, "buyer3", "demo-multichain-cover", P.multichain, GEN, 365);
   C.inconclusive = await newCover(DEMO, "buyer4", "demo-inconclusive-cover", P.euler, GEN / 2n, 365);
   C.prorataA = await newCover(DEMO, "buyer5", "demo-prorata-cover-a", P.prorata, GEN, 365);
@@ -156,16 +211,14 @@ if (part === "all" || part === "demo") {
   save();
 
   const K = {};
-  K.covered = await newClaim(DEMO, "buyer1", "demo-covered-claim", C.covered, URL_.euler,
+  K.covered = await newClaim(DEMO, "buyer1", "demo-covered-claim", C.covered, KEY.euler, URL_.euler,
     "Euler V1 was drained on 13 March 2023 via the donateToReserves flaw.");
-  K.curve = await newClaim(DEMO, "buyer2", "demo-curve-claim", C.curve, URL_.curveDns,
-    "Curve users lost funds on 9 August 2022.");
-  K.multichain = await newClaim(DEMO, "buyer3", "demo-multichain-claim", C.multichain, URL_.multichain,
+  K.multichain = await newClaim(DEMO, "buyer3", "demo-multichain-claim", C.multichain, KEY.multichain, URL_.multichain,
     "Multichain funds were drained in July 2023.");
-  K.inconclusive = await newClaim(DEMO, "buyer4", "demo-inconclusive-claim", C.inconclusive, URL_.eulerHome,
+  K.inconclusive = await newClaim(DEMO, "buyer4", "demo-inconclusive-claim", C.inconclusive, KEY.euler, URL_.eulerHome,
     "Euler lost funds; see the official site.");
-  K.prorataA = await newClaim(DEMO, "buyer5", "demo-prorata-claim-a", C.prorataA, URL_.euler, "Euler exploit, March 2023.");
-  K.prorataB = await newClaim(DEMO, "buyer6", "demo-prorata-claim-b", C.prorataB, URL_.eulerArchive, "Euler exploit (archived report).");
+  K.prorataA = await newClaim(DEMO, "buyer5", "demo-prorata-claim-a", C.prorataA, KEY.euler, URL_.euler, "Euler exploit, March 2023.");
+  K.prorataB = await newClaim(DEMO, "buyer6", "demo-prorata-claim-b", C.prorataB, KEY.euler, URL_.eulerArchive, "Euler exploit (archived report).");
   EV.demo.claims = K;
   save();
 
@@ -176,7 +229,6 @@ if (part === "all" || part === "demo") {
     "Euler's own post-mortem is a new primary source; the underwriter asks the validators to re-read the root cause with it."], bond);
   await step("demo-contest-judge", DEMO, "trigger", "judge_contest", [K.covered]);
 
-  await step("demo-curve-judge", DEMO, "trigger", "judge_claim", [K.curve]);
   await step("demo-multichain-judge", DEMO, "trigger", "judge_claim", [K.multichain]);
   await step("demo-inconclusive-judge", DEMO, "trigger", "judge_claim", [K.inconclusive]);
   await step("demo-prorata-judge-a", DEMO, "trigger", "judge_claim", [K.prorataA]);
@@ -184,7 +236,7 @@ if (part === "all" || part === "demo") {
 
   // STALLED: filed, never judged; the owner pauses; the stall window passes;
   // anyone unsticks it WHILE PAUSED; it is then judged while still paused.
-  K.stalled = await newClaim(DEMO, "buyer4", "demo-stalled-claim", C.stalled, URL_.tornado,
+  K.stalled = await newClaim(DEMO, "buyer4", "demo-stalled-claim", C.stalled, KEY.tornado, URL_.tornado,
     "Tornado Cash governance was taken over in May 2023.");
   save();
   await step("demo-pause", DEMO, "client", "set_paused", [true]);
@@ -224,7 +276,7 @@ if (part === "all" || part === "demo") {
   await step("demo-release-expired", DEMO, "trigger", "release_cover", [C.expired]);
 
   // Payouts: the only method that transfers, and it reads no clock.
-  for (const role of ["buyer1", "buyer5", "buyer6", "uw1", "uw2"]) {
+  for (const role of ["buyer1", "buyer2", "buyer5", "buyer6", "uw1", "uw2"]) {
     const owed = await view(DEMO, "payout_of", [acc[role].address]);
     if (BigInt(owed.owed_wei) > 0n) await step(`demo-payout-${role}`, DEMO, role, "claim_payout", []);
   }

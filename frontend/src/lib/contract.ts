@@ -21,6 +21,8 @@ import type {
   Config,
   Cover,
   EvidenceCheck,
+  IncidentCheck,
+  LlamaIncident,
   Policy,
   Pool,
   Quote,
@@ -113,6 +115,30 @@ export const quote = (a: Addr, pool: number, amountWei: bigint, days: number) =>
 export const checkEvidence = (a: Addr, pool: number, urls: string) =>
   read<EvidenceCheck>(a, "check_evidence", [pool, urls]);
 export const verifyClaim = (a: Addr, id: number) => read<Verification>(a, "verify_claim", [id]);
+export const checkIncident = (a: Addr, cover: number, key: string) =>
+  read<IncidentCheck>(a, "check_incident", [cover, key]);
+
+/**
+ * The protocol's incident records inside a window, straight from DeFi Llama -
+ * the same list every validator reads. Only a picker: the contract checks the
+ * key mechanically and the validators select the record by exact match.
+ */
+export async function llamaIncidents(llamaId: string, from: string, to: string): Promise<LlamaIncident[]> {
+  const res = await fetch("https://api.llama.fi/hacks");
+  if (!res.ok) throw new Error(`api.llama.fi/hacks answered ${res.status}`);
+  const rows = (await res.json()) as Array<Record<string, unknown>>;
+  const out: LlamaIncident[] = [];
+  for (const r of rows) {
+    if (String(r.defillamaId ?? "") !== llamaId || typeof r.date !== "number") continue;
+    const day = new Date(Math.floor(r.date / 86400) * 86400 * 1000).toISOString().slice(0, 10);
+    if (day < from || day > to) continue;
+    out.push({ key: `${llamaId}:${day}`, date: day, name: String(r.name ?? ""), classification: String(r.classification ?? ""),
+      technique: String(r.technique ?? ""), amount: typeof r.amount === "number" ? r.amount : 0 });
+  }
+  // A day shared by two records needs the name to tell them apart.
+  for (const x of out) if (out.filter((y) => y.date === x.date).length > 1) x.key = `${x.key}:${x.name}`;
+  return out.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
 
 /* --- writes ----------------------------------------------------------- */
 
@@ -218,10 +244,11 @@ export const cancelCover = (c: Addr, account: Addr, cover: number) =>
   write(c, account, "cancel_cover", [cover]);
 export const releaseCover = (c: Addr, account: Addr, cover: number) =>
   write(c, account, "release_cover", [cover]);
-export const fileClaim = (c: Addr, account: Addr, cover: number, urls: string, statement: string) =>
-  write(c, account, "file_claim", [cover, urls, statement]);
-export const refileClaim = (c: Addr, account: Addr, claim: number, urls: string, statement: string) =>
-  write(c, account, "refile_claim", [claim, urls, statement]);
+export const fileClaim = (c: Addr, account: Addr, cover: number, incidentKey: string, urls: string, statement: string) =>
+  write(c, account, "file_claim", [cover, incidentKey, urls, statement]);
+/** `incidentKey` "" keeps the claim's incident; `urls` "" keeps its evidence. */
+export const refileClaim = (c: Addr, account: Addr, claim: number, incidentKey: string, urls: string, statement: string) =>
+  write(c, account, "refile_claim", [claim, incidentKey, urls, statement]);
 export const judgeClaim = (c: Addr, account: Addr, claim: number) =>
   write(c, account, "judge_claim", [claim]);
 export const contest = (c: Addr, account: Addr, claim: number, urls: string, statement: string, bondWei: bigint) =>

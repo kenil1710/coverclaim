@@ -95,6 +95,21 @@ export function useQuote(pool: number | null, amountWei: bigint | null, days: nu
     STABLE,
   );
 }
+export function useIncidentCheck(cover: number | null, key: string) {
+  const a = useAddr();
+  return useSWR(a && cover && key.trim() ? ["incident", a, cover, key.trim()] : null, () =>
+    api.checkIncident(a!, cover!, key.trim()),
+    STABLE,
+  );
+}
+
+export function useLlamaIncidents(llamaId: string | null, from: string | null, to: string | null) {
+  return useSWR(llamaId && from && to ? ["llama-hacks", llamaId, from, to] : null, () =>
+    api.llamaIncidents(llamaId!, from!, to!),
+    STABLE,
+  );
+}
+
 export function useEvidenceCheck(pool: number | null, urls: string) {
   const a = useAddr();
   return useSWR(a && pool && urls.trim() ? ["evidence", a, pool, urls.trim()] : null, () =>

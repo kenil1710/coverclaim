@@ -26,18 +26,29 @@ const batches = J(await demo.view("get_batches", [0, 100])).items;
 const dStats = J(await demo.view("get_stats"));
 const cStats = J(await canon.view("get_stats"));
 const dCfg = J(await demo.view("get_config"));
+const dPools = J(await demo.view("get_pools", [0, 100])).items;
 const K = seed.demo?.claims ?? {};
 const C = seed.demo?.covers ?? {};
 const byId = (id) => dClaims.find((c) => c.claim_id === id) ?? {};
 
 const covered = byId(K.covered);
-const curve = byId(K.curve);
+const MK = seed.demo?.multi?.claims ?? {};
+const m1 = byId(MK.m1);
+const m2 = byId(MK.m2);
+const m3 = byId(MK.m3);
+const m4 = byId(MK.m4);
+const m5 = byId(MK.m5);
+const v1 = MK.m1 ? J(await demo.view("verify_claim", [MK.m1])) : {};
+const v5 = MK.m5 ? J(await demo.view("verify_claim", [MK.m5])) : {};
+const returnedOf = (label) => seed.steps.filter((s) => s.label === label).map((s) => s.returned).pop() ?? {};
+const paidOrApproved = (c) => ["PAID", "APPROVED"].includes(c.status);
 const multi = byId(K.multichain);
 const inc = byId(K.inconclusive);
 const pa = byId(K.prorataA);
 const pb = byId(K.prorataB);
 const st = byId(K.stalled);
-const backdated = cClaims.find((c) => c.claim_id === seed.canonical?.claim_backdated) ?? {};
+const backdatedCover = seed.canonical?.cover_backdated ? J(await canon.view("get_cover", [seed.canonical.cover_backdated])) : {};
+const backdatedRefusal = returnedOf("canon-backdated-file-refused");
 const expired = J(await demo.view("get_cover", [C.expired]));
 const pBatch = batches.find((b) => b.claim_ids.includes(K.prorataA)) ?? {};
 const att = J(await reg.view("get_attestation", [0]));
@@ -59,9 +70,31 @@ const scenarios = [
     evidence: `contest ${covered.contest_status}; re-read as ${covered.contest_classification} strength ${covered.contest_strength}; novel ${String(covered.contest_novel ?? "").length} chars; tx ${txOf("demo-contest-judge")}`,
   },
   {
-    scenario: "EXCLUDED — Curve DNS hijack 2022-08-09",
-    pass: curve.status === "DENIED_EXCLUDED" && curve.exclusion === "FRONTEND_HIJACK",
-    evidence: `claim #${curve.claim_id} ${curve.status}; ${curve.exclusion}; incident ${curve.incident_date}; tx ${txOf("demo-curve-judge")}`,
+    scenario: "MULTI-INCIDENT 1 — Curve: Vyper evidence + 2023-07-30 record → COVERED, paid at the Vyper window's severity",
+    pass: paidOrApproved(m1) && m1.effective === "COVERED" && m1.event_match === "SAME" && m1.incident_key === "3:2023-07-30"
+      && m1.incident_date === "2023-07-30" && /anchor 2023-07-30 /.test(m1.tvl_window) && v1.hash_matches && v1.record_matches_key && v1.tvl_window_anchored,
+    evidence: `claim #${m1.claim_id} ${m1.status}; key ${m1.incident_key}; event ${m1.event_match}; ${m1.peril}; bucket ${m1.severity_bucket} (drop ${m1.drop_bps} bps); paid ${gen(m1.payout_wei)} GEN; binding "${m1.evidence_binding}"; verify hash/record/window ${v1.hash_matches}/${v1.record_matches_key}/${v1.tvl_window_anchored}; tx ${txOf("multi-m1-judge")}`,
+  },
+  {
+    scenario: "MULTI-INCIDENT 2 — Curve: Vyper evidence + 2022-08-09 record → EVIDENCE_MISMATCH, no payout",
+    pass: m2.status === "EVIDENCE_MISMATCH" && m2.incident_key === "3:2022-08-09" && m2.gross_wei === "0" && m2.payout_wei === "0" && !m2.batch_id,
+    evidence: `claim #${m2.claim_id} ${m2.status}; key ${m2.incident_key}; event ${m2.event_match}; model_called ${m2.model_called}; binding "${m2.evidence_binding}"; gross ${m2.gross_wei}; tx ${txOf("multi-m2-judge")}`,
+  },
+  {
+    scenario: "MULTI-INCIDENT 3 — Curve: DNS evidence + 2023-07-30 record → EVIDENCE_MISMATCH, no payout",
+    pass: m3.status === "EVIDENCE_MISMATCH" && m3.incident_key === "3:2023-07-30" && m3.gross_wei === "0" && m3.payout_wei === "0" && !m3.batch_id,
+    evidence: `claim #${m3.claim_id} ${m3.status}; key ${m3.incident_key}; event ${m3.event_match}; model_called ${m3.model_called}; binding "${m3.evidence_binding}"; gross ${m3.gross_wei}; tx ${txOf("multi-m3-judge")}`,
+  },
+  {
+    scenario: "MULTI-INCIDENT 4 — Curve: DNS evidence + 2022-08-09 record → EXCLUDED (FRONTEND_HIJACK)",
+    pass: m4.status === "DENIED_EXCLUDED" && m4.exclusion === "FRONTEND_HIJACK" && m4.event_match === "SAME" && m4.incident_date === "2022-08-09",
+    evidence: `claim #${m4.claim_id} ${m4.status}; key ${m4.incident_key}; event ${m4.event_match}; ${m4.exclusion}; bucket ${m4.severity_bucket} (DNS window, not paid: excluded); tx ${txOf("multi-m4-judge")}`,
+  },
+  {
+    scenario: "MULTI-INCIDENT 5 — refile after mismatch: DNS evidence on the 2023 record, refiled with the Vyper report → COVERED",
+    pass: paidOrApproved(m5) && m5.effective === "COVERED" && m5.mismatch_refiles === 1 && m5.refiles === 1 && v5.hash_matches
+      && returnedOf("multi-m5-judge-mismatch").outcome === "EVIDENCE_MISMATCH",
+    evidence: `claim #${m5.claim_id} first ${returnedOf("multi-m5-judge-mismatch").outcome} (tx ${txOf("multi-m5-judge-mismatch")}), refiled (tx ${txOf("multi-m5-refile")}), then ${m5.status} bucket ${m5.severity_bucket}, paid ${gen(m5.payout_wei)} GEN (tx ${txOf("multi-m5-judge-after-refile")})`,
   },
   {
     scenario: "EXCLUDED — Multichain key compromise 2023-07-07",
@@ -89,9 +122,9 @@ const scenarios = [
     evidence: `claim #${st.claim_id} stalls=${st.stalls}, then ${st.status} (${st.exclusion}); settle tx ${txOf("demo-settle-stalled-while-paused")} (paused by ${txOf("demo-pause")})`,
   },
   {
-    scenario: "REJECTED_BACKDATED — canonical cover bought after the incident",
-    pass: backdated.status === "REJECTED_BACKDATED",
-    evidence: `canonical claim #${backdated.claim_id} ${backdated.status}; classification ${backdated.classification}; incident ${backdated.incident_date} < waiting ends ${new Date(backdated.waiting_ends * 1000).toISOString().slice(0, 10)}; tx ${txOf("canon-backdated-judge")}`,
+    scenario: "BACKDATED — canonical cover bought after the incident: claim keyed to it refused at filing, before any model call; the cover keeps its one claim",
+    pass: backdatedRefusal.status === "REJECTED" && /predates this cover's start/.test(backdatedRefusal.reason ?? "") && backdatedCover.claim_id === 0 && cClaims.length === 0,
+    evidence: `canonical cover #${backdatedCover.cover_id} claim_id ${backdatedCover.claim_id}; "${backdatedRefusal.reason}"; tx ${txOf("canon-backdated-file-refused")}`,
   },
   {
     scenario: "CoverRegistry attests a live canonical cover",
@@ -102,6 +135,12 @@ const scenarios = [
     scenario: "WAITING-PERIOD GATE — claim filed inside the waiting period refused mechanically; the one claim is not spent",
     pass: wgRefused?.returned?.status === "REJECTED" && /waiting period has not ended yet, claimable after \d+/.test(wgRefused?.returned?.reason ?? "") && wgCover.claim_id === 0 && wgCover.in_waiting_period === true,
     evidence: `canonical cover #${wgCover.cover_id}: "${wgRefused?.returned?.reason}"; claim_id still ${wgCover.claim_id}; tx ${wgRefused?.tx}`,
+  },
+  {
+    scenario: "DRAINED — every demo pool closed, books at exactly 0 wei",
+    pass: dStats.balance_wei === "0" && dStats.held_wei === "0" && dStats.payable_wei === "0" && dStats.locked_wei === "0"
+      && dPools.length > 0 && dPools.every((p) => p.status === "CLOSED" && p.capital_wei === "0" && p.premiums_held_wei === "0"),
+    evidence: `${dPools.length} pools CLOSED; balance ${dStats.balance_wei} = held ${dStats.held_wei} + payable ${dStats.payable_wei} wei; locked ${dStats.locked_wei}; undelivered_wei ${dStats.undelivered_wei} (Studio Dev transfers posted, not executed)`,
   },
   {
     scenario: "Ledger identity holds on both instances",
@@ -139,9 +178,17 @@ const md = [
   "",
   "## Claims (demo)",
   "",
-  "| # | protocol | status | classification | peril / exclusion | incident | bucket | strength | model | content hash |",
-  "|---|---|---|---|---|---|---|---|---|---|",
-  ...dClaims.map((c) => `| ${c.claim_id} | ${c.protocol_name} | ${c.status} | ${c.classification} | ${c.peril !== "NONE" ? c.peril : c.exclusion} | ${c.incident_date} | ${c.severity_bucket} | ${c.evidence_strength} | ${c.model_called} | \`${c.content_hash}\` |`),
+  "| # | protocol | incident key | status | event | classification | peril / exclusion | bucket | strength | model | content hash |",
+  "|---|---|---|---|---|---|---|---|---|---|---|",
+  ...dClaims.map((c) => `| ${c.claim_id} | ${c.protocol_name} | \`${c.incident_key}\` | ${c.status} | ${c.event_match} | ${c.classification} | ${c.peril !== "NONE" ? c.peril : c.exclusion} | ${c.severity_bucket} | ${c.evidence_strength} | ${c.model_called} | \`${c.content_hash}\` |`),
+  "",
+  "## The multi-incident proof, page by page",
+  "",
+  "One Curve pool, one cover window (" + (m1.cover_start ? new Date(m1.cover_start * 1000).toISOString().slice(0, 10) : "?") + " start, waiting 7 days, 365 days), two DeFi Llama records inside it: `3:2022-08-09` (DNS hijack) and `3:2023-07-30` (Vyper reentrancy).",
+  "",
+  "| claim | key | evidence binding | event | outcome | TVL window |",
+  "|---|---|---|---|---|---|",
+  ...[m1, m2, m3, m4, m5].filter((c) => c.claim_id).map((c) => `| #${c.claim_id} | \`${c.incident_key}\` | \`${c.evidence_binding}\` | ${c.event_match} | ${c.status} | \`${String(c.tvl_window).slice(0, 90)}…\` |`),
   "",
 ];
 writeFileSync(new URL("docs/EVIDENCE.md", root), md.join("\n"));

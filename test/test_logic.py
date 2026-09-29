@@ -74,10 +74,12 @@ def set_now(ts: int) -> None:
 
 
 NOW = epoch("2026-09-27T12:00:00Z")
-# The demo instance's fixed backdate: covers bought at NOW start on 2022-07-28,
-# which puts Curve's DNS hijack (2022-08-09), Euler (2023-03-13), Tornado Cash
-# governance (2023-05-20) and Multichain (2023-07-07) inside a 365-day cover.
-DEMO_DAYS = (NOW - epoch("2022-07-28T12:00:00Z")) // DAY
+# The demo instance's fixed backdate: covers bought at NOW start on 2022-07-31,
+# so a 365-day cover with a 7-day wait runs 2022-08-07 .. 2023-07-31. That puts
+# BOTH of Curve's incidents inside one cover - the DNS hijack (2022-08-09) and
+# the Vyper reentrancy (2023-07-30) - with Euler (2023-03-13), Tornado Cash
+# governance (2023-05-20) and Multichain (2023-07-07).
+DEMO_DAYS = (NOW - epoch("2022-07-31T12:00:00Z")) // DAY
 
 OWNER = _Addr("0x" + "a" * 40)
 UW = _Addr("0x" + "b" * 40)
@@ -268,9 +270,39 @@ def buy(c, pid, who=ALICE, amount=GEN, days=365, extra=0):
     return int(out["cover_id"])
 
 
-def file(c, cid, urls, who=None, statement="The protocol was exploited."):
+# The incident record each captured article is about, by key.
+KEY_OF_URL = {R_EULER: "1183:2023-03-13", A_EULER: "1183:2023-03-13",
+              PM_EULER: "1183:2023-03-13", R_CURVE_DNS: "3:2022-08-09",
+              R_VYPER: "3:2023-07-30", R_MULTI: "591:2023-07-07",
+              R_TORNADO: "148:2023-05-20", R_KYBER: "2615:2023-11-22"}
+# The record a claim on a pool of this id is about when the evidence does not
+# say (a homepage, a blog, another protocol's article).
+KEY_OF_POOL = {"1183": "1183:2023-03-13", "3": "3:2022-08-09",
+               "591": "591:2023-07-07", "148": "148:2023-05-20",
+               "2615": "2615:2023-11-22"}
+K_EULER = "1183:2023-03-13"
+K_DNS = "3:2022-08-09"
+K_VYPER = "3:2023-07-30"
+
+
+def live_key(lid):
+    """A well-formed key dated TODAY (the fake block time's day): the only kind
+    of in-window key a canonical cover bought at NOW can carry."""
+    return lid + ":" + C._date_text(now_of())
+
+
+def key_for(c, cid, urls):
+    lid = str(c.pools[int(c.covers[cid - 1].pool_id) - 1].llama_id)
+    first = str(urls).replace(",", " ").split()
+    k = KEY_OF_URL.get(first[0], "") if first else ""
+    return k if k.startswith(lid + ":") else KEY_OF_POOL.get(lid, lid + ":2023-01-01")
+
+
+def file(c, cid, urls, who=None, statement="The protocol was exploited.",
+         key=None):
     cover = c.covers[cid - 1]
-    out = send(c, who or cover.buyer, 0, "file_claim", cid, urls, statement)
+    out = send(c, who or cover.buyer, 0, "file_claim", cid,
+               key_for(c, cid, urls) if key is None else key, urls, statement)
     if not ok(out):
         raise AssertionError("fixture claim failed: " + str(out))
     return int(out["claim_id"])
@@ -292,9 +324,10 @@ class _TopStrength(dict):
     """A model answer whose strength is filled in from the prompt's own range
     - the answer an honest model gives at the top of its bracket."""
 
-    def __init__(self, classification, peril, exclusion):
+    def __init__(self, classification, peril, exclusion, event_match="SAME"):
         super().__init__(classification=classification, peril=peril,
-                         exclusion=exclusion, evidence_strength=0)
+                         exclusion=exclusion, evidence_strength=0,
+                         event_match=event_match)
 
 
 _orig_next = MODEL._next
@@ -373,13 +406,20 @@ def raw_of(llama=None, tvl=None, pages=None):
 
 
 def euler_facts(**over):
+    key = over.pop("key", None)
     f = {"mode": "claim", "claim_id": 1, "protocol_name": "Euler",
+         "incident_key": "1183:2023-03-13", "key_id": "1183",
+         "key_day": epoch("2023-03-13T00:00:00Z"), "key_name": "",
+         "prior_bound": 0,
          "llama_slug": "euler-v1", "llama_id": "1183",
          "perils": list(C.PERILS), "exclusions": list(C.EXCLUSIONS),
          "urls": [R_EULER], "start": epoch("2022-07-28T12:00:00Z"),
          "end": epoch("2023-07-28T12:00:00Z"), "waiting_s": 7 * DAY,
          "prior_digest": "", "prior_sources": 0, "prior_match": False}
     f.update(over)
+    if key is not None:
+        k, lid, day, name, _ = C._parse_key(key)
+        f.update(incident_key=k, key_id=lid, key_day=day, key_name=name)
     return f
 
 
@@ -960,38 +1000,93 @@ class TestMoney(unittest.TestCase):
         self.assertEqual(C._drop(3, 2), 3333)
 
 
-class TestPickIncident(unittest.TestCase):
-    ROWS = [{"date": 100}, {"date": 500}, {"date": 900}, {"date": 2000}]
+class TestSelectIncident(unittest.TestCase):
+    """THE record is the one the key names - by exact day (and name) - never
+    the latest, the nearest, or the first in feed order."""
+    ROWS = [{"date": 100 * DAY, "name": "A"}, {"date": 500 * DAY, "name": "B"},
+            {"date": 900 * DAY, "name": "C"}, {"date": 2000 * DAY, "name": "D"}]
 
-    def test_latest_inside_window(self):
-        self.assertEqual(C._pick_incident(self.ROWS, 400, 1000, 0)["date"], 900)
+    def test_exact_day(self):
+        row, n = C._select_incident(self.ROWS, 500 * DAY, "")
+        self.assertEqual((row["name"], n), ("B", 1))
 
-    def test_waiting_period_moves_window(self):
-        self.assertEqual(C._pick_incident(self.ROWS, 400, 1000, 200)["date"], 900)
-        self.assertEqual(C._pick_incident(self.ROWS, 400, 800, 200)["date"], 500)
+    def test_no_latest_fallback(self):
+        # 901 is inside any window that holds 900; it names nothing.
+        self.assertEqual(C._select_incident(self.ROWS, 901 * DAY, ""), (None, 0))
 
-    def test_before_window_when_none_inside(self):
-        self.assertEqual(C._pick_incident(self.ROWS, 1000, 1500, 0)["date"], 900)
+    def test_name_disambiguates_and_must_match(self):
+        rows = self.ROWS + [{"date": 500 * DAY, "name": "B2"}]
+        self.assertEqual(C._select_incident(rows, 500 * DAY, ""), (None, 2))
+        self.assertEqual(C._select_incident(rows, 500 * DAY, "b2")[0]["name"], "B2")
+        self.assertEqual(C._select_incident(rows, 500 * DAY, "zzz"), (None, 0))
 
-    def test_after_when_nothing_before(self):
-        self.assertEqual(C._pick_incident([{"date": 2000}], 100, 500, 0)["date"], 2000)
+    def test_order_never_matters(self):
+        rnd = random.Random(7)
+        for _ in range(50):
+            rows = list(self.ROWS)
+            rnd.shuffle(rows)
+            for d, name in ((100, "A"), (500, "B"), (900, "C"), (2000, "D")):
+                self.assertEqual(C._select_incident(rows, d * DAY, "")[0]["name"], name)
 
-    def test_earliest_after(self):
-        rows = [{"date": 3000}, {"date": 2000}]
-        self.assertEqual(C._pick_incident(rows, 100, 500, 0)["date"], 2000)
+    def test_pick_incident_is_gone(self):
+        self.assertFalse(hasattr(C, "_pick_incident"))
+        self.assertNotIn("_pick_incident", SRC_TEXT)
 
-    def test_cannot_hide_old_incident_behind_later_one_outside(self):
-        # An incident before the window and one after it: the one BEFORE wins,
-        # and the backdating check rejects it.
-        rows = [{"date": 100}, {"date": 9000}]
-        self.assertEqual(C._pick_incident(rows, 500, 1000, 0)["date"], 100)
 
-    def test_real_multichain_rows(self):
-        rows = [r for r in json.loads(HACKS) if str(r["defillamaId"]) == "591"]
-        rows = [{"date": C._day_of(int(r["date"]))} for r in rows]
-        got = C._pick_incident(rows, epoch("2022-07-28T12:00:00Z"),
-                               epoch("2023-07-28T12:00:00Z"), 7 * DAY)
-        self.assertEqual(C._date_text(got["date"]), "2023-07-07")
+class TestDatesAndKeys(unittest.TestCase):
+    def days(self, text):
+        return [C._date_text(d) for d in C._dates_in(C._norm(text), 40)]
+
+    def test_forms(self):
+        self.assertEqual(self.days("Monday, July 31, 2023"), ["2023-07-31"])
+        self.assertEqual(self.days("on 9 August 2022 the"), ["2022-08-09"])
+        self.assertEqual(self.days("iso 2023-07-30 here"), ["2023-07-30"])
+        self.assertEqual(self.days("Sept 3rd, 2021"), ["2021-09-03"])
+
+    def test_yearless_takes_the_page_year(self):
+        self.assertEqual(self.days("Friday, July 14, 2023. It began on July 7th."),
+                         ["2023-07-14", "2023-07-07"])
+        # before any year: the first year the page writes
+        self.assertEqual(self.days("On March 13 it broke. Published March 14, 2023"),
+                         ["2023-03-13", "2023-03-14"])
+
+    def test_no_year_anywhere_is_no_date(self):
+        self.assertEqual(self.days("It happened on July 30th."), [])
+
+    def test_not_dates(self):
+        self.assertEqual(self.days("you may 2x it; march 99 2023; 2023 13 40; "
+                                   "february 30 2023"), [])
+
+    def test_distinct_and_capped(self):
+        text = " ".join("July %d, 2023" % d for d in range(1, 29)) + " July 1, 2023"
+        self.assertEqual(len(C._dates_in(C._norm(text), 40)), 28)
+        self.assertEqual(len(C._dates_in(C._norm(text), 5)), 5)
+
+    def test_never_raises(self):
+        for junk in ("", "july", "31", "2023", "july 31st 99999", "0 jan 2023"):
+            C._dates_in(C._norm(junk), 40)
+
+    def test_parse_key(self):
+        self.assertEqual(C._parse_key("3:2023-07-30")[:4],
+                         ("3:2023-07-30", "3", epoch("2023-07-30T00:00:00Z"), ""))
+        self.assertEqual(C._parse_key(" 3:2023-07-30:Curve DEX ")[0],
+                         "3:2023-07-30:Curve DEX")
+        for bad in ("", "3", "3:", ":2023-07-30", "x:2023-07-30", "3:2023-7-30",
+                    "3:2023-02-30", "3:30-07-2023", "3/2023-07-30"):
+            self.assertNotEqual(C._parse_key(bad)[4], "", bad)
+
+    def test_tvl_line_roundtrip(self):
+        tvl = {"ok": True, "doc_id": "3", "anchor": epoch("2023-07-30T00:00:00Z"),
+               "before_at": epoch("2023-07-29T00:00:00Z"), "before": 100,
+               "low": 40, "after_points": 2,
+               "window": [[epoch("2023-07-30T00:00:00Z"), 90],
+                          [epoch("2023-07-31T00:00:00Z"), 40]]}
+        got = C._parse_tvl_line(C._tvl_line(tvl))
+        self.assertEqual(got["anchor"], "2023-07-30")
+        self.assertEqual(got["before_day"], "2023-07-29")
+        self.assertEqual((got["before"], got["low"], got["count"]), (100, 40, 2))
+        self.assertEqual(got["points"], [["2023-07-30", 90], ["2023-07-31", 40]])
+        self.assertEqual(C._parse_tvl_line("no TVL history"), {})
 
 
 # ===========================================================================
@@ -1117,7 +1212,7 @@ class TestReading(unittest.TestCase):
 
     def test_curve_dns(self):
         facts = euler_facts(protocol_name="Curve", llama_slug="curve-dex",
-                            llama_id="3", urls=[R_CURVE_DNS])
+                            llama_id="3", urls=[R_CURVE_DNS], key=K_DNS)
         r = C._reading(facts, fetch_raw(facts))
         self.assertIn("FRONTEND_HIJACK", r["allowed_exclusions"])
         self.assertEqual(C._date_text(r["incident_day"]), "2022-08-09")
@@ -1125,7 +1220,8 @@ class TestReading(unittest.TestCase):
 
     def test_multichain(self):
         facts = euler_facts(protocol_name="Multichain", llama_slug="multichain",
-                            llama_id="591", urls=[R_MULTI])
+                            llama_id="591", urls=[R_MULTI],
+                            key="591:2023-07-07")
         r = C._reading(facts, fetch_raw(facts))
         self.assertIn("USER_KEY_COMPROMISE", r["allowed_exclusions"])
         self.assertEqual(C._date_text(r["incident_day"]), "2023-07-07")
@@ -1133,16 +1229,20 @@ class TestReading(unittest.TestCase):
 
     def test_tornado_governance(self):
         facts = euler_facts(protocol_name="Tornado Cash", llama_slug="tornado-cash",
-                            llama_id="148", urls=[R_TORNADO])
+                            llama_id="148", urls=[R_TORNADO],
+                            key="148:2023-05-20")
         r = C._reading(facts, fetch_raw(facts))
         self.assertIn("GOVERNANCE_ATTACK", r["allowed_exclusions"])
 
     def test_pinned_no_protocol_name(self):
-        # Protocol B's article on protocol A's pool.
+        # Protocol B's article on protocol A's pool: dated, but to another
+        # event and without naming A - EVIDENCE_MISMATCH, no model call.
         r = self.read(urls=[R_MULTI])
         self.assertFalse(r["protocol_match"])
         self.assertFalse(r["model_called"])
-        self.assertIn("no evidence page names Euler", r["pinned"])
+        self.assertEqual(r["pinned_as"], "EVIDENCE_MISMATCH")
+        self.assertEqual(r["event_gate"], "DIFFERENT")
+        self.assertIn("no evidence page both names Euler", r["pinned"])
 
     def test_pinned_no_indicators(self):
         facts = euler_facts(urls=[HOME_EULER])
@@ -1153,9 +1253,10 @@ class TestReading(unittest.TestCase):
         self.assertIn("names no peril and no exclusion", r["pinned"])
 
     def test_pinned_no_llama_row(self):
-        r = self.read(llama_id="424242")
-        self.assertIn("no entry", r["pinned"])
+        r = self.read(llama_id="424242", key="424242:2023-03-13")
+        self.assertIn("no DeFi Llama incident record matches", r["pinned"])
         self.assertEqual(r["incident_day"], 0)
+        self.assertFalse(r["model_called"])
 
     def test_pinned_id_mismatch(self):
         facts = euler_facts(llama_slug="multichain")
@@ -1257,7 +1358,7 @@ class TestPrompt(unittest.TestCase):
         self.assertNotIn("The protocol was exploited", self.p)
 
     def test_record_line_present(self):
-        self.assertIn("DeFi Llama incident record: Euler V1, 2023-03-13", self.p)
+        self.assertIn("DeFi Llama incident record 1183:2023-03-13: Euler V1", self.p)
 
 
 class TestFromJson(unittest.TestCase):
@@ -1267,9 +1368,20 @@ class TestFromJson(unittest.TestCase):
 
     def test_accepts_valid(self):
         got = C._from_json({"classification": "covered", "peril": "smart_contract_bug",
-                            "exclusion": None, "evidence_strength": "4"}, self.read)
+                            "exclusion": None, "evidence_strength": "4",
+                            "event_match": "same"}, self.read)
         self.assertEqual(got["classification"], "COVERED")
         self.assertEqual(got["exclusion"], "NONE")
+        self.assertEqual(got["event_match"], "SAME")
+
+    def test_refuses_missing_or_unknown_event_match(self):
+        base = {"classification": "COVERED", "peril": "SMART_CONTRACT_BUG",
+                "exclusion": "NONE", "evidence_strength": 4}
+        self.assertIsNone(C._from_json(dict(base), self.read))
+        for ev in ("", "YES", "MAYBE", "NOT_ASKED", None, 1):
+            self.assertIsNone(C._from_json(dict(base, event_match=ev), self.read), ev)
+        for ev in ("SAME", "DIFFERENT", "UNCLEAR"):
+            self.assertIsNotNone(C._from_json(dict(base, event_match=ev), self.read), ev)
 
     def test_refuses_outside_bracket_peril(self):
         self.assertIsNone(C._from_json({"classification": "COVERED",
@@ -1308,7 +1420,8 @@ class TestFromJson(unittest.TestCase):
     def test_inconclusive_valid(self):
         self.assertIsNotNone(C._from_json({"classification": "INCONCLUSIVE",
                                            "peril": "", "exclusion": "n/a",
-                                           "evidence_strength": 3}, self.read))
+                                           "evidence_strength": 3,
+                                           "event_match": "SAME"}, self.read))
 
 
 class TestEffective(unittest.TestCase):
@@ -1947,7 +2060,8 @@ class TestCancelAndRelease(unittest.TestCase):
 
     def test_cancel_after_claim_refused(self):
         cid = buy(self.c, self.pid, days=30)
-        file(self.c, cid, R_EULER)
+        advance(DAY)
+        file(self.c, cid, R_EULER, key=live_key("1183"))
         self.assertTrue(rejected(send(self.c, ALICE, 0, "cancel_cover", cid)))
 
     def test_cancel_after_end_refused(self):
@@ -1991,7 +2105,8 @@ class TestCancelAndRelease(unittest.TestCase):
 
     def test_release_blocked_by_filed_claim(self):
         cid = buy(self.c, self.pid, days=30)
-        file(self.c, cid, R_EULER)
+        advance(DAY)
+        file(self.c, cid, R_EULER, key=live_key("1183"))
         advance(61 * DAY)
         out = send(self.c, STRANGER, 0, "release_cover", cid)
         self.assertTrue(rejected(out))
@@ -2016,14 +2131,14 @@ class TestWaitingPeriodGate(unittest.TestCase):
         self.cid = buy(self.c, self.pid, days=30)
 
     def test_refused_inside_waiting_period(self):
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "x")
         self.assertTrue(rejected(out))
         self.assertEqual(out["reason"], "cover waiting period has not ended yet, "
                          "claimable after " + str(NOW + 7 * DAY))
         self.assertEqual(out["claimable_after"], NOW + 7 * DAY)
 
     def test_refused_before_genlayer_and_claim_not_spent(self):
-        send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "x")
         self.assertEqual(len(self.c.claims), 0)
         self.assertEqual(int(self.c.covers[0].claim_id), 0)
         self.assertEqual(CALLS, [])
@@ -2031,31 +2146,43 @@ class TestWaitingPeriodGate(unittest.TestCase):
 
     def test_one_second_before_is_refused(self):
         advance(7 * DAY - 1)
-        self.assertTrue(rejected(send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")))
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "x")))
 
     def test_allowed_exactly_at_waiting_end(self):
+        # At the second the wait ends the waiting gate opens. No incident can
+        # yet be dated inside the cover (days are whole days, and today began
+        # before the wait ended), so the KEY is what refuses now; from the
+        # next day an incident of that day can be claimed.
         advance(7 * DAY)
-        self.assertTrue(ok(send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")))
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, live_key("1183"), R_EULER, "x")
+        self.assertNotIn("waiting period has not ended", out.get("reason", ""))
+        advance(DAY)
+        self.assertTrue(ok(send(self.c, ALICE, 0, "file_claim", self.cid,
+                                live_key("1183"), R_EULER, "x")))
 
     def test_value_sent_is_returned(self):
-        send(self.c, ALICE, 7, "file_claim", self.cid, R_EULER, "x")
+        send(self.c, ALICE, 7, "file_claim", self.cid, K_EULER, R_EULER, "x")
         self.assertEqual(int(self.c.payout_wei.get(ALICE)), 7)
 
     def test_refused_while_paused_too_but_only_for_waiting(self):
         send(self.c, OWNER, 0, "set_paused", True)
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "x")
         self.assertIn("waiting period", out["reason"])
 
     def test_waiting_zero_files_at_once(self):
         pid = make_pool(self.c, uw=UW2, wait=0)
         cid = buy(self.c, pid, who=BOB, days=30)
-        self.assertTrue(ok(send(self.c, BOB, 0, "file_claim", cid, R_EULER, "x")))
+        out = send(self.c, BOB, 0, "file_claim", cid, live_key("1183"), R_EULER, "x")
+        self.assertNotIn("waiting period has not ended", out.get("reason", ""))
+        advance(DAY)
+        self.assertTrue(ok(send(self.c, BOB, 0, "file_claim", cid, live_key("1183"),
+                                R_EULER, "x")))
 
     def test_demo_waiting_period_already_past(self):
         c = fresh(demo=True)
         pid = make_pool(c, wait=7)
         cid = buy(c, pid)
-        self.assertTrue(ok(send(c, ALICE, 0, "file_claim", cid, R_EULER, "x")))
+        self.assertTrue(ok(send(c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")))
 
     def test_view_flags_follow_the_gate(self):
         v = view(self.c, "get_cover", self.cid)
@@ -2067,9 +2194,10 @@ class TestWaitingPeriodGate(unittest.TestCase):
         self.assertFalse(v["in_waiting_period"])
 
     def test_cover_can_still_claim_after_the_wait(self):
-        send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "early")
+        send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "early")
         advance(8 * DAY)
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "later")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, live_key("1183"), R_EULER,
+                   "later")
         self.assertTrue(ok(out), out)
 
 
@@ -2120,7 +2248,7 @@ class TestSeverityMustBeMeasurable(unittest.TestCase):
         self.assertEqual(str(cl.status), "INCONCLUSIVE")
         self.assertEqual(int(cl.refile_until), int(self.c.covers[0].claim_deadline))
         install_web()      # DeFi Llama now has the history
-        self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", self.clid, A_EULER, "again")))
+        self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", self.clid, "", A_EULER, "again")))
         self.assertEqual(judge(self.c, self.clid)["outcome"], "APPROVED")
 
     def test_measured_zero_drop_is_still_no_payout(self):
@@ -2137,11 +2265,18 @@ class TestSeverityMustBeMeasurable(unittest.TestCase):
         self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
 
     def test_backdated_stays_backdated_without_tvl(self):
+        # A historical incident on a cover bought today is refused at filing
+        # - before TVL is ever read, so missing TVL cannot soften it.
         c = fresh(demo=False)
         pid = make_pool(c, wait=0)
-        clid = file(c, buy(c, pid, days=30), R_EULER)
+        cid = buy(c, pid, days=30)
         WEB[proto("euler-v1")] = (200, _tvl_doc([]))
-        self.assertEqual(judge(c, clid)["outcome"], "REJECTED_BACKDATED")
+        out = send(c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("predates this cover's start", out["reason"])
+        self.assertEqual(C._outcome("COVERED", S0 - DAY, S0, S0 + 30 * DAY, 0, GEN,
+                                    [0, 2500, 5000, 7500, 10000], 0, 0, False)[0],
+                         "REJECTED_BACKDATED")
 
     def test_measured_flag_is_compared(self):
         self.assertIn("tvl_measured", C.EXACT_BOOL)
@@ -2170,18 +2305,18 @@ class TestFileClaim(unittest.TestCase):
         self.cid = buy(self.c, self.pid)
 
     def test_ok(self):
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "hacked")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "hacked")
         self.assertTrue(ok(out), out)
         cl = self.c.claims[0]
         self.assertEqual(str(cl.status), "FILED")
         self.assertEqual(int(self.c.covers[0].claim_id), 1)
 
     def test_only_buyer(self):
-        self.assertTrue(rejected(send(self.c, BOB, 0, "file_claim", self.cid,
+        self.assertTrue(rejected(send(self.c, BOB, 0, "file_claim", self.cid, K_EULER,
                                       R_EULER, "x")))
 
     def test_refuses_random_blog_before_genlayer(self):
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, BLOG, "x")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, BLOG, "x")
         self.assertTrue(rejected(out))
         self.assertIn("refused before judging", out["reason"])
         self.assertEqual(len(self.c.claims), 0)
@@ -2190,20 +2325,20 @@ class TestFileClaim(unittest.TestCase):
 
     def test_refuses_after_deadline(self):
         advance(31 * DAY)
-        self.assertTrue(rejected(send(self.c, ALICE, 0, "file_claim", self.cid,
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER,
                                       R_EULER, "x")))
 
     def test_works_while_paused(self):
         send(self.c, OWNER, 0, "set_paused", True)
-        self.assertTrue(ok(send(self.c, ALICE, 0, "file_claim", self.cid,
+        self.assertTrue(ok(send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER,
                                 R_EULER, "x")))
 
     def test_statement_capped(self):
-        send(self.c, ALICE, 0, "file_claim", self.cid, R_EULER, "x" * 5000)
+        send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, R_EULER, "x" * 5000)
         self.assertEqual(len(str(self.c.claims[0].statement)), C.MAX_STATEMENT)
 
     def test_value_sent_to_file_claim_is_returned(self):
-        send(self.c, ALICE, 5, "file_claim", self.cid, R_EULER, "x")
+        send(self.c, ALICE, 5, "file_claim", self.cid, K_EULER, R_EULER, "x")
         self.assertEqual(int(self.c.payout_wei.get(ALICE)), 5)
 
     def test_check_evidence_view(self):
@@ -2277,11 +2412,21 @@ class TestJudgeClaim(unittest.TestCase):
         self.assertIsNotNone(facts_raw)
 
     def test_after_cover_end(self):
+        # KyberSwap's record (2023-11-22) is after this cover ends: the key is
+        # refused at filing, before any fetch or model call, and the cover
+        # keeps its one claim.
         pid = make_pool(self.c, uw=UW2, spec=KYBER)
         cid = buy(self.c, pid, who=BOB)
-        clid = file(self.c, cid, R_KYBER)
-        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
-        self.assertEqual(out["outcome"], "REJECTED_AFTER_COVER_END")
+        out = send(self.c, BOB, 0, "file_claim", cid, "2615:2023-11-22", R_KYBER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("after this cover ended", out["reason"])
+        self.assertEqual(int(self.c.covers[cid - 1].claim_id), 0)
+        self.assertEqual(MODEL.calls, 0)
+        self.assertEqual(C._outcome("COVERED", C._day_of(epoch("2023-11-22T00:00:00Z")),
+                                    epoch("2022-07-28T12:00:00Z"),
+                                    epoch("2023-07-28T12:00:00Z"), 0, GEN,
+                                    [0, 2500, 5000, 7500, 10000], 4, 0)[0],
+                         "REJECTED_AFTER_COVER_END")
 
     def test_no_payout_bucket_zero(self):
         # Curve's DNS hijack moved TVL 1.5%: even if it were covered, bucket 0.
@@ -2373,32 +2518,32 @@ class TestRefile(unittest.TestCase):
 
     def test_inconclusive_can_be_refiled_and_then_pay(self):
         self.assertEqual(str(self.c.claims[0].status), "INCONCLUSIVE")
-        out = send(self.c, ALICE, 0, "refile_claim", self.clid, R_EULER, "rekt")
+        out = send(self.c, ALICE, 0, "refile_claim", self.clid, "", R_EULER, "rekt")
         self.assertTrue(ok(out), out)
         self.assertEqual(judge(self.c, self.clid)["outcome"], "APPROVED")
 
     def test_refile_needs_a_new_url(self):
-        out = send(self.c, ALICE, 0, "refile_claim", self.clid, HOME_EULER, "again")
+        out = send(self.c, ALICE, 0, "refile_claim", self.clid, "", HOME_EULER, "again")
         self.assertTrue(rejected(out))
         self.assertIn("new source", out["reason"])
 
     def test_refile_only_claimant(self):
-        self.assertTrue(rejected(send(self.c, BOB, 0, "refile_claim", self.clid,
+        self.assertTrue(rejected(send(self.c, BOB, 0, "refile_claim", self.clid, "",
                                       R_EULER, "x")))
 
     def test_refile_allowlist(self):
-        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid,
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid, "",
                                       BLOG, "x")))
 
     def test_refile_after_deadline(self):
         advance(31 * DAY)
-        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid,
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid, "",
                                       R_EULER, "x")))
 
     def test_refile_not_from_approved(self):
-        send(self.c, ALICE, 0, "refile_claim", self.clid, R_EULER, "x")
+        send(self.c, ALICE, 0, "refile_claim", self.clid, "", R_EULER, "x")
         judge(self.c, self.clid)
-        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid,
+        self.assertTrue(rejected(send(self.c, ALICE, 0, "refile_claim", self.clid, "",
                                       A_EULER, "x")))
 
     def test_inconclusive_is_not_contestable(self):
@@ -2692,7 +2837,7 @@ class TestStalled(unittest.TestCase):
     def test_stall_lets_claimant_replace_evidence(self):
         advance(HOUR + 1)
         send(self.c, STRANGER, 0, "settle_stalled", self.clid)
-        out = send(self.c, ALICE, 0, "refile_claim", self.clid, A_EULER, "mirror")
+        out = send(self.c, ALICE, 0, "refile_claim", self.clid, "", A_EULER, "mirror")
         self.assertTrue(ok(out), out)
         self.assertEqual(judge(self.c, self.clid)["outcome"], "APPROVED")
 
@@ -2702,7 +2847,7 @@ class TestStalled(unittest.TestCase):
         out = send(self.c, STRANGER, 0, "settle_stalled", self.clid)
         self.assertTrue(ok(out))
         self.assertGreater(int(out["refile_until"]), int(self.c.covers[0].claim_deadline))
-        self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", self.clid,
+        self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", self.clid, "",
                                 A_EULER, "x")))
 
     def test_judging_marker_stall(self):
@@ -2797,30 +2942,35 @@ class TestLoophole01_BuyingAfterAnIncidentIsBackdated(unittest.TestCase):
         self.pid = make_pool(self.c, wait=0)
 
     def test_canonical_rejects_historical_incident(self):
+        # REFUSED AT FILING, before any source is fetched or model asked: the
+        # key names Euler's 2023 record, which predates a cover bought today.
         cid = buy(self.c, self.pid, days=30)
-        clid = file(self.c, cid, R_EULER)
-        out = judge(self.c, clid)
-        self.assertEqual(out["classification"], "COVERED")
-        self.assertEqual(out["outcome"], "REJECTED_BACKDATED")
-        self.assertEqual(int(self.c.claims[0].gross_wei), 0)
+        out = send(self.c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("predates this cover's start", out["reason"])
+        self.assertEqual(len(self.c.claims), 0)
+        self.assertEqual(int(self.c.covers[0].claim_id), 0)
+        self.assertEqual(CALLS, [])
+        self.assertEqual(MODEL.calls, 0)
 
     def test_premium_not_refunded(self):
         cid = buy(self.c, self.pid, days=30)
         prem = int(self.c.covers[0].premium_wei)
-        clid = file(self.c, cid, R_EULER)
-        judge(self.c, clid)
+        send(self.c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")
         advance(61 * DAY)
         self.assertTrue(ok(send(self.c, STRANGER, 0, "release_cover", cid)))
         self.assertEqual(int(self.c.payout_wei.get(UW)), prem)
         self.assertEqual(int(self.c.payout_wei.get(ALICE) or 0), 0)
 
     def test_incident_inside_waiting_period_is_backdated(self):
-        # A demo cover starting 3 days before Euler, waiting 7: still backdated.
+        # A demo cover starting 3 days before Euler, waiting 7: refused.
         c = fresh(demo_backdate_days=(NOW - epoch("2023-03-10T00:00:00Z")) // DAY + 1)
         pid = make_pool(c)
         cid = buy(c, pid)
-        clid = file(c, cid, R_EULER)
-        self.assertEqual(judge(c, clid)["outcome"], "REJECTED_BACKDATED")
+        out = send(c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("waiting period", out["reason"])
+        self.assertEqual(MODEL.calls, 0)
 
     def test_same_bytes_demo_pays(self):
         c = fresh(demo=True)
@@ -2829,17 +2979,23 @@ class TestLoophole01_BuyingAfterAnIncidentIsBackdated(unittest.TestCase):
         clid = file(c, cid, R_EULER)
         self.assertEqual(judge(c, clid)["outcome"], "APPROVED")
 
-    def test_backdated_can_be_contested_but_date_is_data(self):
+    def test_a_key_cannot_move_an_incident_into_the_cover(self):
+        # The date is DATA from DeFi Llama. Typing an in-window date for
+        # Euler's exploit names no record: nothing is judged, nothing pays.
         cid = buy(self.c, self.pid, days=30)
-        clid = file(self.c, cid, R_EULER)
-        judge(self.c, clid)
-        out = send(self.c, ALICE, int(self.c.contest_bond_wei), "contest", clid,
-                   PM_EULER, "The official post-mortem gives the real dates of it all.")
-        self.assertTrue(ok(out))
-        MODEL.serve_raw(_TopStrength("COVERED", "SMART_CONTRACT_BUG", "NONE"))
-        out = send(self.c, STRANGER, 0, "judge_contest", clid)
-        self.assertEqual(out["contest"], "UPHELD")
-        self.assertEqual(out["rejudged_as"], "REJECTED_BACKDATED")
+        advance(DAY)
+        clid = file(self.c, cid, R_EULER, key=live_key("1183"))
+        out = judge(self.c, clid)
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertFalse(out["model_called"])
+        self.assertEqual(MODEL.calls, 0)
+        self.assertIn("no DeFi Llama incident record matches", str(self.c.claims[0].pinned))
+        c = fresh(demo=True)
+        pid = make_pool(c)
+        clid = file(c, buy(c, pid), R_EULER, key="1183:2023-03-20")
+        out = judge(c, clid)
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertEqual(int(c.claims[0].gross_wei), 0)
 
 
 class TestLoophole02_FakeEvidenceRefusedBeforeGenLayer(unittest.TestCase):
@@ -2851,7 +3007,7 @@ class TestLoophole02_FakeEvidenceRefusedBeforeGenLayer(unittest.TestCase):
     def attempt(self, urls):
         del CALLS[:]
         calls = MODEL.calls
-        out = send(self.c, ALICE, 0, "file_claim", self.cid, urls, "x")
+        out = send(self.c, ALICE, 0, "file_claim", self.cid, K_EULER, urls, "x")
         self.assertTrue(rejected(out), urls)
         self.assertEqual(CALLS, [])
         self.assertEqual(MODEL.calls, calls)
@@ -2921,7 +3077,7 @@ class TestLoophole04_OneClaimPerCover(unittest.TestCase):
         pid = make_pool(c)
         cid = buy(c, pid)
         file(c, cid, R_EULER)
-        out = send(c, ALICE, 0, "file_claim", cid, A_EULER, "again")
+        out = send(c, ALICE, 0, "file_claim", cid, K_EULER, A_EULER, "again")
         self.assertTrue(rejected(out))
         self.assertIn("one claim per cover", out["reason"])
 
@@ -2932,7 +3088,7 @@ class TestLoophole04_OneClaimPerCover(unittest.TestCase):
         clid = file(c, cid, R_EULER)
         judge(c, clid)
         settle_ready(c, 1)
-        self.assertTrue(rejected(send(c, ALICE, 0, "file_claim", cid, A_EULER, "x")))
+        self.assertTrue(rejected(send(c, ALICE, 0, "file_claim", cid, K_EULER, A_EULER, "x")))
 
     def test_second_claim_refused_after_denial(self):
         c = fresh()
@@ -2940,7 +3096,7 @@ class TestLoophole04_OneClaimPerCover(unittest.TestCase):
         cid = buy(c, pid)
         clid = file(c, cid, R_CURVE_DNS)
         judge(c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
-        self.assertTrue(rejected(send(c, ALICE, 0, "file_claim", cid, R_EULER, "x")))
+        self.assertTrue(rejected(send(c, ALICE, 0, "file_claim", cid, K_EULER, R_EULER, "x")))
 
     def test_same_incident_twice_through_two_covers_is_two_covers(self):
         """Two covers are two premiums and two locks - that is not a double
@@ -3110,7 +3266,7 @@ class TestLoophole08_OtherProtocolsIncident(unittest.TestCase):
         clid = file(c, buy(c, pid), R_MULTI)
         calls = MODEL.calls
         out = judge(c, clid, "COVERED", "BRIDGE_COMPROMISE")
-        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
         self.assertFalse(out["protocol_match"])
         self.assertEqual(MODEL.calls, calls)
 
@@ -3122,6 +3278,8 @@ class TestLoophole08_OtherProtocolsIncident(unittest.TestCase):
         clid = file(c, buy(c, pid), "https://rekt.news/euler-rekt")
         out = judge(c, clid, "COVERED", "SMART_CONTRACT_BUG")
         self.assertEqual(out["incident_date"], "2023-05-20")
+        # ...and Euler's article, dated March, is not about that record.
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
 
     def test_id_mismatch_pool_cannot_pay(self):
         c = fresh()
@@ -3136,6 +3294,340 @@ class TestLoophole08_OtherProtocolsIncident(unittest.TestCase):
         pid = make_pool(c, spec=dict(EULER, lid="999999"))
         clid = file(c, buy(c, pid), R_EULER)
         self.assertEqual(judge(c, clid)["outcome"], "INCONCLUSIVE")
+
+
+class TestOneEventBindsEverything(unittest.TestCase):
+    """THE STEWARD'S FINDING. A protocol with two incident records inside one
+    cover - Curve: the DNS hijack of 2022-08-09 (excluded, FRONTEND_HIJACK)
+    and the Vyper reentrancy of 2023-07-30 (covered, SMART_CONTRACT_BUG).
+    Evidence, the selected record and the TVL window must be ONE event."""
+
+    def setUp(self):
+        self.c = fresh()
+        # perils without BRIDGE; every exclusion
+        self.pid = make_pool(self.c, uw=UW, spec=CURVE,
+                             perils="SMART_CONTRACT_BUG,ORACLE_MANIPULATION,ECONOMIC_EXPLOIT")
+
+    def claim(self, key, urls, who=ALICE):
+        cid = buy(self.c, self.pid, who=who, amount=GEN // 2)
+        advance(MIN)
+        return file(self.c, cid, urls, key=key)
+
+    # a.
+    def test_a_matching_evidence_selects_the_intended_event(self):
+        clid = self.claim(K_VYPER, R_VYPER)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "APPROVED")
+        self.assertEqual(out["event_match"], "SAME")
+        self.assertEqual(out["incident_date"], "2023-07-30")
+        self.assertEqual(out["severity_bucket"], 2)          # Vyper's window
+        self.assertEqual(out["drop_bps"], 4952)
+        k = self.c.claims[clid - 1]
+        self.assertIn("anchor 2023-07-30 ", str(k.tvl_line))
+        self.assertIn("Vyper Compiler Bug", str(k.llama_line))
+        self.assertIn("rekt.news/curve-vyper-rekt BOUND 2023-07-31", str(k.bind_line))
+        self.assertEqual(int(k.gross_wei), C._gross(GEN // 2, 5000, 1000))
+
+    def test_a_other_event_matching_is_excluded_at_its_own_severity(self):
+        clid = self.claim(K_DNS, R_CURVE_DNS)
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+        self.assertEqual(out["incident_date"], "2022-08-09")
+        self.assertEqual(out["severity_bucket"], 0)          # DNS's window
+
+    # b.
+    def test_b_evidence_A_with_record_B_is_mismatch(self):
+        clid = self.claim(K_DNS, R_VYPER)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
+        self.assertEqual(out["event_match"], "DIFFERENT")
+        self.assertFalse(out["model_called"])
+        self.assertEqual(MODEL.calls, 0)
+        self.nothing_moved(clid)
+
+    # c.
+    def test_c_evidence_B_with_record_A_is_mismatch(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
+        self.assertFalse(out["model_called"])
+        self.nothing_moved(clid)
+
+    def test_c_model_different_is_mismatch_even_when_dates_bind(self):
+        # A bound page, but the validators read it as another event.
+        clid = self.claim(K_VYPER, R_VYPER)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.c2 = fresh()
+        for ev in ("DIFFERENT", "UNCLEAR"):
+            c = fresh()
+            pid = make_pool(c, spec=CURVE)
+            cid = buy(c, pid, amount=GEN // 2)
+            k = file(c, cid, R_VYPER, key=K_VYPER)
+            MODEL.serve_raw(_TopStrength("COVERED", "SMART_CONTRACT_BUG", "NONE", ev))
+            got = send(c, STRANGER, 0, "judge_claim", k)
+            self.assertEqual(got["outcome"], "EVIDENCE_MISMATCH", ev)
+            self.assertTrue(got["model_called"])
+            self.assertEqual(got["event_match"], ev)
+            self.assertEqual(int(c.claims[0].gross_wei), 0)
+        self.assertEqual(out["outcome"], "APPROVED")
+
+    def test_mixed_evidence_reads_only_the_bound_page(self):
+        # Vyper + DNS pages on the Vyper record: the DNS page is UNBOUND and
+        # contributes no sentence - so FRONTEND_HIJACK is not in the bracket.
+        clid = self.claim(K_VYPER, R_VYPER + " " + R_CURVE_DNS)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "APPROVED")
+        k = self.c.claims[clid - 1]
+        self.assertIn("rekt.news/curve-finance-rekt UNBOUND", str(k.bind_line))
+        self.assertNotIn("FRONTEND_HIJACK", str(k.bracket))
+        self.assertNotIn("DNS", str(k.digest))
+
+    def test_undated_evidence_cannot_pay(self):
+        clid = self.claim(K_VYPER, "https://curve.finance/pm")
+        RENDER["https://curve.finance/pm"] = (
+            "Curve pools were drained because of a reentrancy bug in the Vyper "
+            "compiler that broke the nonreentrant lock on several pools.")
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
+        self.assertEqual(out["event_match"], "UNCLEAR")
+        self.assertEqual(MODEL.calls, 0)
+
+    def nothing_moved(self, clid):
+        k = self.c.claims[clid - 1]
+        self.assertEqual(int(k.gross_wei), 0)
+        self.assertEqual(int(k.batch_id), 0)
+        self.assertEqual(int(k.payout_wei), 0)
+        self.assertEqual(len(self.c.batches), 0)
+        self.assertEqual(int(self.c.payout_wei.get(ALICE) or 0), 0)
+        # the claim is not consumed: it can come back
+        self.assertEqual(str(k.status), "EVIDENCE_MISMATCH")
+        self.assertGreater(int(k.refile_until), 0)
+
+    # d.
+    def test_d_feed_order_does_not_change_the_record(self):
+        rows = json.loads(HACKS)
+        # A THIRD Curve row inside the cover, later than DNS and earlier than
+        # Vyper: the old "latest in window" rule would have been moved by it.
+        rows.append({"name": "Curve DEX", "date": epoch("2023-01-15T00:00:00Z"),
+                     "defillamaId": "3", "classification": "Oracle Manipulation",
+                     "technique": "Spot Price", "amount": 10})
+        hashes = set()
+        for seed in range(6):
+            random.Random(seed).shuffle(rows)
+            facts = euler_facts(protocol_name="Curve", llama_slug="curve-dex",
+                                llama_id="3", urls=[R_VYPER], key=K_VYPER)
+            install_web()
+            WEB[HACKS_URL] = (200, json.dumps(rows))
+            r = C._reading(facts, C._read_sources(facts))
+            self.assertEqual(C._date_text(r["incident_day"]), "2023-07-30")
+            self.assertEqual(r["bucket"], 2)
+            hashes.add(r["content_hash"])
+        self.assertEqual(len(hashes), 1)
+
+    def test_d_on_the_contract_too(self):
+        rows = json.loads(HACKS)
+        rows.reverse()
+        WEB[HACKS_URL] = (200, json.dumps(rows))
+        clid = self.claim(K_DNS, R_CURVE_DNS)
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["incident_date"], "2022-08-09")
+        self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+
+    # e.
+    def test_e_record_outside_the_window_refused_before_model(self):
+        # A cover starting after the DNS hijack: its key is refused at filing.
+        c = fresh(demo_backdate_days=(NOW - epoch("2023-01-01T00:00:00Z")) // DAY)
+        pid = make_pool(c, spec=CURVE)
+        cid = buy(c, pid, amount=GEN // 2, days=30)
+        out = send(c, ALICE, 0, "file_claim", cid, K_DNS, R_CURVE_DNS, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("predates this cover's start", out["reason"])
+        # ...and Vyper is after this 30-day cover ended.
+        out = send(c, ALICE, 0, "file_claim", cid, K_VYPER, R_VYPER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("after this cover ended", out["reason"])
+        self.assertEqual(len(c.claims), 0)
+        self.assertEqual(CALLS, [])
+        self.assertEqual(MODEL.calls, 0)
+
+    # f.
+    def test_f_missing_or_malformed_key_refused(self):
+        cid = buy(self.c, self.pid, amount=GEN // 2)
+        for bad, why in (("", "incident key is required"),
+                         ("curve", "is not <id>"),
+                         ("3:2023/07/30", "real day"),
+                         ("1183:2023-03-13", "names DeFi Llama id 1183 but this pool covers id 3")):
+            out = send(self.c, ALICE, 0, "file_claim", cid, bad, R_VYPER, "x")
+            self.assertTrue(rejected(out), bad)
+            self.assertIn(why, out["reason"])
+        self.assertEqual(len(self.c.claims), 0)
+        self.assertEqual(MODEL.calls, 0)
+
+    def test_f_unknown_key_refused_before_model(self):
+        clid = self.claim("3:2023-02-02", R_VYPER)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertFalse(out["model_called"])
+        self.assertEqual(MODEL.calls, 0)
+        pinned = str(self.c.claims[clid - 1].pinned)
+        self.assertIn("no DeFi Llama incident record matches incident key 3:2023-02-02", pinned)
+        self.assertIn("2022-08-09, 2023-07-30", pinned)
+        self.assertEqual(int(self.c.claims[clid - 1].gross_wei), 0)
+
+    def test_f_ambiguous_key_refused_until_named(self):
+        rows = json.loads(HACKS)
+        rows.append({"name": "Curve Lending", "date": epoch("2023-07-30T00:00:00Z"),
+                     "defillamaId": "3", "classification": "Access Control",
+                     "technique": "x", "amount": 5})
+        WEB[HACKS_URL] = (200, json.dumps(rows))
+        clid = self.claim(K_VYPER, R_VYPER)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "INCONCLUSIVE")
+        self.assertIn("add the record's name", str(self.c.claims[clid - 1].pinned))
+        self.assertEqual(MODEL.calls, 0)
+        out = send(self.c, ALICE, 0, "refile_claim", clid, K_VYPER + ":Curve DEX", "", "x")
+        self.assertTrue(ok(out), out)
+        self.assertEqual(judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")["outcome"],
+                         "APPROVED")
+
+    # g.
+    def test_g_refile_after_mismatch_with_correct_evidence(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        self.assertEqual(judge(self.c, clid)["outcome"], "EVIDENCE_MISMATCH")
+        out = send(self.c, ALICE, 0, "refile_claim", clid, "", R_VYPER, "the Vyper report")
+        self.assertTrue(ok(out), out)
+        self.assertEqual(out["mismatch_refiles_left"], 1)
+        out = judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "APPROVED")
+        self.assertEqual(out["severity_bucket"], 2)
+
+    def test_g_refile_with_corrected_key_same_evidence(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        judge(self.c, clid)
+        out = send(self.c, ALICE, 0, "refile_claim", clid, K_DNS, R_CURVE_DNS, "wrong key")
+        self.assertTrue(ok(out), out)
+        self.assertEqual(str(self.c.claims[clid - 1].incident_key), K_DNS)
+        out = judge(self.c, clid, "EXCLUDED", "NONE", "FRONTEND_HIJACK")
+        self.assertEqual(out["outcome"], "DENIED_EXCLUDED")
+
+    def test_g_refile_needs_a_change(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        judge(self.c, clid)
+        out = send(self.c, ALICE, 0, "refile_claim", clid, "", R_CURVE_DNS, "again")
+        self.assertTrue(rejected(out))
+        self.assertIn("corrected incident key", out["reason"])
+
+    def test_g_mismatch_refiles_are_limited(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        judge(self.c, clid)
+        urls = [A_EULER, R_EULER]      # allowlisted, dated to another event
+        for u in urls:
+            self.assertTrue(ok(send(self.c, ALICE, 0, "refile_claim", clid, "", u, "x")))
+            self.assertEqual(judge(self.c, clid)["outcome"], "EVIDENCE_MISMATCH")
+        out = send(self.c, ALICE, 0, "refile_claim", clid, "", R_VYPER, "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("used all 2 refiles", out["reason"])
+        # the cover then releases after its claim window, premium earned
+        advance(31 * DAY)
+        self.assertTrue(ok(send(self.c, STRANGER, 0, "release_cover",
+                                int(self.c.claims[clid - 1].cover_id))))
+
+    def test_mismatch_is_not_contestable(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        judge(self.c, clid)
+        out = send(self.c, UW, int(self.c.contest_bond_wei), "contest", clid,
+                   R_VYPER, "The underwriter wants the pool's view on this recorded.")
+        self.assertTrue(rejected(out))
+        self.assertIn("refile it instead", out["reason"])
+
+    def test_release_waits_for_a_mismatch_refile(self):
+        clid = self.claim(K_VYPER, R_CURVE_DNS)
+        judge(self.c, clid)
+        cover = int(self.c.claims[clid - 1].cover_id)
+        out = send(self.c, STRANGER, 0, "release_cover", cover)
+        self.assertTrue(rejected(out))
+
+    # the hash binds all of it
+    def test_hash_binds_key_record_evidence_and_window(self):
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_VYPER], key=K_VYPER)
+        raw = fetch_raw(f)
+        base = C._reading(f, raw)["content_hash"]
+        variants = []
+        g = dict(f, incident_key=K_VYPER + ":Curve DEX", key_name="Curve DEX")
+        variants.append(("key", C._reading(g, fetch_raw(g))))
+        r2 = json.loads(json.dumps(raw))
+        r2["tvl"]["window"][3][1] += 1
+        variants.append(("tvl point", C._reading(f, r2)))
+        r3 = json.loads(json.dumps(raw))
+        r3["llama"]["technique"] = "Something Else"
+        variants.append(("record", C._reading(f, r3)))
+        r4 = json.loads(json.dumps(raw))
+        r4["pages"][0]["days"] = [epoch("2023-07-29T00:00:00Z")]
+        variants.append(("binding", C._reading(f, r4)))
+        r5 = json.loads(json.dumps(raw))
+        r5["pages"][0]["digest"] += " Also the Vyper compiler team apologised to everyone."
+        variants.append(("evidence", C._reading(f, r5)))
+        for name, r in variants:
+            self.assertNotEqual(r["content_hash"], base, name)
+
+    def test_verify_rederives_all_of_it(self):
+        clid = self.claim(K_VYPER, R_VYPER)
+        judge(self.c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        v = view(self.c, "verify_claim", clid)
+        for k in ("hash_matches", "record_matches_key", "tvl_window_anchored"):
+            self.assertTrue(v[k], k)
+        self.assertEqual(v["drop_from_window_bps"], 4952)
+        self.assertEqual(v["incident_key"], K_VYPER)
+        k = self.c.claims[clid - 1]
+        for field, forged in (("incident_key", K_DNS),
+                              ("tvl_line", str(k.tvl_line).replace("low 1578413160", "low 1")),
+                              ("bind_line", str(k.bind_line) + " x"),
+                              ("llama_line", str(k.llama_line).replace("61700000", "1"))):
+            old = getattr(k, field)
+            setattr(k, field, forged)
+            self.assertFalse(view(self.c, "verify_claim", clid)["hash_matches"], field)
+            setattr(k, field, old)
+        # a stored window re-anchored on the other incident is caught even if
+        # the hash were recomputed by whoever tampered with it
+        old = k.tvl_line
+        k.tvl_line = str(old).replace("anchor 2023-07-30", "anchor 2022-08-09")
+        self.assertFalse(view(self.c, "verify_claim", clid)["tvl_window_anchored"])
+        k.tvl_line = old
+        old = k.llama_line
+        k.llama_line = str(old).replace("3:2023-07-30", "3:2022-08-09")
+        self.assertFalse(view(self.c, "verify_claim", clid)["record_matches_key"])
+        k.llama_line = old
+
+    def test_forged_leader_with_other_record_is_refused(self):
+        # A leader that swaps in the DNS record under a Vyper key: its own raw
+        # inputs no longer match the question, and coherence fails.
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_VYPER], key=K_VYPER)
+        raw = fetch_raw(f)
+        g = dict(f, incident_key=K_DNS, key_day=epoch("2022-08-09T00:00:00Z"))
+        other = fetch_raw(g)
+        forged = json.loads(json.dumps(raw))
+        forged["llama"] = other["llama"]
+        forged["tvl"] = other["tvl"]
+        payload = C._derive(f, forged, {"classification": "INCONCLUSIVE", "peril": "NONE",
+                                        "exclusion": "NONE", "strength": 0,
+                                        "event_match": "DIFFERENT"})
+        honest = C._derive(f, raw, {"classification": "COVERED",
+                                    "peril": "SMART_CONTRACT_BUG", "exclusion": "NONE",
+                                    "strength": 4, "event_match": "SAME"})
+        payload = dict(payload, raw=forged, choice={"classification": "INCONCLUSIVE",
+                                                    "peril": "NONE", "exclusion": "NONE",
+                                                    "strength": payload["strength_lo"],
+                                                    "event_match": payload["event_gate"]})
+        honest["raw"] = raw
+        self.assertFalse(C._agrees(payload, honest))
+        self.assertNotEqual(payload["content_hash"], honest["content_hash"])
+
+    def test_event_fields_are_compared_exactly(self):
+        for k in ("incident_key", "bind_line", "event_gate", "pinned_as", "event_match"):
+            self.assertIn(k, C.EXACT_STR)
+        self.assertIn("bound", C.EXACT_INT)
 
 
 class TestLoophole09_OwnerPauseCannotFreezeMoney(unittest.TestCase):
@@ -3566,7 +4058,7 @@ def run_lifecycle(seed):
         if r < 0.75:
             spec_url = rnd.choice(SPECS)[1] if rnd.random() < 0.2 else \
                 dict((s["slug"], u) for s, u in SPECS)[str(c.pools[int(cov.pool_id) - 1].llama_slug)]
-            out = send(c, cov.buyer, 0, "file_claim", cid, spec_url, "claim")
+            out = send(c, cov.buyer, 0, "file_claim", cid, key_for(c, cid, spec_url), spec_url, "claim")
             if not ok(out):
                 continue
             clid = int(out["claim_id"])

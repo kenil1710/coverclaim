@@ -107,15 +107,20 @@
             "deductible_bps": int(pool.deductible_bps) if pool is not None else 0,
             "filed_at": int(claim.filed_at),
             "last_filed_at": int(claim.last_filed_at),
+            "incident_key": str(claim.incident_key),
             "evidence_urls": _split_urls(claim.urls),
             "statement": str(claim.statement),
             "status": str(claim.status),
             "refiles": int(claim.refiles),
+            "mismatch_refiles": int(claim.mismatch_refiles),
+            "mismatch_refiles_left": MAX_MISMATCH_REFILES
+            - int(claim.mismatch_refiles),
             "refile_until": int(claim.refile_until),
             "attempts": int(claim.attempts),
             "stalls": int(claim.stalls),
             "judged_at": int(claim.judged_at),
             "classification": str(claim.classification),
+            "event_match": str(claim.event_match),
             "effective": str(claim.effective),
             "peril": str(claim.peril),
             "exclusion": str(claim.exclusion),
@@ -124,7 +129,10 @@
             "incident_day": int(claim.incident_day),
             "incident_date": _date_text(int(claim.incident_day)),
             "protocol_match": bool(claim.protocol_match),
+            "evidence_binding": str(claim.bind_line),
+            "bound_pages": int(claim.bound),
             "llama_record": str(claim.llama_line),
+            "tvl_window": str(claim.tvl_line),
             "tvl_before_usd": str(int(claim.tvl_before)),
             "tvl_low_usd": str(int(claim.tvl_low)),
             "drop_bps": int(claim.drop_bps),
@@ -373,29 +381,92 @@
                 "allowlist": domains}
 
     @gl.public.view
+    def check_incident(self, cover_id: typing.Any, incident_key: str) -> typing.Any:
+        """The mechanical verdict on an incident key for a cover, by the same
+        function `file_claim` uses. Whether DeFi Llama has the record is
+        answered by the validators at judgement, before any model call."""
+        cover = self._cover(cover_id)
+        if cover is None:
+            return {"ok": False, "reason": "no such cover"}
+        pool = self._pool(cover.pool_id)
+        if pool is None:
+            return {"ok": False, "reason": "the cover's pool is missing"}
+        key, why = self._key_check(cover, pool, incident_key, self._now())
+        return {"ok": why == "", "incident_key": key, "reason": why,
+                "llama_id": str(pool.llama_id),
+                "window": [_date_text(_day_of(int(cover.start)
+                                              + int(pool.waiting_days) * DAY)),
+                           _date_text(int(cover.end))],
+                "format": "<DeFi Llama id>:<YYYY-MM-DD>[:<record name>]"}
+
+    @gl.public.view
     def verify_claim(self, claim_id: typing.Any) -> typing.Any:
         """Recompute, from storage alone, everything about a judged claim that
-        arithmetic can recompute: the content hash of the evidence it was judged
-        on, and the payout. `hash_matches` is the loophole-6 check - an evidence
-        page edited after judging does not change what was judged, and anyone
-        can prove which text that was."""
+        arithmetic can recompute, and check that ONE EVENT binds it:
+
+          - the content hash, over the incident key, the evidence digest and
+            its page binding, the selected record and the TVL window points;
+          - the record in `llama_record` is the one the key names (same id,
+            same day), and the claim's incident day is that day;
+          - the TVL window is anchored on that day: the "before" point is
+            earlier, every window point is inside the seven days from it, and
+            the lowest point, the drop and the bucket recompute exactly;
+          - the payout from the bucket, the table and the deductible.
+
+        `hash_matches` is the loophole-6 check - an evidence page edited after
+        judging does not change what was judged, and anyone can prove which
+        text that was."""
         claim = self._claim(claim_id)
         if claim is None:
             return {"found": False}
         cover = self._cover(claim.cover_id)
         pool = self._pool(claim.pool_id)
-        recomputed = _fnv(_norm(str(claim.digest)) + "|"
-                          + _norm(str(claim.llama_line)) + "|" + str(claim.tvl_line))
+        judged = int(claim.judged_at) > 0
+        key, lid, day, _, _ = _parse_key(str(claim.incident_key))
+        recomputed = _content_hash(key, _norm(str(claim.digest)),
+                                   str(claim.bind_line), str(claim.llama_line),
+                                   str(claim.tvl_line))
+        record = str(claim.llama_line)
+        has_record = record.startswith("DeFi Llama incident record ")
+        record_ok = (not has_record) or (
+            record.startswith("DeFi Llama incident record " + lid + ":"
+                              + _date_text(day) + ": ")
+            and int(claim.incident_day) == day)
+        tv = _parse_tvl_line(str(claim.tvl_line))
+        tvl_ok = True
+        low = -1
+        if tv:
+            top = day + SEVERITY_WINDOW_DAYS * DAY
+            tvl_ok = tv["anchor"] == _date_text(day)
+            if tv["before_day"] not in ("", "-"):
+                _, _, bday, _, why = _parse_key("0:" + tv["before_day"])
+                tvl_ok = tvl_ok and why == "" and bday < day
+            for pt in tv["points"]:
+                _, _, pday, _, why = _parse_key("0:" + str(pt[0]))
+                tvl_ok = tvl_ok and why == "" and pday >= day and pday <= top
+                if low < 0 or int(pt[1]) < low:
+                    low = int(pt[1])
+            if len(tv["points"]) == int(tv["count"]):
+                tvl_ok = tvl_ok and low == int(tv["low"])
+            if int(tv["before"]) >= 0:
+                tvl_ok = tvl_ok and int(tv["before"]) == int(claim.tvl_before)
+        drop = _drop(int(tv["before"]), int(tv["low"])) if tv else 0
         amount = int(cover.amount_wei) if cover is not None else 0
         ded = int(pool.deductible_bps) if pool is not None else 0
         gross = _gross(amount, int(claim.table_bps), ded)
         return {"found": True, "claim_id": int(claim.claim_id),
+                "incident_key": key,
                 "content_hash": str(claim.content_hash),
                 "recomputed_hash": recomputed,
-                "hash_matches": int(claim.judged_at) == 0
+                "hash_matches": (not judged)
                 or recomputed == str(claim.content_hash),
+                "record_matches_key": (not judged) or record_ok,
+                "tvl_window_anchored": (not judged) or tvl_ok,
+                "evidence_binding": str(claim.bind_line),
+                "event_match": str(claim.event_match),
                 "severity_bucket": int(claim.bucket),
                 "drop_bps": int(claim.drop_bps),
+                "drop_from_window_bps": drop,
                 "bucket_from_drop": _bucket(int(claim.drop_bps)),
                 "table_bps": int(claim.table_bps),
                 "deductible_bps": ded,
@@ -403,6 +474,9 @@
                 "gross_recomputed_wei": str(gross),
                 "gross_stored_wei": str(int(claim.gross_wei)),
                 "payout_wei": str(int(claim.payout_wei)),
+                "hash_formula": ("fnv1a64(incident_key | norm(digest) | "
+                                 "evidence_binding | norm(llama_record) | "
+                                 "tvl_window)"),
                 "formula": "gross = cover x table[bucket] x (10000 - deductible) / 10000^2"}
 
     @gl.public.view
@@ -542,6 +616,10 @@
             "llama_map": LLAMA_MAP,
             "severity_edges_bps": list(SEVERITY_EDGES_BPS),
             "severity_window_days": SEVERITY_WINDOW_DAYS,
+            "incident_key_format": "<DeFi Llama id>:<YYYY-MM-DD>[:<record name>]",
+            "bind_window_days": BIND_WINDOW_DAYS,
+            "event_matches": list(EVENT_MATCHES),
+            "max_mismatch_refiles": MAX_MISMATCH_REFILES,
             "default_payout_table_bps": list(DEFAULT_PAYOUT_TABLE),
             "min_covered_strength": MIN_COVERED_STRENGTH,
             "strength_tolerance": STRENGTH_TOLERANCE,

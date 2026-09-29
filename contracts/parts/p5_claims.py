@@ -7,9 +7,14 @@
         AND LISTS before any nondet block opens. The only boundary between
         storage and the closure."""
         urls = claim.contest_urls if mode == "contest" else claim.urls
+        key, lid, day, name, _ = _parse_key(str(claim.incident_key))
         return {
             "mode": mode,
             "claim_id": int(claim.claim_id),
+            "incident_key": key,
+            "key_id": lid,
+            "key_day": day,
+            "key_name": name,
             "protocol_name": str(pool.protocol_name),
             "llama_slug": str(pool.llama_slug),
             "llama_id": str(pool.llama_id),
@@ -23,7 +28,35 @@
             "prior_sources": int(claim.sources) if mode == "contest" else 0,
             "prior_match": bool(claim.protocol_match) if mode == "contest"
             else False,
+            "prior_bound": int(claim.bound) if mode == "contest" else 0,
         }
+
+    def _key_check(self, cover: Cover, pool: Pool, text: typing.Any,
+                   now: int) -> tuple:
+        """(canonical key, why) - the MECHANICAL half of selecting an incident,
+        before any evidence is read or any validator asked. The key must be
+        well formed, name THIS pool's DeFi Llama id, and date an incident
+        inside the cover after its waiting period and not in the future. That
+        the record exists is checked by every validator against the live feed,
+        still before any model call."""
+        key, lid, day, _, why = _parse_key(text)
+        if why:
+            return ("", why)
+        if lid != str(pool.llama_id):
+            return ("", "incident key " + key + " names DeFi Llama id " + lid
+                    + " but this pool covers id " + str(pool.llama_id)
+                    + " (" + str(pool.protocol_name) + ")")
+        lo = int(cover.start) + int(pool.waiting_days) * DAY
+        if day < lo:
+            return ("", "incident " + key + " predates this cover's start plus "
+                    "its waiting period (" + _date_text(_day_of(lo)) + "); it "
+                    "is not covered and is refused before judging")
+        if day > int(cover.end):
+            return ("", "incident " + key + " is after this cover ended ("
+                    + _date_text(int(cover.end)) + ")")
+        if now > 0 and day > now:
+            return ("", "incident " + key + " is dated in the future")
+        return (key, "")
 
     def _consensus(self, facts: dict) -> typing.Any:
         """Run one judgement through consensus and return the agreed payload,
@@ -48,15 +81,21 @@
         return gl.vm.run_nondet(leader_fn, validator_fn)
 
     @gl.public.write
-    def file_claim(self, cover_id: typing.Any, evidence_urls: str,
-                   statement: str) -> typing.Any:
-        """File THE claim on a cover. Buyer only. Works while paused.
+    def file_claim(self, cover_id: typing.Any, incident_key: str,
+                   evidence_urls: str, statement: str) -> typing.Any:
+        """File THE claim on a cover, about ONE incident. Buyer only. Works
+        while paused.
+
+        `incident_key` selects one DeFi Llama hacks record:
+        "<llama id>:<YYYY-MM-DD>[:<record name>]". That record alone fixes the
+        incident date, the TVL window and what the evidence must be about.
 
         Mechanical refusals, all before GenLayer: one claim per cover; the
-        cover must be live and inside its claim window; 1..3 distinct evidence
-        URLs, EVERY ONE on the pool's frozen allowlist (a web.archive.org
-        snapshot only of an allowlisted page). Evidence from anywhere else is
-        refused here and never reaches a validator."""
+        cover must be live and inside its claim window; the key must name this
+        pool's protocol and a day inside the cover after its waiting period;
+        1..3 distinct evidence URLs, EVERY ONE on the pool's frozen allowlist
+        (a web.archive.org snapshot only of an allowlisted page). Evidence
+        from anywhere else is refused here and never reaches a validator."""
         self._bank()
         sender = gl.message.sender_address
         now = self._now()
@@ -95,6 +134,9 @@
             return self._refuse("the claim window for cover #" + str(cid)
                                 + " closed " + str(now - int(cover.claim_deadline))
                                 + "s ago", {"claim_deadline": int(cover.claim_deadline)})
+        key, why = self._key_check(cover, pool, incident_key, now)
+        if why:
+            return self._refuse("incident refused before judging: " + why)
         urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
         if why:
             return self._refuse("evidence refused before judging: " + why,
@@ -109,6 +151,7 @@
         claim.claimant = sender
         claim.filed_at = u64(now)
         claim.last_filed_at = u64(now)
+        claim.incident_key = key
         claim.urls = " ".join(urls)
         keys = []
         for u in urls:
@@ -122,17 +165,23 @@
         self.claims_by_pool.get_or_insert_default(str(int(pool.pool_id))).append(u32(clid))
         self.total_claims = u256(int(self.total_claims) + 1)
         return {"status": "OK", "claim_id": clid, "cover_id": cid,
-                "evidence": urls,
+                "incident_key": key, "evidence": urls,
                 "note": ("filed; anyone may now call judge_claim(" + str(clid)
                          + ") and GenLayer's validators will read the evidence")}
 
     @gl.public.write
-    def refile_claim(self, claim_id: typing.Any, evidence_urls: str,
-                     statement: str) -> typing.Any:
-        """Put an INCONCLUSIVE claim - or one `settle_stalled` returned to FILED -
-        back in front of the validators with NEW evidence. Claimant only. At
-        least one URL must be one this claim has never used; nothing is lost by
-        an INCONCLUSIVE verdict and nothing is gained by resubmitting it."""
+    def refile_claim(self, claim_id: typing.Any, incident_key: str,
+                     evidence_urls: str, statement: str) -> typing.Any:
+        """Put an INCONCLUSIVE or EVIDENCE_MISMATCH claim - or one
+        `settle_stalled` returned to FILED - back in front of the validators.
+        Claimant only. `incident_key` may be "" to keep the claim's incident,
+        or a corrected key, checked exactly as at filing; `evidence_urls` may be
+        "" to keep the claim's evidence (with a corrected key).
+
+        Something must change: at least one URL this claim has never used, or
+        a different incident key. Nothing is lost by either verdict and nothing
+        is gained by resubmitting it. A claim comes back from EVIDENCE_MISMATCH
+        at most MAX_MISMATCH_REFILES times."""
         self._bank()
         sender = gl.message.sender_address
         now = self._now()
@@ -146,16 +195,30 @@
         if sender != claim.claimant:
             return self._refuse("only the claimant can refile claim #" + str(clid))
         st = str(claim.status)
-        if st != CL_INCONCLUSIVE and not (st == CL_FILED and int(claim.stalls) > 0):
+        if st != CL_INCONCLUSIVE and st != CL_MISMATCH and \
+                not (st == CL_FILED and int(claim.stalls) > 0):
             return self._refuse("claim #" + str(clid) + " is " + st.lower()
-                                + "; only an INCONCLUSIVE or stalled claim is "
-                                "refiled")
+                                + "; only an INCONCLUSIVE, EVIDENCE_MISMATCH or "
+                                "stalled claim is refiled")
+        if st == CL_MISMATCH and int(claim.mismatch_refiles) >= MAX_MISMATCH_REFILES:
+            return self._refuse("claim #" + str(clid) + " has used all "
+                                + str(MAX_MISMATCH_REFILES) + " refiles after "
+                                "EVIDENCE_MISMATCH")
+        cover = self._cover(claim.cover_id)
+        if cover is None:
+            return self._refuse("the claim's cover is missing")
         if now <= 0:
             return self._refuse("the block time was unreadable; retry")
         if now > int(claim.refile_until):
             return self._refuse("the refile window for claim #" + str(clid)
                                 + " has closed")
-        urls, why = _parse_urls(evidence_urls, _split_csv(pool.domains_csv))
+        key = str(claim.incident_key)
+        if _clean(incident_key, MAX_KEY) != "":
+            key, why = self._key_check(cover, pool, incident_key, now)
+            if why:
+                return self._refuse("incident refused before judging: " + why)
+        given = evidence_urls if _split_urls(evidence_urls) else claim.urls
+        urls, why = _parse_urls(given, _split_csv(pool.domains_csv))
         if why:
             return self._refuse("evidence refused before judging: " + why)
         used = str(claim.used_urls).split(" ")
@@ -163,9 +226,13 @@
         for u in urls:
             if _url_key(u) not in used:
                 fresh += 1
-        if fresh == 0:
+        if fresh == 0 and key == str(claim.incident_key):
             return self._refuse("every one of these URLs was already judged on "
-                                "this claim; bring at least one new source")
+                                "this claim for this incident; bring at least "
+                                "one new source or a corrected incident key")
+        if st == CL_MISMATCH:
+            claim.mismatch_refiles = u32(int(claim.mismatch_refiles) + 1)
+        claim.incident_key = key
         claim.urls = " ".join(urls)
         for u in urls:
             k = _url_key(u)
@@ -177,6 +244,9 @@
         claim.refiles = u32(int(claim.refiles) + 1)
         self._set_status(claim, CL_FILED)
         return {"status": "OK", "claim_id": clid, "refiles": int(claim.refiles),
+                "incident_key": key,
+                "mismatch_refiles_left": MAX_MISMATCH_REFILES
+                - int(claim.mismatch_refiles),
                 "note": "refiled; call judge_claim(" + str(clid) + ")"}
 
     def _join_batch(self, pool: Pool, claim: Claim, now: int) -> int:
@@ -205,6 +275,7 @@
         out of `d`, which `judge_claim` rebuilt after consensus (rule 11)."""
         claim.judged_at = u64(now)
         claim.classification = str(d.get("classification", ""))
+        claim.event_match = str(d.get("event_match", ""))
         claim.effective = str(d.get("effective", ""))
         claim.peril = str(d.get("peril", NONE))
         claim.exclusion = str(d.get("exclusion", NONE))
@@ -213,8 +284,10 @@
         claim.strength_hi = u32(_clamp(_as_int(d.get("strength_hi"), 0), 0, TOP_STRENGTH))
         claim.incident_day = u64(_as_int(d.get("incident_day"), 0))
         claim.protocol_match = bool(d.get("protocol_match"))
-        claim.llama_line = _short(str(d.get("llama_line", "")), 300)
-        claim.tvl_line = _short(str(d.get("tvl_line", "")), 200)
+        claim.bind_line = str(d.get("bind_line", ""))
+        claim.bound = u32(_clamp(_as_int(d.get("bound"), 0), 0, 99))
+        claim.llama_line = str(d.get("llama_line", ""))
+        claim.tvl_line = str(d.get("tvl_line", ""))
         claim.tvl_before = u256(_clamp(_as_int(d.get("tvl_before"), 0), 0, 10 ** 30))
         claim.tvl_low = u256(_clamp(_as_int(d.get("tvl_low"), 0), 0, 10 ** 30))
         claim.drop_bps = u32(_clamp(_as_int(d.get("drop_bps"), 0), 0, BPS))
@@ -236,9 +309,11 @@
         PERMISSIONLESS - anyone may trigger, nobody is paid to. Works while
         paused.
 
-        Each node independently fetches DeFi Llama's incident record and TVL
-        history and renders every evidence page, computes the bracket, and -
-        only if the bracket leaves a choice - asks its model. The full vector is
+        Each node independently fetches DeFi Llama's incident list and selects
+        the ONE record the claim's key names, reads the TVL window around that
+        record's day, fetches every evidence page and binds it to that record
+        by date, computes the bracket, and - only if the evidence is about the
+        selected incident and the bracket leaves a choice - asks its model. The full vector is
         compared (rule 10). THEN this file, not a model, applies the policy:
         backdating, cover end, exclusion, severity, deductible (`_outcome`).
 
@@ -307,7 +382,7 @@
         claim.table_bps = u32(table[_clamp(int(d["bucket"]), 0, BUCKETS - 1)])
         claim.gross_wei = u256(gross)
         self._set_status(claim, status)
-        if status == CL_INCONCLUSIVE:
+        if status == CL_INCONCLUSIVE or status == CL_MISMATCH:
             claim.refile_until = u64(int(cover.claim_deadline))
         bid = 0
         if status == CL_APPROVED:
@@ -315,8 +390,11 @@
         self.total_judgements = u256(int(self.total_judgements) + 1)
         return {"status": "OK", "claim_id": clid, "judged": True,
                 "outcome": status, "classification": str(d["classification"]),
+                "event_match": str(d["event_match"]),
                 "effective": str(d["effective"]), "peril": str(d["peril"]),
                 "exclusion": str(d["exclusion"]),
+                "incident_key": str(d["incident_key"]),
+                "evidence_binding": str(d["bind_line"]),
                 "incident_date": _date_text(d["incident_day"]),
                 "protocol_match": bool(d["protocol_match"]),
                 "severity_bucket": int(d["bucket"]),
@@ -361,7 +439,7 @@
             return self._refuse("claim #" + str(clid) + " is " + st.lower()
                                 + " and cannot be contested"
                                 + (" - refile it instead" if st == CL_INCONCLUSIVE
-                                   else ""))
+                                   or st == CL_MISMATCH else ""))
         if str(claim.contest_status) != CT_NONE:
             return self._refuse("claim #" + str(clid) + " has already been "
                                 "contested; one contest per claim")
@@ -511,7 +589,7 @@
         claim.gross_wei = u256(gross)
         table = self._table(pool)
         claim.table_bps = u32(table[_clamp(int(d["bucket"]), 0, BUCKETS - 1)])
-        if new == CL_INCONCLUSIVE:
+        if new == CL_INCONCLUSIVE or new == CL_MISMATCH:
             claim.refile_until = u64(int(cover.claim_deadline))
         bid = 0
         if new == CL_APPROVED:

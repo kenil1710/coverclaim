@@ -85,6 +85,7 @@ export default function ClaimPage() {
   const batch = useBatch(c?.batch_id || null);
   const payout = usePayout(account);
   const [urls, setUrls] = useState("");
+  const [refileKey, setRefileKey] = useState("");
   const [grounds, setGrounds] = useState("");
   const [mounted] = useState(() => Math.floor(Date.now() / 1000));
 
@@ -103,7 +104,8 @@ export default function ClaimPage() {
   const cover = toBig(c.cover_amount_wei);
   const afterDed = (BigInt(c.table_bps) * BigInt(10000 - c.deductible_bps)) / 10000n;
   const canContest = me && c.contestable_by && c.contestable_by.toLowerCase() === me;
-  const canRefile = me && c.claimant.toLowerCase() === me && (c.status === "INCONCLUSIVE" || (c.status === "FILED" && c.stalls > 0));
+  const canRefile = me && c.claimant.toLowerCase() === me && (c.status === "INCONCLUSIVE"
+    || (c.status === "EVIDENCE_MISMATCH" && c.mismatch_refiles_left > 0) || (c.status === "FILED" && c.stalls > 0));
   const now = cfg.data?.now ?? mounted;
 
   return (
@@ -129,6 +131,7 @@ export default function ClaimPage() {
             <div className="card stack">
               <h3 className="row" style={{ gap: 8 }}><ShieldCheck size={16} color="var(--orange)" /> Validator findings</h3>
               <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: 10 }}>
+                <Finding label="Same event?" value={c.event_match === "NOT_ASKED" ? "not asked" : c.event_match} tone={c.event_match === "SAME" ? "var(--covered)" : c.event_match === "NOT_ASKED" ? undefined : "var(--excluded)"} />
                 <Finding label="Classification" value={c.classification} tone={c.classification === "COVERED" ? "var(--covered)" : c.classification === "EXCLUDED" ? "var(--excluded)" : "var(--inconclusive)"} />
                 <Finding label="Matched peril" value={c.peril === "NONE" ? "—" : human(c.peril)} />
                 <Finding label="Matched exclusion" value={c.exclusion === "NONE" ? "—" : human(c.exclusion)} />
@@ -140,7 +143,10 @@ export default function ClaimPage() {
               </div>
               <div className="kv">
                 <span>Bracket (what the model could choose)</span><span className="mono" style={{ fontSize: "0.78rem" }}>{c.bracket}</span>
+                <span>Incident key</span><span className="mono" style={{ fontSize: "0.78rem" }}>{c.incident_key}</span>
                 <span>DeFi Llama record</span><span style={{ fontSize: "0.8rem" }}>{c.llama_record}</span>
+                <span>Evidence bound to it</span><span className="mono" style={{ fontSize: "0.74rem" }}>{c.evidence_binding}</span>
+                <span>TVL window</span><span className="mono break" style={{ fontSize: "0.74rem" }}>{c.tvl_window}</span>
                 <span>TVL before → lowest in 7 days</span><span>{usd(c.tvl_before_usd)} → {usd(c.tvl_low_usd)} ({pct(c.drop_bps)} drop)</span>
               </div>
               {c.pinned && <p className="quote">{c.pinned}</p>}
@@ -153,7 +159,7 @@ export default function ClaimPage() {
               <div className="math">
                 1. incident {c.incident_date || "?"} ≥ waiting ends {date(c.waiting_ends)}? {c.incident_day >= c.waiting_ends ? "✓" : "✗ → REJECTED_BACKDATED"}
                 <br />2. incident ≤ cover end {date(c.cover_end)}? {c.incident_day && c.incident_day <= c.cover_end ? "✓" : c.incident_day ? "✗ → REJECTED_AFTER_COVER_END" : "—"}
-                <br />3. effective classification = {c.effective}{c.effective === "EXCLUDED" ? " → DENIED" : c.effective === "INCONCLUSIVE" ? " → refile" : ""}
+                <br />3. effective classification = {c.effective}{c.effective === "EXCLUDED" ? " → DENIED" : c.effective === "INCONCLUSIVE" || c.effective === "EVIDENCE_MISMATCH" ? " → refile" : ""}
                 <br />4. TVL drop {pct(c.drop_bps)} → bucket {c.severity_bucket} → table pays {pct(c.table_bps)}
                 <br />5. deductible {pct(c.deductible_bps)} → {pct(Number(afterDed))} of cover
                 <br />6. gross = {gen(cover)} × {pct(c.table_bps)} × (1 − {pct(c.deductible_bps)}) = <strong style={{ color: "var(--covered)" }}>{gen(c.gross_wei, 6)} GEN</strong>
@@ -243,7 +249,7 @@ export default function ClaimPage() {
                 )}
               </>
             ) : (
-              <p className="muted" style={{ fontSize: "0.84rem" }}>{c.status === "INCONCLUSIVE" ? "Inconclusive claims are refiled, not contested." : "Not contestable now."}</p>
+              <p className="muted" style={{ fontSize: "0.84rem" }}>{c.status === "INCONCLUSIVE" || c.status === "EVIDENCE_MISMATCH" ? "Inconclusive and mismatched claims are refiled, not contested." : "Not contestable now."}</p>
             )}
           </div>
 
@@ -268,9 +274,10 @@ export default function ClaimPage() {
             )}
             {canRefile && (
               <>
-                <textarea className="textarea mono" placeholder="New evidence URL(s) — at least one never used on this claim" value={urls} onChange={(e) => setUrls(e.target.value)} />
-                <TxButton label="Refile with new evidence" icon={<RefreshCw size={16} />} disabled={!urls.trim()} send={(a) => refileClaim(contract!, a, c.claim_id, urls.trim(), c.statement)} onDone={refresh} />
-                <span className="dim" style={{ fontSize: "0.76rem" }}>Refile open until {dateTime(c.refile_until)}.</span>
+                <input className="input mono" placeholder={`Incident key — blank keeps ${c.incident_key}`} value={refileKey} onChange={(e) => setRefileKey(e.target.value)} aria-label="Corrected incident key" />
+                <textarea className="textarea mono" placeholder="New evidence URL(s) — blank keeps the current evidence (with a corrected key)" value={urls} onChange={(e) => setUrls(e.target.value)} />
+                <TxButton label="Refile" icon={<RefreshCw size={16} />} disabled={!urls.trim() && !refileKey.trim()} send={(a) => refileClaim(contract!, a, c.claim_id, refileKey.trim(), urls.trim(), c.statement)} onDone={refresh} />
+                <span className="dim" style={{ fontSize: "0.76rem" }}>Refile open until {dateTime(c.refile_until)}.{c.status === "EVIDENCE_MISMATCH" ? ` ${c.mismatch_refiles_left} refile(s) after a mismatch left.` : ""}</span>
               </>
             )}
             {payout.data && toBig(payout.data.owed_wei) > 0n && (
