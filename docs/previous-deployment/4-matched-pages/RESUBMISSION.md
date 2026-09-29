@@ -65,34 +65,7 @@ Undated text is used for exactly one decision, and never reaches the model: whet
 
 **On chain:** claims 6 and 7 below. Each claim's stored, hashed digest contains no text from the unmatched article.
 
-## Binding audit (items 2–6)
-
-Line numbers are in the deployed `contracts/CoverClaim.py`. Tests are in `test/test_logic.py`.
-
-| # | item | before the audit | code | tests |
-|---|---|---|---|---|
-| 2 | canonical incident identity | **FAIL**: settlement windows were keyed by `pool:incident_day`, so two records of one protocol on one day would share a batch | `_incident_id` L1934: the selected record's `id:day:normalised name`. It is compared exactly (`EXACT_STR`), stored on the claim and the batch, keys the batch (`_join_batch` L3556), and is what the content hash covers | `TestBindingAudit.test_2_differently_written_keys_group_and_scale_together`: `1183:2023-03-13` and `…:Euler V1` → one incident, one batch, same hash, scaled pro-rata. `test_2_two_records_on_one_day_are_two_incidents` |
-| 3 | contest binding | **PASS**: already bound | allowlist L3778; the contest has no key parameter (`contest(claim_id, evidence_urls, statement)` L3728) and its facts use the claim's stored key (L3292); only BOUND pages are read (L1765), so pages dated elsewhere and undated pages add nothing; `event_match` is asked again | `test_3_contest_page_dated_elsewhere_is_not_read`, `test_3_contest_undated_page_is_not_read`, `test_3_contest_bound_page_rejudged_with_event_match` (DIFFERENT → EVIDENCE_MISMATCH), `test_3_contest_allowlist_applies`, `test_3_contest_cannot_change_the_incident_key` |
-| 4 | refile binding | **PASS for the question, FAIL for leftover state**: the new judgement was already asked from scratch, but the rejected attempt's batch membership and resolved-contest state carried over | refile L3517: `_leave_batch`, gross and table reset, a resolved contest cleared; the key re-checked by `_key_check`; evidence by the allowlist; limit L3485 | `test_4_refile_reuses_nothing_from_the_rejected_attempt`, `test_4_refile_rechecks_the_key_from_scratch`, `test_4_refile_limit` |
-| 5 | one payout per cover | **FAIL**, and a real one: approve → contest flip → refile → re-approve inside one open window appended the claim to the same batch twice, and `finalize_incident` paid it twice. The test showed "2 != 1" and a broken ledger before the fix | listed once (L3571); a flip out of APPROVED leaves the batch (L3905, `_leave_batch` L3577); finalize pays each claim once (L3965), only if still in THIS batch and its cover is ACTIVE (L3974) | `test_5_flip_refile_reapprove_pays_once`, `test_5_paid_cover_is_never_paid_again`, `test_5_new_verdict_after_refile_can_be_contested`, `test_5_payouts_never_exceed_locked_capacity_random` (12 random pools, mixed keys, random flips: Σ payouts ≤ Σ locks, one payout per cover) |
-| 6 | any other binding | two found (below); everything else PASS | see below | `TestBindingAudit6` |
-
-**Item 6, everything a stored result depends on:**
-
-| stored result | depends on | bound to | status |
-|---|---|---|---|
-| incident date, record fields | the one hacks row the key names | record | PASS |
-| severity (TVL window) | `/protocol/<slug>`, window anchored on the record's day; `id_match` requires the TVL document's id to be the pool's id (L1819) | record + pool | PASS (`test_severity_window_follows_the_record_not_the_filing_time`) |
-| classification, peril, exclusion, strength | bound pages only; bracket ∩ the pool's frozen perils and exclusions | record + policy | PASS |
-| outcome and gross (`_outcome` L3692) | cover start, end and amount; pool waiting period, table and deductible | cover + policy | PASS (`test_outcome_inputs_are_this_cover_and_this_pool`) |
-| settlement batch, pro-rata pool | canonical incident id, the locks of those covers | record + covers | **was FAIL** (item 2), fixed |
-| payout | the claim's membership in the batch, the cover's status | cover | **was FAIL** (item 5), fixed |
-| a page's evidence date on `web.archive.org` | text of the page | page | PASS: the Wayback "FILE ARCHIVED ON" footer is an HTML comment and is dropped. Hardened: a toolbar block, if one is served inside the page, is cut out (L1477) (`test_wayback_metadata_never_dates_a_page`) |
-| **CoverRegistry attestation** (`get_active_cover` / `is_covered`) | **the protocol string matched against the pool's free-text display name** as well as its slug | — | **FAIL**, fixed: matched only by the pool's frozen DeFi Llama slug, id, or `slug:id` (L4661). A pool named "Aave" over Euler's slug no longer attests Aave cover (`test_registry_ignores_display_names`, registry tests) |
-| contest re-reading | the stored judged digest, and the record and TVL re-read under the claim's same key | record | PASS. A contest re-reads DeFi Llama live, so if DeFi Llama edits or removes the record afterwards, a contest can come out INCONCLUSIVE (refileable). That is a re-reading of the same record, never a different one |
-| pool slug vs id | both frozen at creation, but no web read is possible there | policy | residual, documented: a pool whose slug and id name different protocols can never pay (`id_match` pins every claim INCONCLUSIVE). `slug:id` lets an integrator require both |
-
-## Tests (offline, `python3 test/test_logic.py`, 650 passing)
+## Tests (offline, `python3 test/test_logic.py`, 632 passing)
 
 `TestOneEventBindsEverything` runs on Curve's two real records in one cover window (fixtures captured from the live sources). DNS is excluded (FRONTEND_HIJACK) and Vyper is covered (SMART_CONTRACT_BUG).
 
@@ -111,7 +84,7 @@ Two earlier behaviours changed on purpose, and their tests were updated:
 - The canonical backdating tests now assert **refusal at filing** rather than a `REJECTED_BACKDATED` verdict.
 - Another protocol's article is now EVIDENCE_MISMATCH rather than INCONCLUSIVE.
 
-## On-chain proof (demo instance `0x02A81134c4aCc85386Ad092Bcd2EB55809df15a9`)
+## On-chain proof (demo instance `0xf59B1A3DEE9E7075B9Bc1CdcdeD3d0d67666dE99`)
 
 Probed first:
 - `api.llama.fi/hacks` has both Curve DEX records under `defillamaId` 3: 2022-08-09 "Frontend & Infrastructure / DNS Hijack" and 2023-07-30 "Reentrancy / Vyper Compiler Bug".
@@ -124,59 +97,60 @@ Setup:
 
 | # | evidence | record (key) | outcome | event | binding | severity | judge tx |
 |---|---|---|---|---|---|---|---|
-| 1 | Vyper (rekt.news/curve-vyper-rekt) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG` | SAME (model) | BOUND 2023-07-31 | bucket 2, 4952 bps (Vyper window); gross 0.225 GEN | `0xba9299bfa20d5641228e2c15384127f5ea376cfc101163070b712c428dea693c` |
-| 2 | Vyper | `3:2022-08-09` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2023-07-31 | window anchored on 2022-08-09 (148 bps), not used | `0x99d79d65309427de6a655f7451494088a8287b8d88c3243ee698f3377b73d28f` |
-| 3 | DNS (rekt.news/curve-finance-rekt) | `3:2023-07-30` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2022-08-10 | window anchored on 2023-07-30, not used | `0x85379cae7696b56bb2cb7a3d6dec31c78f90a59b1d602e5e6769f82ced502ddb` |
-| 4 | DNS | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK` | SAME (model) | BOUND 2022-08-10 | bucket 0, 148 bps (DNS window) | `0xb9682a340416807cf012194adfdfacb3e8e5ed8feab53c3aca2d1a0b4153b437` |
-| 5 | DNS, then refiled with Vyper | `3:2023-07-30` | EVIDENCE_MISMATCH → refile → **APPROVED → paid** | DIFFERENT → SAME | UNBOUND → BOUND | bucket 2, 4952 bps | mismatch `0xf36b6caa57b80dc2e5e23c52381f3c567c7e46cd7f99f27b764a14f40938336e`, refile `0xe0e7538367a66f17b58b648d3e2a66e3e16d01a41e309a487bb34bc9aefb5b44`, judge `0xa841ac4034cb3d6570b3a8868126edffd26c6ef85759686c8ff934eda385a60c` |
-| 6 | [DNS, Vyper] (mixed) | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK`, no payout, classified from the DNS page only | SAME (model) | DNS BOUND 2022-08-10; Vyper UNBOUND 2023-07-31 | bucket 0 (DNS window) | `0x718b1a7cb6cbfdee948e7ec14fc560d2de7ce00103db1a16d5ab627c66e29de4` |
-| 7 | [Vyper, DNS] (mixed) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG`, classified from the Vyper page only | SAME (model) | Vyper BOUND 2023-07-31; DNS UNBOUND 2022-08-10 | bucket 2, 4952 bps | `0x9095fc70fe6fe8c0f270c0cb1beb78dc96e7751eee7a4187e8d8acd3a4e34f14` |
+| 1 | Vyper (rekt.news/curve-vyper-rekt) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG` | SAME (model) | BOUND 2023-07-31 | bucket 2, 4952 bps (Vyper window); gross 0.225 GEN | `0x5bb0b92f397df1abe05dd68fd5d9730689ad6fb1d903c3612a44bc1ff16ffce4` |
+| 2 | Vyper | `3:2022-08-09` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2023-07-31 | window anchored on 2022-08-09 (148 bps), not used | `0x39f27738e643247121a4487ea16c66d6fd047c39e3b3205dd5503e5152d7bc40` |
+| 3 | DNS (rekt.news/curve-finance-rekt) | `3:2023-07-30` | **EVIDENCE_MISMATCH**, no payout | DIFFERENT (no model call) | UNBOUND 2022-08-10 | window anchored on 2023-07-30, not used | `0xe5f3d7ddcc52ebfd104705b32ad4f1c69147f198225309536288ed49cae0a18c` |
+| 4 | DNS | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK` | SAME (model) | BOUND 2022-08-10 | bucket 0, 148 bps (DNS window) | `0x8b26f14edb2fe33607ac18990cdf236634a59330a02b35025162971c1cde6242` |
+| 5 | DNS, then refiled with Vyper | `3:2023-07-30` | EVIDENCE_MISMATCH → refile → **APPROVED → paid** | DIFFERENT → SAME | UNBOUND → BOUND | bucket 2, 4952 bps | mismatch `0x419f8b7403ed48205f090628415622f428db0f363bb1ea19ffef85ca19726f1b`, refile `0x20415f467f1c5208068e660830bf3b2ee292bc389c94d921348264fe882c6b97`, judge `0xa55aa33c0ac3343796e7eab65f1c82ad56583dc3a7ead93f8e9d7effde0b36d0` |
+| 6 | [DNS, Vyper] (mixed) | `3:2022-08-09` | **DENIED_EXCLUDED**, `FRONTEND_HIJACK`, no payout, classified from the DNS page only | SAME (model) | DNS BOUND 2022-08-10; Vyper UNBOUND 2023-07-31 | bucket 0 (DNS window) | `0x3fdf39a27f75b56351be45d1bdf57ab964ea708aac0bf4ff248386f84ebff565` |
+| 7 | [Vyper, DNS] (mixed) | `3:2023-07-30` | **APPROVED → paid**, COVERED `SMART_CONTRACT_BUG`, classified from the Vyper page only | SAME (model) | Vyper BOUND 2023-07-31; DNS UNBOUND 2022-08-10 | bucket 2, 4952 bps | `0xddabcdb7800377c1a9c03e5b7662d640138301a567e93782cf7d624dae3d23bd` |
 
 Claims 1 and 5 carry the same content hash `7b244fb5a5ef1dbd`: same key, same evidence, same record, same TVL window.
 
 Claim 2's hash `e4db574b4f52ad5e` and claim 3's `b6bc02b93277364b` differ from it and from each other; claim 3 shares its hash with claim 5's first (mismatched) judgement.
 
-**Canonical, backdating.** A cover bought on 2026-09-29, with a claim keyed to Euler's `1183:2023-03-13`, is refused at filing ("predates this cover's start plus its waiting period"), with no fetch and no model. The cover keeps its one claim: tx `0xffae8e905755fbf5be114f48099f4ddb4c409a74d0e2190f2483ab11eae651bf`.
+**Canonical, backdating.** A cover bought on 2026-09-29, with a claim keyed to Euler's `1183:2023-03-13`, is refused at filing ("predates this cover's start plus its waiting period"), with no fetch and no model. The cover keeps its one claim: tx `0x2327b6dc9caa899e54a9573859cb2dd7e0f52c96d2ac77fcfa181f28c534468d`.
 
 **Settlement.**
-- Claims 1, 5 and 7 share one canonical incident (`3:2023-07-30:curve dex`), so they are paid together in batch 1 (`0x981613fe73090ae206c533839de9ba16573d449dd3f122cffe04a23083a04d78`). Each was credited 0.225 GEN: 0.5 GEN × 50% × (1 − 10%).
+- Claims 1, 5 and 7 share one incident, so they are paid together in batch 1 (`0x982c053bbc922b455539f971b1f387099e55eb4ea85e87dedec1b50c6b3c205e`). Each was credited 0.225 GEN: 0.5 GEN × 50% × (1 − 10%).
+- Withdrawals: buyer2 `0x66293af7…`, buyer6 `0x22112472…`, buyer4 `0xa68a9ed4…`.
 - Claims 2, 3 and 6 have gross 0 and no batch. Their covers released to the underwriter after the claim window.
-- **Item 2 on chain:** the two pro-rata Euler claims were keyed `1183:2023-03-13` and `1183:2023-03-13:Euler V1`. Both resolved to incident `1183:2023-03-13:euler v1` and settled in one batch, scaled at factor 5555 bps (`0x78ee0948948d8f3b8494890b6a19249876b7a87272ddb7d42845ec24051b1277`).
 
 **All reseeded scenarios pass, read back from chain state** by `node test/collect.mjs` ([docs/EVIDENCE.md](docs/EVIDENCE.md), **19/19**):
-- the seven Curve claims
-- Euler COVERED at bucket 4, and the contest UPHELD
+- the seven Curve claims above
+- Euler COVERED at bucket 4, and the underwriter's contest UPHELD
 - Multichain EXCLUDED
 - INCONCLUSIVE homepage (no model call)
-- PRO-RATA, keyed two ways, one batch
+- PRO-RATA
 - EXPIRED
 - STALLED (settled and judged while paused)
-- canonical BACKDATED, refused at filing
-- waiting-period gate
-- registry attest (queried by slug `curve-dex`)
+- canonical BACKDATED, refused at filing (`0x2327b6dc…`)
+- waiting-period gate (`0xb59ea9f7…`)
+- registry attest
 - ledger identity
 - demo drained
 
-The seed script's buy-cooldown bug from the previous deployment is fixed. This run needed no re-run.
+**One seeding re-run, stated plainly.** In the first seed pass on this deployment, the Euler COVERED + CONTESTED scenario did not run:
+- buyer1 bought the 1-day "expired" cover and then the Euler cover 10 s apart, inside the per-wallet buy cooldown, so the contract refused the second buy. The seed script could not read that refusal and took buyer1's previous cover.
+- The contract behaved correctly. The script bug is fixed: `newCover` now waits out the cooldown and requires a new cover id.
+- The scenario was re-run on its own on a fresh Euler pool (`node test/seed.mjs --part=euler-covered`): claim #13, judged COVERED `0x6b48885e…`, contest UPHELD `0xc8a1460d…`.
 
-**Drained to zero.** In one pass, every demo cover was released, all five pools were closed and every balance was withdrawn ([docs/drain-evidence.json](docs/drain-evidence.json)). The books read **balance 0 = held 0 + payable 0 wei, locked 0**. Studio Dev again finalized every `claim_payout` without executing the transfer: `undelivered_wei = 12134233333333333341`, published by `get_stats`.
+**Drained to zero.** Every demo cover was released, all six pools were closed and every balance was withdrawn, in two passes (`docs/drain-evidence-pass1.json`, then `docs/drain-evidence.json` after the Euler re-run). The books read **balance 0 = held 0 + payable 0 wei, locked 0**. As before, Studio Dev finalized every `claim_payout` without executing the value transfer: `undelivered_wei = 14355900000000000008`, published by `get_stats`.
 
-**Audit.** `python3 tools/audit.py` gives **57 PASS / 0 FAIL** ([docs/AUDIT.md](docs/AUDIT.md)). It includes:
+**Audit.** `python3 tools/audit.py` gives **54 PASS / 0 FAIL** ([docs/AUDIT.md](docs/AUDIT.md)). It includes the new checks:
 - no "latest row" selection
-- the hash binds canonical incident + evidence + record + TVL window
-- canonical identity keys the batches; one listing per claim; finalize pays once, on a live cover
-- contest and refile bindings
-- registry matches frozen DeFi Llama identity only
+- the content hash binds incident key + evidence + record + TVL window
+- steward tests a–g and the classifier-input tests pass
 - README addresses equal `deployments.json`
 
 ## New addresses (GenLayer Studio Dev, chain 61997)
 
 | contract | address | deploy tx |
 |---|---|---|
-| `CoverClaim` (canonical) | `0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3` | `0xb6d4fd74e413509d803232a8bb4684b736a4c2aaaa08613ab707185795a3e06d` |
-| `CoverClaimDemo` (DEMO, `demo_backdate_days = 1521`) | `0x02A81134c4aCc85386Ad092Bcd2EB55809df15a9` | `0x755c47837df2c77ff169725538aa42711f345bfd6db3967de266b08d5b27aa0a` |
-| `CoverRegistry` | `0x325A84972a8D86D94bFb4301CA04312B15Cf2F99` | `0x416a275c3b89a1ade41b1b1aa75ac69da593b1fbacef96f772606d6706d9d5bb` |
+| `CoverClaim` (canonical) | `0xF2F545d265dB85495E5Bda8fA02573F17B193983` | `0x4ea19dde06ff07bc91a9ccb81db3f3198990531dd91084b66e857ef3d3ed1f65` |
+| `CoverClaimDemo` (DEMO, `demo_backdate_days = 1521`) | `0xf59B1A3DEE9E7075B9Bc1CdcdeD3d0d67666dE99` | `0x4c02ac916c08b7079387c0c433f8b05f35ee21e9251935161fbb5e2dd0aac4fc` |
+| `CoverRegistry` | `0x06144d4702C513d289c4Ef1bAA811bbad0c6a4EB` | `0x0a6f32dd1c87a6090ee4631b140fe1628314f7295ace4c94726107ad471e0e81` |
 
-- CoverClaim source: 218,088 bytes, sha256 `3e8593642bad764f…`, identical on chain for both instances (`node test/verify_onchain.mjs`).
-- Previous deployments: `docs/previous-deployment/1-first/`, `docs/previous-deployment/2-waitgate/`, `docs/previous-deployment/3-one-event/` (before the classifier-input confirmation), `docs/previous-deployment/4-matched-pages/` (before the binding audit).
+- CoverClaim source: 213,653 bytes, sha256 `c0ba646ac17989f2…`, identical on chain for both instances (`node test/verify_onchain.mjs`).
+- Previous deployments: `docs/previous-deployment/1-first/`, `docs/previous-deployment/2-waitgate/`, `docs/previous-deployment/3-one-event/` (this fix before the classifier-input confirmation above).
 - App: https://coverclaim.vercel.app. It reads the addresses from Vercel production env vars, and the live bundle contains only these addresses.

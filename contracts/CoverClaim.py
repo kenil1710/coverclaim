@@ -1470,6 +1470,14 @@ def _page(url: str) -> tuple:
     status, body = _http(url)
     if status != 200 or body == "":
         return (False, "")
+    if _host_of(url) == ARCHIVE_HOST:
+        # The Wayback toolbar (capture dates, calendars) is archive metadata,
+        # not evidence: it must never date a page. Its "FILE ARCHIVED ON"
+        # footer is an HTML comment, which _strip_html already drops.
+        a = body.find("<!-- BEGIN WAYBACK TOOLBAR INSERT -->")
+        b = body.find("<!-- END WAYBACK TOOLBAR INSERT -->")
+        if a >= 0 and b > a:
+            body = body[:a] + body[b:]
     return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS])
 
 
@@ -1881,12 +1889,19 @@ def _reading(facts: dict, raw: dict) -> dict:
 
     llama_line = _llama_line(llama)
     key = str(facts.get("incident_key", ""))
+    # THE CANONICAL INCIDENT IDENTITY: the selected RECORD's own id, day and
+    # normalised name - never the claimant's spelling of the key. "id:date"
+    # and "id:date:Name" for one record are one incident; two records on one
+    # day are two. Grouping, settlement windows, pro-rata and the hash use it.
+    ident = _incident_id(llama) if found else ""
     tline = _tvl_line(tvl)
     return {
         "digest": digest,
         "novel": novel,
-        "content_hash": _content_hash(key, dnorm, bind_line, llama_line, tline),
+        "content_hash": _content_hash(ident if ident else key, dnorm, bind_line,
+                                      llama_line, tline),
         "incident_key": key,
+        "incident_id": ident,
         "bind_line": bind_line,
         "bound": bound,
         "event_gate": gate,
@@ -1914,6 +1929,12 @@ def _reading(facts: dict, raw: dict) -> dict:
         "pinned": pinned,
         "model_called": pinned == "",
     }
+
+
+def _incident_id(llama: dict) -> str:
+    """"<id>:<YYYY-MM-DD>:<normalised record name>" of a SELECTED record."""
+    return (str(llama.get("id", "")) + ":" + _date_text(llama.get("date", 0)) + ":"
+            + _norm(llama.get("name", "")))
 
 
 def _content_hash(key: str, dnorm: str, bind_line: str, llama_line: str,
@@ -2187,7 +2208,7 @@ def _collect(facts: dict) -> dict:
 
 # The deterministic fields of a verdict, compared EXACTLY (rule 10).
 EXACT_STR = ("facts_hash", "mode", "content_hash", "digest", "novel",
-             "incident_key", "bind_line", "event_gate", "pinned_as",
+             "incident_key", "incident_id", "bind_line", "event_gate", "pinned_as",
              "llama_line", "tvl_line", "llama_mapped", "pinned", "classification", "peril",
              "exclusion", "event_match", "effective", "reason")
 EXACT_INT = ("claim_id", "incident_day", "bound", "tvl_before", "tvl_low",
@@ -2457,6 +2478,7 @@ class Claim:
 
     # --- verdict
     judged_at: u64
+    incident_id: str
     classification: str
     event_match: str
     effective: str
@@ -2520,6 +2542,7 @@ class Batch:
     capacity locked for those covers cannot pay them all in full."""
     batch_id: u32
     pool_id: u32
+    incident_id: str
     incident_day: u64
     opened_at: u64
     closes_at: u64
@@ -3491,6 +3514,20 @@ class CoverClaim(gl.contract.Contract):
                                 "one new source or a corrected incident key")
         if st == CL_MISMATCH:
             claim.mismatch_refiles = u32(int(claim.mismatch_refiles) + 1)
+        # NOTHING OF THE REJECTED ATTEMPT CARRIES OVER. The next judgement is
+        # asked from scratch (mode "claim": no prior digest, no prior sources,
+        # no prior binding); settlement fields return to zero; and a contest
+        # that was already resolved does not use up the right to contest the
+        # NEW verdict, which rests on different evidence.
+        self._leave_batch(claim)
+        if str(claim.contest_status) not in CT_OPEN:
+            claim.contest_status = CT_NONE
+            claim.contest_urls = ""
+            claim.contest_statement = ""
+            claim.contest_bond_wei = u256(0)
+            claim.contested_at = u64(0)
+            claim.contest_judging_since = u64(0)
+            claim.status_before_contest = ""
         claim.incident_key = key
         claim.urls = " ".join(urls)
         for u in urls:
@@ -3510,8 +3547,13 @@ class CoverClaim(gl.contract.Contract):
 
     def _join_batch(self, pool: Pool, claim: Claim, now: int) -> int:
         """Put an APPROVED claim into its incident's settlement window, opening
-        one if none is open. Returns the batch id."""
-        key = str(int(pool.pool_id)) + ":" + str(int(claim.incident_day))
+        one if none is open. Returns the batch id.
+
+        The window is keyed by the CANONICAL incident id - the selected
+        record's id, day and name - never by the claimant's spelling of the
+        key. A claim is listed in a batch AT MOST ONCE: one that left the
+        batch (a contest flipped it) and comes back is not appended again."""
+        key = str(int(pool.pool_id)) + ":" + str(claim.incident_id)
         bid = int(self.open_batch.get(key) or 0)
         batch = self._batch(bid) if bid > 0 else None
         if batch is None or str(batch.status) != B_OPEN:
@@ -3519,20 +3561,36 @@ class CoverClaim(gl.contract.Contract):
             batch = self.batches.append_new_get()
             batch.batch_id = u32(bid)
             batch.pool_id = u32(int(pool.pool_id))
+            batch.incident_id = str(claim.incident_id)
             batch.incident_day = u64(int(claim.incident_day))
             batch.opened_at = u64(now)
             batch.closes_at = u64(now + int(self.settlement_window_s))
             batch.status = B_OPEN
             self.open_batch[key] = u32(bid)
-        self.batch_claims.get_or_insert_default(str(bid)).append(u32(int(claim.claim_id)))
+        clid = int(claim.claim_id)
+        if clid not in self._ids(self.batch_claims.get(str(bid))):
+            self.batch_claims.get_or_insert_default(str(bid)).append(u32(clid))
         batch.members = u32(int(batch.members) + 1)
         claim.batch_id = u32(bid)
         return bid
+
+    def _leave_batch(self, claim: Claim) -> None:
+        """A claim that stops being APPROVED leaves its batch's live count; its
+        settlement fields go back to zero. `finalize_incident` pays only
+        APPROVED members, each once."""
+        bid = int(claim.batch_id)
+        batch = self._batch(bid) if bid > 0 else None
+        if batch is not None and str(batch.status) == B_OPEN and int(batch.members) > 0:
+            batch.members = u32(int(batch.members) - 1)
+        claim.batch_id = u32(0)
+        claim.gross_wei = u256(0)
+        claim.table_bps = u32(0)
 
     def _record(self, claim: Claim, d: dict, now: int) -> None:
         """Write an agreed, RE-DERIVED verdict onto a claim. Every value comes
         out of `d`, which `judge_claim` rebuilt after consensus (rule 11)."""
         claim.judged_at = u64(now)
+        claim.incident_id = str(d.get("incident_id", ""))
         claim.classification = str(d.get("classification", ""))
         claim.event_match = str(d.get("event_match", ""))
         claim.effective = str(d.get("effective", ""))
@@ -3844,6 +3902,8 @@ class CoverClaim(gl.contract.Contract):
         claim.contest_status = CT_FLIPPED
         self.total_flipped = u256(int(self.total_flipped) + 1)
         self._release_to(claim.contester, bond)
+        if old == CL_APPROVED:
+            self._leave_batch(claim)
         self._set_status(claim, new)
         claim.gross_wei = u256(gross)
         table = self._table(pool)
@@ -3854,6 +3914,8 @@ class CoverClaim(gl.contract.Contract):
         if new == CL_APPROVED:
             if int(claim.incident_day) <= 0:
                 claim.incident_day = u64(int(d["incident_day"]))
+            if str(claim.incident_id) == "":
+                claim.incident_id = str(d["incident_id"])
             bid = self._join_batch(pool, claim, now)
         return {"status": "OK", "claim_id": clid, "contest": CT_FLIPPED,
                 "outcome": new, "was": old, "bond_to": claim.contester.as_hex,
@@ -3896,9 +3958,20 @@ class CoverClaim(gl.contract.Contract):
                                 {"closes_at": int(batch.closes_at)})
         members = self._ids(self.batch_claims.get(str(bid)))
         live = []
+        seen = []
         for clid in members:
+            # ONE PAYOUT PER COVER: each claim at most once, only while its
+            # cover is live, only if it is still a member of THIS batch.
+            if clid in seen:
+                continue
+            seen.append(clid)
             claim = self._claim(clid)
             if claim is None or str(claim.status) != CL_APPROVED:
+                continue
+            if int(claim.batch_id) != bid:
+                continue
+            cv = self._cover(claim.cover_id)
+            if cv is None or str(cv.status) != COVER_ACTIVE:
                 continue
             if str(claim.contest_status) in CT_OPEN:
                 return self._refuse("claim #" + str(clid) + " in this incident "
@@ -3944,7 +4017,7 @@ class CoverClaim(gl.contract.Contract):
         batch.paid_total_wei = u256(paid)
         batch.dust_wei = u256(dust)
         batch.scaled = total > available
-        key = str(int(pool.pool_id)) + ":" + str(int(batch.incident_day))
+        key = str(int(pool.pool_id)) + ":" + str(batch.incident_id)
         if int(self.open_batch.get(key) or 0) == bid:
             self.open_batch[key] = u32(0)
         self.total_batches_finalized = u256(int(self.total_batches_finalized) + 1)
@@ -4182,6 +4255,7 @@ class CoverClaim(gl.contract.Contract):
             "filed_at": int(claim.filed_at),
             "last_filed_at": int(claim.last_filed_at),
             "incident_key": str(claim.incident_key),
+            "incident_id": str(claim.incident_id),
             "evidence_urls": _split_urls(claim.urls),
             "statement": str(claim.statement),
             "status": str(claim.status),
@@ -4249,6 +4323,7 @@ class CoverClaim(gl.contract.Contract):
         return {
             "batch_id": int(batch.batch_id),
             "pool_id": int(batch.pool_id),
+            "incident_id": str(batch.incident_id),
             "incident_day": int(batch.incident_day),
             "incident_date": _date_text(int(batch.incident_day)),
             "opened_at": int(batch.opened_at),
@@ -4497,7 +4572,8 @@ class CoverClaim(gl.contract.Contract):
         pool = self._pool(claim.pool_id)
         judged = int(claim.judged_at) > 0
         key, lid, day, _, _ = _parse_key(str(claim.incident_key))
-        recomputed = _content_hash(key, _norm(str(claim.digest)),
+        ident = str(claim.incident_id)
+        recomputed = _content_hash(ident if ident else key, _norm(str(claim.digest)),
                                    str(claim.bind_line), str(claim.llama_line),
                                    str(claim.tvl_line))
         record = str(claim.llama_line)
@@ -4505,7 +4581,8 @@ class CoverClaim(gl.contract.Contract):
         record_ok = (not has_record) or (
             record.startswith("DeFi Llama incident record " + lid + ":"
                               + _date_text(day) + ": ")
-            and int(claim.incident_day) == day)
+            and int(claim.incident_day) == day
+            and ident.startswith(lid + ":" + _date_text(day) + ":"))
         tv = _parse_tvl_line(str(claim.tvl_line))
         tvl_ok = True
         low = -1
@@ -4529,7 +4606,7 @@ class CoverClaim(gl.contract.Contract):
         ded = int(pool.deductible_bps) if pool is not None else 0
         gross = _gross(amount, int(claim.table_bps), ded)
         return {"found": True, "claim_id": int(claim.claim_id),
-                "incident_key": key,
+                "incident_key": key, "incident_id": ident,
                 "content_hash": str(claim.content_hash),
                 "recomputed_hash": recomputed,
                 "hash_matches": (not judged)
@@ -4548,22 +4625,28 @@ class CoverClaim(gl.contract.Contract):
                 "gross_recomputed_wei": str(gross),
                 "gross_stored_wei": str(int(claim.gross_wei)),
                 "payout_wei": str(int(claim.payout_wei)),
-                "hash_formula": ("fnv1a64(incident_key | norm(digest) | "
+                "hash_formula": ("fnv1a64(incident_id (canonical) | norm(digest) | "
                                  "evidence_binding | norm(llama_record) | "
                                  "tvl_window)"),
                 "formula": "gross = cover x table[bucket] x (10000 - deductible) / 10000^2"}
 
     @gl.public.view
     def get_active_cover(self, address: str, protocol: str) -> typing.Any:
-        """The strongest ACTIVE cover this wallet holds on `protocol` (a DeFi
-        Llama slug or the pool's protocol name), for integrators such as
-        CoverRegistry. `in_force` is true only between start + waiting period
+        """The strongest ACTIVE cover this wallet holds on `protocol`, for
+        integrators such as CoverRegistry. `protocol` names the pool's FROZEN
+        DeFi Llama identity: its slug ("euler-v1"), its numeric id ("1183"),
+        or both ("euler-v1:1183", both must match). NEVER the pool's display
+        name: that is free text, and a pool named "Aave" over another
+        protocol's slug must not attest cover on Aave. `in_force` is true only between start + waiting period
         and end; `time_checked` says whether the block time was readable in
         this call - when it is not, `in_force` is false, never assumed."""
         if not _is_addr(address):
             return {"found": False, "reason": "not an address"}
         now = self._now()
-        want = _norm(protocol)
+        want = _lower(protocol)
+        k = want.find(":")
+        want_slug = want if k < 0 else want[:k]
+        want_id = "" if k < 0 else want[k + 1:]
         best = None
         for cid in self._ids(self.covers_by_buyer.get(Address(str(address).strip()))):
             cover = self._cover(cid)
@@ -4572,7 +4655,12 @@ class CoverClaim(gl.contract.Contract):
             pool = self._pool(cover.pool_id)
             if pool is None:
                 continue
-            if want != _norm(pool.llama_slug) and want != _norm(pool.protocol_name):
+            slug = _lower(pool.llama_slug)
+            lid = str(pool.llama_id)
+            if k >= 0:
+                if want_slug != slug or want_id != lid:
+                    continue
+            elif want != slug and want != lid:
                 continue
             view = self._cover_view(cover, now)
             if best is None or (view["in_force"] and not best["in_force"]) or \

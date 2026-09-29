@@ -108,6 +108,7 @@
             "filed_at": int(claim.filed_at),
             "last_filed_at": int(claim.last_filed_at),
             "incident_key": str(claim.incident_key),
+            "incident_id": str(claim.incident_id),
             "evidence_urls": _split_urls(claim.urls),
             "statement": str(claim.statement),
             "status": str(claim.status),
@@ -175,6 +176,7 @@
         return {
             "batch_id": int(batch.batch_id),
             "pool_id": int(batch.pool_id),
+            "incident_id": str(batch.incident_id),
             "incident_day": int(batch.incident_day),
             "incident_date": _date_text(int(batch.incident_day)),
             "opened_at": int(batch.opened_at),
@@ -423,7 +425,8 @@
         pool = self._pool(claim.pool_id)
         judged = int(claim.judged_at) > 0
         key, lid, day, _, _ = _parse_key(str(claim.incident_key))
-        recomputed = _content_hash(key, _norm(str(claim.digest)),
+        ident = str(claim.incident_id)
+        recomputed = _content_hash(ident if ident else key, _norm(str(claim.digest)),
                                    str(claim.bind_line), str(claim.llama_line),
                                    str(claim.tvl_line))
         record = str(claim.llama_line)
@@ -431,7 +434,8 @@
         record_ok = (not has_record) or (
             record.startswith("DeFi Llama incident record " + lid + ":"
                               + _date_text(day) + ": ")
-            and int(claim.incident_day) == day)
+            and int(claim.incident_day) == day
+            and ident.startswith(lid + ":" + _date_text(day) + ":"))
         tv = _parse_tvl_line(str(claim.tvl_line))
         tvl_ok = True
         low = -1
@@ -455,7 +459,7 @@
         ded = int(pool.deductible_bps) if pool is not None else 0
         gross = _gross(amount, int(claim.table_bps), ded)
         return {"found": True, "claim_id": int(claim.claim_id),
-                "incident_key": key,
+                "incident_key": key, "incident_id": ident,
                 "content_hash": str(claim.content_hash),
                 "recomputed_hash": recomputed,
                 "hash_matches": (not judged)
@@ -474,22 +478,28 @@
                 "gross_recomputed_wei": str(gross),
                 "gross_stored_wei": str(int(claim.gross_wei)),
                 "payout_wei": str(int(claim.payout_wei)),
-                "hash_formula": ("fnv1a64(incident_key | norm(digest) | "
+                "hash_formula": ("fnv1a64(incident_id (canonical) | norm(digest) | "
                                  "evidence_binding | norm(llama_record) | "
                                  "tvl_window)"),
                 "formula": "gross = cover x table[bucket] x (10000 - deductible) / 10000^2"}
 
     @gl.public.view
     def get_active_cover(self, address: str, protocol: str) -> typing.Any:
-        """The strongest ACTIVE cover this wallet holds on `protocol` (a DeFi
-        Llama slug or the pool's protocol name), for integrators such as
-        CoverRegistry. `in_force` is true only between start + waiting period
+        """The strongest ACTIVE cover this wallet holds on `protocol`, for
+        integrators such as CoverRegistry. `protocol` names the pool's FROZEN
+        DeFi Llama identity: its slug ("euler-v1"), its numeric id ("1183"),
+        or both ("euler-v1:1183", both must match). NEVER the pool's display
+        name: that is free text, and a pool named "Aave" over another
+        protocol's slug must not attest cover on Aave. `in_force` is true only between start + waiting period
         and end; `time_checked` says whether the block time was readable in
         this call - when it is not, `in_force` is false, never assumed."""
         if not _is_addr(address):
             return {"found": False, "reason": "not an address"}
         now = self._now()
-        want = _norm(protocol)
+        want = _lower(protocol)
+        k = want.find(":")
+        want_slug = want if k < 0 else want[:k]
+        want_id = "" if k < 0 else want[k + 1:]
         best = None
         for cid in self._ids(self.covers_by_buyer.get(Address(str(address).strip()))):
             cover = self._cover(cid)
@@ -498,7 +508,12 @@
             pool = self._pool(cover.pool_id)
             if pool is None:
                 continue
-            if want != _norm(pool.llama_slug) and want != _norm(pool.protocol_name):
+            slug = _lower(pool.llama_slug)
+            lid = str(pool.llama_id)
+            if k >= 0:
+                if want_slug != slug or want_id != lid:
+                    continue
+            elif want != slug and want != lid:
                 continue
             view = self._cover_view(cover, now)
             if best is None or (view["in_force"] and not best["in_force"]) or \

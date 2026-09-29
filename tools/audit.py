@@ -200,6 +200,17 @@ def main() -> int:
     check("patterns", "multi-incident: mismatched evidence cannot pay, matching evidence selects the intended "
           "event (steward tests a-g)", t_ok, t_ev)
 
+    jb = ast.unparse(CC["_join_batch"])
+    t_ok, t_ev = run_tests("TestBindingAudit")
+    check("patterns", "canonical incident identity: batches keyed by the selected record's id:date:name, never the "
+          "raw key; one listing per claim; finalize pays each claim once, on a live cover only",
+          "claim.incident_id" in jb and "incident_key" not in jb and "not in self._ids" in jb and t_ok, t_ev)
+    check("patterns", "contest and refile bindings: same checks as filing, key fixed in a contest, refile from scratch, "
+          "limit enforced; one payout per cover", t_ok, t_ev)
+    t_ok, t_ev = run_tests("TestBindingAudit6")
+    check("patterns", "other bindings: registry matches frozen DeFi Llama identity only; archive metadata never "
+          "dates a page; severity and outcome inputs bound to record, cover and pool", t_ok, t_ev)
+
     gated = sorted({n for n, m in CC.items() if is_write(m) and any(
         isinstance(x, ast.If) and "self.paused" in ast.unparse(x.test) for x in ast.walk(m))})
     check("patterns", "pause gates only new business; settle_stalled works while paused",

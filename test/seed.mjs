@@ -273,7 +273,8 @@ if (part === "all" || part === "demo") {
   K.inconclusive = await newClaim(DEMO, "buyer4", "demo-inconclusive-claim", C.inconclusive, KEY.euler, URL_.eulerHome,
     "Euler lost funds; see the official site.");
   K.prorataA = await newClaim(DEMO, "buyer5", "demo-prorata-claim-a", C.prorataA, KEY.euler, URL_.euler, "Euler exploit, March 2023.");
-  K.prorataB = await newClaim(DEMO, "buyer6", "demo-prorata-claim-b", C.prorataB, KEY.euler, URL_.eulerArchive, "Euler exploit (archived report).");
+  // The same record keyed two ways: one canonical incident, one batch.
+  K.prorataB = await newClaim(DEMO, "buyer6", "demo-prorata-claim-b", C.prorataB, KEY.euler + ":Euler V1", URL_.eulerArchive, "Euler exploit (archived report).");
   EV.demo.claims = K;
   save();
 

@@ -1,0 +1,97 @@
+{
+  "at": "2026-09-29T07:59:32.847Z",
+  "pools": [
+    {
+      "id": 1,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 2,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 3,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 4,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 5,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    },
+    {
+      "id": 6,
+      "status": "CLOSED",
+      "capital_wei": "0",
+      "locked_wei": "0",
+      "premiums_held_wei": "0",
+      "active_covers": 0
+    }
+  ],
+  "stats": {
+    "balance_wei": "0",
+    "held_wei": "0",
+    "payable_wei": "0",
+    "locked_wei": "0",
+    "capital_wei": "0",
+    "bonds_wei": "0",
+    "chain_balance_wei": "14355900000000000008",
+    "undelivered_wei": "14355900000000000008",
+    "ledger_balanced": true,
+    "held_matches_books": true
+  },
+  "steps": [
+    {
+      "label": "close pool #6",
+      "role": "uw1",
+      "method": "close_pool",
+      "args": [
+        6
+      ],
+      "tx": "0x1c27e6930a4e4b9a696931548ed5def2df97e63d56942fb98cb4aeb081879ee9",
+      "status": "ACCEPTED",
+      "returned": {
+        "claim_with": "claim_payout()",
+        "pool_id": 6,
+        "returned_wei": "1100000000000000000",
+        "status": "OK"
+      }
+    },
+    {
+      "label": "claim_payout uw1 (1.100000 GEN)",
+      "role": "uw1",
+      "method": "claim_payout",
+      "args": [],
+      "tx": "0x2a4f0c5f396a9de9635a401b5315546d3db7b4fad252c6ea2f5997a21a4d66ce",
+      "status": "ACCEPTED",
+      "returned": {
+        "note": "the transfer is posted on finalisation of this transaction",
+        "paid_gen": "1.10",
+        "paid_wei": "1100000000000000000",
+        "status": "OK"
+      }
+    }
+  ]
+}

@@ -50,3 +50,14 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] drained to 0; chain scenarios 19/19; audit 54/0
 - [x] addresses updated: deployments.json, README, RESUBMISSION, frontend env (Vercel prod), live bundle verified
 - [x] pushed; GitHub bytes verified
+
+## Binding audit, items 2–6
+- [x] 2 canonical incident identity: FAIL (batches keyed by day) → fixed, `incident_id` from the record; tests
+- [x] 3 contest binding: PASS; tests added
+- [x] 4 refile binding: leftover batch/contest state → fixed; tests
+- [x] 5 one payout per cover: FAIL (double listing → double pay after flip+refile) → fixed; tests incl. randomized
+- [x] 6 other bindings: registry matched free-text pool name → fixed (slug/id only); Wayback metadata hardened; rest PASS
+- [x] 650 offline tests
+- [x] redeployed all three, byte-for-byte verified (canonical 0x8a7e766b…, demo 0x02A81134…, registry 0x325A8497…)
+- [x] Vercel production env + deploy; live bundle only new addresses
+- [x] reseed incl. Curve proof and two-way-keyed pro-rata (19/19); drained to 0; audit 57/0; pushed

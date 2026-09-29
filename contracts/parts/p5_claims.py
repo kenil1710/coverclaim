@@ -232,6 +232,20 @@
                                 "one new source or a corrected incident key")
         if st == CL_MISMATCH:
             claim.mismatch_refiles = u32(int(claim.mismatch_refiles) + 1)
+        # NOTHING OF THE REJECTED ATTEMPT CARRIES OVER. The next judgement is
+        # asked from scratch (mode "claim": no prior digest, no prior sources,
+        # no prior binding); settlement fields return to zero; and a contest
+        # that was already resolved does not use up the right to contest the
+        # NEW verdict, which rests on different evidence.
+        self._leave_batch(claim)
+        if str(claim.contest_status) not in CT_OPEN:
+            claim.contest_status = CT_NONE
+            claim.contest_urls = ""
+            claim.contest_statement = ""
+            claim.contest_bond_wei = u256(0)
+            claim.contested_at = u64(0)
+            claim.contest_judging_since = u64(0)
+            claim.status_before_contest = ""
         claim.incident_key = key
         claim.urls = " ".join(urls)
         for u in urls:
@@ -251,8 +265,13 @@
 
     def _join_batch(self, pool: Pool, claim: Claim, now: int) -> int:
         """Put an APPROVED claim into its incident's settlement window, opening
-        one if none is open. Returns the batch id."""
-        key = str(int(pool.pool_id)) + ":" + str(int(claim.incident_day))
+        one if none is open. Returns the batch id.
+
+        The window is keyed by the CANONICAL incident id - the selected
+        record's id, day and name - never by the claimant's spelling of the
+        key. A claim is listed in a batch AT MOST ONCE: one that left the
+        batch (a contest flipped it) and comes back is not appended again."""
+        key = str(int(pool.pool_id)) + ":" + str(claim.incident_id)
         bid = int(self.open_batch.get(key) or 0)
         batch = self._batch(bid) if bid > 0 else None
         if batch is None or str(batch.status) != B_OPEN:
@@ -260,20 +279,36 @@
             batch = self.batches.append_new_get()
             batch.batch_id = u32(bid)
             batch.pool_id = u32(int(pool.pool_id))
+            batch.incident_id = str(claim.incident_id)
             batch.incident_day = u64(int(claim.incident_day))
             batch.opened_at = u64(now)
             batch.closes_at = u64(now + int(self.settlement_window_s))
             batch.status = B_OPEN
             self.open_batch[key] = u32(bid)
-        self.batch_claims.get_or_insert_default(str(bid)).append(u32(int(claim.claim_id)))
+        clid = int(claim.claim_id)
+        if clid not in self._ids(self.batch_claims.get(str(bid))):
+            self.batch_claims.get_or_insert_default(str(bid)).append(u32(clid))
         batch.members = u32(int(batch.members) + 1)
         claim.batch_id = u32(bid)
         return bid
+
+    def _leave_batch(self, claim: Claim) -> None:
+        """A claim that stops being APPROVED leaves its batch's live count; its
+        settlement fields go back to zero. `finalize_incident` pays only
+        APPROVED members, each once."""
+        bid = int(claim.batch_id)
+        batch = self._batch(bid) if bid > 0 else None
+        if batch is not None and str(batch.status) == B_OPEN and int(batch.members) > 0:
+            batch.members = u32(int(batch.members) - 1)
+        claim.batch_id = u32(0)
+        claim.gross_wei = u256(0)
+        claim.table_bps = u32(0)
 
     def _record(self, claim: Claim, d: dict, now: int) -> None:
         """Write an agreed, RE-DERIVED verdict onto a claim. Every value comes
         out of `d`, which `judge_claim` rebuilt after consensus (rule 11)."""
         claim.judged_at = u64(now)
+        claim.incident_id = str(d.get("incident_id", ""))
         claim.classification = str(d.get("classification", ""))
         claim.event_match = str(d.get("event_match", ""))
         claim.effective = str(d.get("effective", ""))
@@ -585,6 +620,8 @@
         claim.contest_status = CT_FLIPPED
         self.total_flipped = u256(int(self.total_flipped) + 1)
         self._release_to(claim.contester, bond)
+        if old == CL_APPROVED:
+            self._leave_batch(claim)
         self._set_status(claim, new)
         claim.gross_wei = u256(gross)
         table = self._table(pool)
@@ -595,6 +632,8 @@
         if new == CL_APPROVED:
             if int(claim.incident_day) <= 0:
                 claim.incident_day = u64(int(d["incident_day"]))
+            if str(claim.incident_id) == "":
+                claim.incident_id = str(d["incident_id"])
             bid = self._join_batch(pool, claim, now)
         return {"status": "OK", "claim_id": clid, "contest": CT_FLIPPED,
                 "outcome": new, "was": old, "bond_to": claim.contester.as_hex,
@@ -637,9 +676,20 @@
                                 {"closes_at": int(batch.closes_at)})
         members = self._ids(self.batch_claims.get(str(bid)))
         live = []
+        seen = []
         for clid in members:
+            # ONE PAYOUT PER COVER: each claim at most once, only while its
+            # cover is live, only if it is still a member of THIS batch.
+            if clid in seen:
+                continue
+            seen.append(clid)
             claim = self._claim(clid)
             if claim is None or str(claim.status) != CL_APPROVED:
+                continue
+            if int(claim.batch_id) != bid:
+                continue
+            cv = self._cover(claim.cover_id)
+            if cv is None or str(cv.status) != COVER_ACTIVE:
                 continue
             if str(claim.contest_status) in CT_OPEN:
                 return self._refuse("claim #" + str(clid) + " in this incident "
@@ -685,7 +735,7 @@
         batch.paid_total_wei = u256(paid)
         batch.dust_wei = u256(dust)
         batch.scaled = total > available
-        key = str(int(pool.pool_id)) + ":" + str(int(batch.incident_day))
+        key = str(int(pool.pool_id)) + ":" + str(batch.incident_id)
         if int(self.open_batch.get(key) or 0) == bid:
             self.open_batch[key] = u32(0)
         self.total_batches_finalized = u256(int(self.total_batches_finalized) + 1)

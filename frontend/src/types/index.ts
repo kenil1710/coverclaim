@@ -86,6 +86,7 @@ export type Claim = {
   filed_at: number;
   last_filed_at: number;
   incident_key: string;
+  incident_id: string;
   evidence_urls: string[];
   statement: string;
   status: string;
@@ -262,6 +263,7 @@ export type EvidenceCheck = {
 export type IncidentCheck = {
   ok: boolean;
   incident_key: string;
+  incident_id: string;
   reason: string;
   llama_id: string;
   window: [string, string];

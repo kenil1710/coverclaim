@@ -141,6 +141,14 @@ def _page(url: str) -> tuple:
     status, body = _http(url)
     if status != 200 or body == "":
         return (False, "")
+    if _host_of(url) == ARCHIVE_HOST:
+        # The Wayback toolbar (capture dates, calendars) is archive metadata,
+        # not evidence: it must never date a page. Its "FILE ARCHIVED ON"
+        # footer is an HTML comment, which _strip_html already drops.
+        a = body.find("<!-- BEGIN WAYBACK TOOLBAR INSERT -->")
+        b = body.find("<!-- END WAYBACK TOOLBAR INSERT -->")
+        if a >= 0 and b > a:
+            body = body[:a] + body[b:]
     return (True, _strip_html(body[:4 * MAX_PAGE_CHARS])[:MAX_PAGE_CHARS])
 
 
@@ -552,12 +560,19 @@ def _reading(facts: dict, raw: dict) -> dict:
 
     llama_line = _llama_line(llama)
     key = str(facts.get("incident_key", ""))
+    # THE CANONICAL INCIDENT IDENTITY: the selected RECORD's own id, day and
+    # normalised name - never the claimant's spelling of the key. "id:date"
+    # and "id:date:Name" for one record are one incident; two records on one
+    # day are two. Grouping, settlement windows, pro-rata and the hash use it.
+    ident = _incident_id(llama) if found else ""
     tline = _tvl_line(tvl)
     return {
         "digest": digest,
         "novel": novel,
-        "content_hash": _content_hash(key, dnorm, bind_line, llama_line, tline),
+        "content_hash": _content_hash(ident if ident else key, dnorm, bind_line,
+                                      llama_line, tline),
         "incident_key": key,
+        "incident_id": ident,
         "bind_line": bind_line,
         "bound": bound,
         "event_gate": gate,
@@ -585,6 +600,12 @@ def _reading(facts: dict, raw: dict) -> dict:
         "pinned": pinned,
         "model_called": pinned == "",
     }
+
+
+def _incident_id(llama: dict) -> str:
+    """"<id>:<YYYY-MM-DD>:<normalised record name>" of a SELECTED record."""
+    return (str(llama.get("id", "")) + ":" + _date_text(llama.get("date", 0)) + ":"
+            + _norm(llama.get("name", "")))
 
 
 def _content_hash(key: str, dnorm: str, bind_line: str, llama_line: str,
@@ -858,7 +879,7 @@ def _collect(facts: dict) -> dict:
 
 # The deterministic fields of a verdict, compared EXACTLY (rule 10).
 EXACT_STR = ("facts_hash", "mode", "content_hash", "digest", "novel",
-             "incident_key", "bind_line", "event_gate", "pinned_as",
+             "incident_key", "incident_id", "bind_line", "event_gate", "pinned_as",
              "llama_line", "tvl_line", "llama_mapped", "pinned", "classification", "peril",
              "exclusion", "event_match", "effective", "reason")
 EXACT_INT = ("claim_id", "incident_day", "bound", "tvl_before", "tvl_low",

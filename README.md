@@ -8,7 +8,7 @@ DeFi users lose billions to hacks. Cover exists, but claims are usually decided 
 
 - **Live app:** https://coverclaim.vercel.app
 - **Network:** GenLayer Studio Dev, chain 61997
-- **Tests:** 632 offline tests (`python3 test/test_logic.py`), every loophole below has its own test class
+- **Tests:** 650 offline tests (`python3 test/test_logic.py`), every loophole below has its own test class
 - **Resubmission (steward fix):** [RESUBMISSION.md](RESUBMISSION.md)
 - **Audit:** [docs/AUDIT.md](docs/AUDIT.md) · **Probe:** [docs/PROBE.md](docs/PROBE.md) · **Seeded evidence:** [docs/EVIDENCE.md](docs/EVIDENCE.md) · **Design notes:** [contracts/NOTES.md](contracts/NOTES.md) · **Article draft:** [docs/ARTICLE.md](docs/ARTICLE.md)
 
@@ -16,11 +16,11 @@ DeFi users lose billions to hacks. Cover exists, but claims are usually decided 
 
 | contract | address | what it is |
 |---|---|---|
-| `CoverClaim` (canonical) | `0xF2F545d265dB85495E5Bda8fA02573F17B193983` | backdating enforced strictly; 30-day claim window, 72 h settlement, 48 h contest, 24 h stall |
-| `CoverClaimDemo` — **DEMO** | `0xf59B1A3DEE9E7075B9Bc1CdcdeD3d0d67666dE99` | **same bytes**, one constructor value: `demo_backdate_days = 1521`; windows in minutes |
-| `CoverRegistry` | `0x06144d4702C513d289c4Ef1bAA811bbad0c6a4EB` | zero-custody consumer: `is_covered(address, protocol)`, `get_active_cover(address)` |
+| `CoverClaim` (canonical) | `0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3` | backdating enforced strictly; 30-day claim window, 72 h settlement, 48 h contest, 24 h stall |
+| `CoverClaimDemo` — **DEMO** | `0x02A81134c4aCc85386Ad092Bcd2EB55809df15a9` | **same bytes**, one constructor value: `demo_backdate_days = 1521`; windows in minutes |
+| `CoverRegistry` | `0x325A84972a8D86D94bFb4301CA04312B15Cf2F99` | zero-custody consumer: `is_covered(address, protocol)` — `protocol` is the pool's frozen DeFi Llama slug, id, or `slug:id`, never its display name — and `get_active_cover(address)` |
 
-The source in this repository **is** the source on chain: `node test/verify_onchain.mjs` reads each contract's code back with `gen_getContractCode` and compares it byte for byte (sha256 `c0ba646a…` for both CoverClaim instances). Earlier deployments are archived in `docs/previous-deployment/` (`1-first/`; `2-waitgate/` — the one the steward reviewed, before the one-event binding; `3-one-event/` — the binding, before undated pages were also kept from the classifier).
+The source in this repository **is** the source on chain: `node test/verify_onchain.mjs` reads each contract's code back with `gen_getContractCode` and compares it byte for byte (sha256 `3e859364…` for both CoverClaim instances). Earlier deployments are archived in `docs/previous-deployment/` (`1-first/`; `2-waitgate/` — the one the steward reviewed, before the one-event binding; `3-one-event/` — the binding, before undated pages were also kept from the classifier; `4-matched-pages/` — before the binding audit (canonical incident identity, one payout per cover, registry identity)).
 
 ### About the DEMO instance
 
@@ -67,7 +67,7 @@ Real hacks are in the past, and the canonical instance rejects a claim on any in
 | CONTESTED | demo | same claim | underwriter contested with Euler's own post-mortem; **UPHELD**, bond to the buyer |
 | EXCLUDED | demo | Multichain `591:2023-07-07` (keys) | DENIED_EXCLUDED — USER_KEY_COMPROMISE |
 | INCONCLUSIVE | demo | Euler, evidence = homepage (undated, names no risk) | INCONCLUSIVE with no model call; refile allowed |
-| PRO-RATA | demo | Euler, two covers on a 50%-collateral pool | both scaled by the same factor |
+| PRO-RATA | demo | Euler, two covers on a 50%-collateral pool, keyed `1183:2023-03-13` and `1183:2023-03-13:Euler V1` | one canonical incident, one batch, both scaled by the same factor |
 | EXPIRED | demo | 1-day cover, never claimed | released; premium to the underwriter |
 | STALLED | demo | Tornado Cash `148:2023-05-20` | settled while paused, then judged while paused |
 | BACKDATED | canonical | Euler `1183:2023-03-13` on a cover bought 2026-09-29 | **refused at filing**, before any fetch or model call; the cover keeps its one claim |
@@ -91,6 +91,7 @@ Every transaction hash: [RESUBMISSION.md](RESUBMISSION.md) (the multi-incident p
 | 7 | contest copying old evidence | new URLs only; GrantJudge sentence-novelty gate on grounds and, in consensus, on new pages | `TestLoophole07_…` |
 | 8 | protocol B's incident on protocol A's cover | the key must carry the pool's own DeFi Llama id; a page counts only if it names the protocol | `TestLoophole08_…` |
 | 11 | evidence about incident A paired with the record of incident B (same protocol, same window) | the claim names ONE record by key; exact selection, no "latest row"; pages bound by date (±3 d) and the model's `event_match` compared exactly; TVL window anchored on the same record; one hash over key + evidence + record + window | `TestOneEventBindsEverything` |
+| 12 | the same hack keyed two ways, or approve → contest flip → refile → re-approve | canonical incident id (record's id:day:name) keys settlement and the hash; a claim is listed once per batch; finalize pays each claim once, on a live cover | `TestBindingAudit` |
 | 9 | owner pausing to freeze money | pause gates only create_pool / add_capacity / buy_cover | `TestLoophole09_…` |
 | 10 | payment that also reads the clock | only `claim_payout` transfers and it reads no clock; everything else credits | `TestLoophole10_…` |
 
@@ -101,7 +102,7 @@ contracts/CoverClaim.py      the contract (assembled from contracts/parts/* by t
 contracts/CoverRegistry.py   the zero-custody consumer
 contracts/_probe*.py         throwaway probes (STEP 1)
 contracts/NOTES.md           design reasoning and hazards
-test/test_logic.py           632 offline tests, stdlib only
+test/test_logic.py           650 offline tests, stdlib only
 test/*.mjs                   probe, deploy, seed, collect, verify_onchain
 tools/audit.py               STEP 6 audit → docs/AUDIT.md
 frontend/                    Next.js app (obsidian + signal orange)

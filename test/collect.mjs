@@ -123,9 +123,10 @@ const scenarios = [
     evidence: `claim #${inc.claim_id} ${inc.status}; model_called ${inc.model_called}; "${String(inc.pinned).slice(0, 90)}"; refile until ${inc.refile_until}; tx ${txOf("demo-inconclusive-judge")}`,
   },
   {
-    scenario: "PRO-RATA — two claims on one incident, capacity short, both scaled",
-    pass: pBatch.scaled === true && pa.status === "PAID" && pb.status === "PAID" && pa.payout_wei === pb.payout_wei,
-    evidence: `batch #${pBatch.batch_id} scaled=${pBatch.scaled}; approved ${gen(pBatch.gross_total_wei)} vs locked ${gen(pBatch.available_wei)} GEN; paid ${gen(pa.payout_wei)} + ${gen(pb.payout_wei)} GEN; dust ${pBatch.dust_wei} wei; tx ${txOf(`demo-finalize-batch-${pBatch.batch_id}`)}`,
+    scenario: "PRO-RATA — two claims on one incident, keyed two ways (\"1183:2023-03-13\" / \"…:Euler V1\"), one canonical incident, one batch, both scaled",
+    pass: pBatch.scaled === true && pa.status === "PAID" && pb.status === "PAID" && pa.payout_wei === pb.payout_wei
+      && pa.incident_key !== pb.incident_key && pa.incident_id === pb.incident_id && pa.batch_id === pb.batch_id && pBatch.incident_id === pa.incident_id,
+    evidence: `keys ${pa.incident_key} / ${pb.incident_key} → incident ${pa.incident_id}; batch #${pBatch.batch_id} scaled=${pBatch.scaled}; approved ${gen(pBatch.gross_total_wei)} vs locked ${gen(pBatch.available_wei)} GEN; paid ${gen(pa.payout_wei)} + ${gen(pb.payout_wei)} GEN; dust ${pBatch.dust_wei} wei; tx ${txOf(`demo-finalize-batch-${pBatch.batch_id}`)}`,
   },
   {
     scenario: "EXPIRED — cover expires unclaimed, premium to the underwriter",

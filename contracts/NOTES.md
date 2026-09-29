@@ -83,6 +83,21 @@ Now:
    key's, that the window is anchored on the key's day, and that the lowest
    point, drop and bucket recompute from the stored points.
 
+**Canonical incident identity.** The key is how a claimant *names* a record;
+the incident is the record. `incident_id = <id>:<day>:<normalised record
+name>` comes from the selected row, is compared and stored, and is what
+settlement windows are keyed by and the content hash covers. "3:2023-07-30"
+and "3:2023-07-30:Curve DEX" are one incident; two records on one day are two.
+
+**One payout per cover, by construction.** A claim is listed in a batch at
+most once (`_join_batch`); a contest that flips a claim out of APPROVED takes
+it out of the batch's live count (`_leave_batch`); `finalize_incident` pays a
+member once, only if it is still APPROVED in THIS batch and its cover is still
+ACTIVE. Found by the binding audit: before, approve → contest flip → refile →
+re-approve inside one open window listed the claim twice and paid it twice.
+A refile starts from scratch — no prior digest, sources, binding, batch or
+gross — and resets a *resolved* contest so the new verdict can be contested.
+
 EVIDENCE_MISMATCH pays nothing, moves nothing, is not contestable, and the
 cover's one claim is not spent: it may be refiled with other evidence or a
 corrected key (at least one of the two must change), at most twice.

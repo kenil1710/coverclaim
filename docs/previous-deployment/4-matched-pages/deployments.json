@@ -4,10 +4,10 @@
       "network": "studiodev",
       "chain_id": 61997,
       "CoverClaim": {
-        "address": "0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3",
-        "deploy_tx": "0xb6d4fd74e413509d803232a8bb4684b736a4c2aaaa08613ab707185795a3e06d",
-        "source_bytes": 218088,
-        "source_sha256": "3e8593642bad764fcf8ee1dfd4a1501936228eddefcc92365379a959750ea237",
+        "address": "0xF2F545d265dB85495E5Bda8fA02573F17B193983",
+        "deploy_tx": "0x4ea19dde06ff07bc91a9ccb81db3f3198990531dd91084b66e857ef3d3ed1f65",
+        "source_bytes": 213653,
+        "source_sha256": "c0ba646ac17989f26269d1b657f06e38a97e519715e36773f3a7e98cb8a652e6",
         "policy_version": "1.0.0",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "demo": false,
@@ -18,14 +18,14 @@
         "stall_ttl_s": 86400,
         "buy_cooldown_s": 60,
         "contest_bond_wei": "100000000000000000",
-        "deployed_at": "2026-09-29T08:18:58.068Z"
+        "deployed_at": "2026-09-29T06:36:20.900Z"
       },
       "explorer": "https://explorer-studio-dev.genlayer.com/",
       "CoverClaimDemo": {
-        "address": "0x02A81134c4aCc85386Ad092Bcd2EB55809df15a9",
-        "deploy_tx": "0x755c47837df2c77ff169725538aa42711f345bfd6db3967de266b08d5b27aa0a",
-        "source_bytes": 218088,
-        "source_sha256": "3e8593642bad764fcf8ee1dfd4a1501936228eddefcc92365379a959750ea237",
+        "address": "0xf59B1A3DEE9E7075B9Bc1CdcdeD3d0d67666dE99",
+        "deploy_tx": "0x4c02ac916c08b7079387c0c433f8b05f35ee21e9251935161fbb5e2dd0aac4fc",
+        "source_bytes": 213653,
+        "source_sha256": "c0ba646ac17989f26269d1b657f06e38a97e519715e36773f3a7e98cb8a652e6",
         "policy_version": "1.0.0",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "demo": true,
@@ -36,18 +36,18 @@
         "stall_ttl_s": 600,
         "buy_cooldown_s": 10,
         "contest_bond_wei": "100000000000000000",
-        "deployed_at": "2026-09-29T08:19:05.271Z"
+        "deployed_at": "2026-09-29T06:36:31.623Z"
       },
       "CoverRegistry": {
-        "address": "0x325A84972a8D86D94bFb4301CA04312B15Cf2F99",
-        "deploy_tx": "0x416a275c3b89a1ade41b1b1aa75ac69da593b1fbacef96f772606d6706d9d5bb",
+        "address": "0x06144d4702C513d289c4Ef1bAA811bbad0c6a4EB",
+        "deploy_tx": "0x0a6f32dd1c87a6090ee4631b140fe1628314f7295ace4c94726107ad471e0e81",
         "source_bytes": 8239,
         "source_sha256": "7aa733788f6cff508768c0377bc002059dc1ea178dabfb3a2e9d7773193094b1",
-        "coverclaim": "0x8a7e766b9221fA55A5d6d868f6ed0Adaa16a93D3",
+        "coverclaim": "0xF2F545d265dB85495E5Bda8fA02573F17B193983",
         "owner": "0x182dC182A9FA3c43Acf87b77048c5c91443d2967",
         "custody": false,
         "payable_methods": 0,
-        "deployed_at": "2026-09-29T08:19:13.863Z"
+        "deployed_at": "2026-09-29T06:36:37.271Z"
       }
     }
   }

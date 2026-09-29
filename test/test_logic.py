@@ -3628,8 +3628,12 @@ class TestOneEventBindsEverything(unittest.TestCase):
         raw = fetch_raw(f)
         base = C._reading(f, raw)["content_hash"]
         variants = []
+        # the same record spelled differently is the SAME incident: same hash
         g = dict(f, incident_key=K_VYPER + ":Curve DEX", key_name="Curve DEX")
-        variants.append(("key", C._reading(g, fetch_raw(g))))
+        self.assertEqual(C._reading(g, fetch_raw(g))["content_hash"], base)
+        # a key naming a different record is a different incident
+        h = dict(f, incident_key=K_DNS, key_day=epoch("2022-08-09T00:00:00Z"))
+        variants.append(("key", C._reading(h, fetch_raw(h))))
         r2 = json.loads(json.dumps(raw))
         r2["tvl"]["window"][3][1] += 1
         variants.append(("tvl point", C._reading(f, r2)))
@@ -3654,7 +3658,7 @@ class TestOneEventBindsEverything(unittest.TestCase):
         self.assertEqual(v["drop_from_window_bps"], 4952)
         self.assertEqual(v["incident_key"], K_VYPER)
         k = self.c.claims[clid - 1]
-        for field, forged in (("incident_key", K_DNS),
+        for field, forged in (("incident_id", "3:2022-08-09:curve dex"),
                               ("tvl_line", str(k.tvl_line).replace("low 1578413160", "low 1")),
                               ("bind_line", str(k.bind_line) + " x"),
                               ("llama_line", str(k.llama_line).replace("61700000", "1"))):
@@ -3672,6 +3676,10 @@ class TestOneEventBindsEverything(unittest.TestCase):
         k.llama_line = str(old).replace("3:2023-07-30", "3:2022-08-09")
         self.assertFalse(view(self.c, "verify_claim", clid)["record_matches_key"])
         k.llama_line = old
+        old = k.incident_key
+        k.incident_key = K_DNS
+        self.assertFalse(view(self.c, "verify_claim", clid)["record_matches_key"])
+        k.incident_key = old
 
     def test_forged_leader_with_other_record_is_refused(self):
         # A leader that swaps in the DNS record under a Vyper key: its own raw
@@ -3702,6 +3710,302 @@ class TestOneEventBindsEverything(unittest.TestCase):
         for k in ("incident_key", "bind_line", "event_gate", "pinned_as", "event_match"):
             self.assertIn(k, C.EXACT_STR)
         self.assertIn("bound", C.EXACT_INT)
+
+
+class TestBindingAudit(unittest.TestCase):
+    """Items 2-5 of the binding audit."""
+
+    # --- 2. canonical incident identity --------------------------------------
+    def test_2_differently_written_keys_group_and_scale_together(self):
+        c = fresh()
+        pid = make_pool(c, capital=GEN, coll=5000, max_cover=GEN)
+        ca = buy(c, pid, who=ALICE, amount=GEN)
+        advance(MIN)
+        cb = buy(c, pid, who=BOB, amount=GEN)
+        ka = file(c, ca, R_EULER, key="1183:2023-03-13")
+        kb = file(c, cb, R_EULER, key="1183:2023-03-13:Euler V1")
+        judge(c, ka)
+        judge(c, kb)
+        A, B = c.claims[ka - 1], c.claims[kb - 1]
+        self.assertNotEqual(str(A.incident_key), str(B.incident_key))
+        self.assertEqual(str(A.incident_id), str(B.incident_id))
+        self.assertEqual(str(A.incident_id), "1183:2023-03-13:euler v1")
+        self.assertEqual(int(A.batch_id), int(B.batch_id))
+        self.assertEqual(str(A.content_hash), str(B.content_hash))
+        out = settle_ready(c, int(A.batch_id))
+        self.assertTrue(ok(out), out)
+        self.assertTrue(out["scaled"])
+        self.assertEqual(int(A.payout_wei), int(B.payout_wei))
+        self.assertEqual(int(A.payout_wei) + int(B.payout_wei) + int(out["dust_to_underwriter_wei"]),
+                         int(out["available_wei"]))
+
+    def test_2_two_records_on_one_day_are_two_incidents(self):
+        rows = json.loads(HACKS)
+        rows.append({"name": "Curve Lending", "date": epoch("2023-07-30T00:00:00Z"),
+                     "defillamaId": "3", "classification": "Access Control",
+                     "technique": "x", "amount": 5})
+        c = fresh()
+        WEB[HACKS_URL] = (200, json.dumps(rows))
+        pid = make_pool(c, spec=CURVE)
+        ca = buy(c, pid, who=ALICE, amount=GEN // 2)
+        advance(MIN)
+        cb = buy(c, pid, who=BOB, amount=GEN // 2)
+        ka = file(c, ca, R_VYPER, key="3:2023-07-30:Curve DEX")
+        kb = file(c, cb, R_VYPER, key="3:2023-07-30:Curve Lending")
+        WEB[HACKS_URL] = (200, json.dumps(rows))
+        judge(c, ka)
+        WEB[HACKS_URL] = (200, json.dumps(rows))
+        judge(c, kb)
+        A, B = c.claims[ka - 1], c.claims[kb - 1]
+        self.assertEqual(str(A.status), "APPROVED")
+        self.assertEqual(str(B.status), "APPROVED")
+        self.assertNotEqual(str(A.incident_id), str(B.incident_id))
+        self.assertNotEqual(int(A.batch_id), int(B.batch_id))
+        self.assertEqual(str(c.batches[int(A.batch_id) - 1].incident_id), str(A.incident_id))
+
+    # --- 3. contest binding ------------------------------------------------------
+    def approved(self):
+        c = fresh()
+        pid = make_pool(c)
+        clid = file(c, buy(c, pid), R_EULER)
+        self.assertEqual(judge(c, clid)["outcome"], "APPROVED")
+        return c, clid
+
+    def test_3_contest_page_dated_elsewhere_is_not_read(self):
+        c, clid = self.approved()
+        out = send(c, UW, int(c.contest_bond_wei), "contest", clid, R_MULTI,
+                   "The underwriter says the Multichain report changes the root cause.")
+        self.assertTrue(ok(out), out)
+        calls = MODEL.calls
+        out = send(c, STRANGER, 0, "judge_contest", clid)
+        self.assertEqual(out["contest"], "NOT_NOVEL")
+        self.assertEqual(MODEL.calls, calls)
+        self.assertEqual(str(c.claims[clid - 1].status), "APPROVED")
+
+    def test_3_contest_undated_page_is_not_read(self):
+        c, clid = self.approved()
+        url = "https://www.euler.finance/notes"
+        RENDER[url] = "Euler notes: a phishing campaign and a governance vote were involved."
+        out = send(c, UW, int(c.contest_bond_wei), "contest", clid, url,
+                   "The underwriter says phishing and governance were the way in.")
+        self.assertTrue(ok(out), out)
+        out = send(c, STRANGER, 0, "judge_contest", clid)
+        self.assertEqual(out["contest"], "NOT_NOVEL")
+        self.assertNotIn("phishing", str(c.claims[clid - 1].contest_novel))
+
+    def test_3_contest_bound_page_rejudged_with_event_match(self):
+        c, clid = self.approved()
+        out = send(c, UW, int(c.contest_bond_wei), "contest", clid, PM_EULER,
+                   "Euler's own post-mortem is a new primary source on the root cause.")
+        self.assertTrue(ok(out), out)
+        MODEL.serve_raw(_TopStrength("COVERED", "SMART_CONTRACT_BUG", "NONE", "DIFFERENT"))
+        out = send(c, STRANGER, 0, "judge_contest", clid)
+        self.assertEqual(out["contest"], "FLIPPED")
+        self.assertEqual(out["outcome"], "EVIDENCE_MISMATCH")
+        self.assertIn("event_match", C._prompt(euler_facts(), C._reading(euler_facts(), fetch_raw(euler_facts()))))
+
+    def test_3_contest_allowlist_applies(self):
+        c, clid = self.approved()
+        out = send(c, UW, int(c.contest_bond_wei), "contest", clid, BLOG,
+                   "A blog post says something different about the root cause.")
+        self.assertTrue(rejected(out))
+        self.assertIn("allowlist", out["reason"])
+
+    def test_3_contest_cannot_change_the_incident_key(self):
+        c, clid = self.approved()
+        cls = _class(TREE, "CoverClaim")
+        args = [a.arg for a in _methods(cls)["contest"].args.args]
+        self.assertEqual(args, ["self", "claim_id", "evidence_urls", "statement"])
+        send(c, UW, int(c.contest_bond_wei), "contest", clid, PM_EULER,
+             "Euler's own post-mortem is a new primary source on the root cause.")
+        k = c.claims[clid - 1]
+        facts = c._claim_facts(k, c.covers[int(k.cover_id) - 1], c.pools[int(k.pool_id) - 1], "contest")
+        self.assertEqual(facts["incident_key"], str(k.incident_key))
+        self.assertEqual(facts["urls"], [PM_EULER])
+
+    # --- 4. refile binding ---------------------------------------------------------
+    def test_4_refile_reuses_nothing_from_the_rejected_attempt(self):
+        c = fresh()
+        pid = make_pool(c, spec=CURVE)
+        clid = file(c, buy(c, pid, amount=GEN // 2), R_CURVE_DNS, key=K_VYPER)
+        self.assertEqual(judge(c, clid)["outcome"], "EVIDENCE_MISMATCH")
+        k = c.claims[clid - 1]
+        before = (str(k.digest), str(k.bind_line), str(k.content_hash))
+        send(c, ALICE, 0, "refile_claim", clid, "", R_VYPER, "the Vyper report")
+        self.assertEqual(str(k.status), "FILED")
+        # nothing of the rejected verdict is carried into the new question
+        facts = c._claim_facts(k, c.covers[int(k.cover_id) - 1], c.pools[int(k.pool_id) - 1], "claim")
+        self.assertEqual(facts["urls"], [R_VYPER])
+        self.assertEqual((facts["prior_digest"], facts["prior_sources"], facts["prior_bound"]), ("", 0, 0))
+        self.assertEqual(int(k.batch_id), 0)
+        self.assertEqual(int(k.gross_wei), 0)
+        out = judge(c, clid, "COVERED", "SMART_CONTRACT_BUG")
+        self.assertEqual(out["outcome"], "APPROVED")
+        after = (str(k.digest), str(k.bind_line), str(k.content_hash))
+        for x, y in zip(before, after):
+            self.assertNotEqual(x, y)
+        self.assertNotIn("DNS", str(k.digest))
+
+    def test_4_refile_rechecks_the_key_from_scratch(self):
+        c = fresh()
+        pid = make_pool(c, spec=CURVE)
+        clid = file(c, buy(c, pid, amount=GEN // 2), R_CURVE_DNS, key=K_VYPER)
+        judge(c, clid)
+        out = send(c, ALICE, 0, "refile_claim", clid, "1183:2023-03-13", "", "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("names DeFi Llama id 1183", out["reason"])
+        out = send(c, ALICE, 0, "refile_claim", clid, "3:2021-01-01", "", "x")
+        self.assertTrue(rejected(out))
+        self.assertIn("predates", out["reason"])
+        out = send(c, ALICE, 0, "refile_claim", clid, "", BLOG, "x")
+        self.assertTrue(rejected(out))
+
+    def test_4_refile_limit(self):
+        c = fresh()
+        pid = make_pool(c, spec=CURVE)
+        clid = file(c, buy(c, pid, amount=GEN // 2), R_CURVE_DNS, key=K_VYPER)
+        judge(c, clid)
+        for u in (A_EULER, R_EULER):
+            self.assertTrue(ok(send(c, ALICE, 0, "refile_claim", clid, "", u, "x")))
+            self.assertEqual(judge(c, clid)["outcome"], "EVIDENCE_MISMATCH")
+        self.assertTrue(rejected(send(c, ALICE, 0, "refile_claim", clid, "", R_VYPER, "x")))
+
+    # --- 5. one payout per cover ---------------------------------------------------
+    def flip_then_reapprove(self, c, pid, who=ALICE):
+        clid = file(c, buy(c, pid, who=who), R_EULER)
+        self.assertEqual(judge(c, clid)["outcome"], "APPROVED")
+        bid = int(c.claims[clid - 1].batch_id)
+        send(c, UW, int(c.contest_bond_wei), "contest", clid, PM_EULER,
+             "Euler's own post-mortem is a new primary source on the root cause.")
+        MODEL.serve_raw(_TopStrength("INCONCLUSIVE", "NONE", "NONE"))
+        out = send(c, STRANGER, 0, "judge_contest", clid)
+        self.assertEqual((out["contest"], out["outcome"]), ("FLIPPED", "INCONCLUSIVE"))
+        self.assertTrue(ok(send(c, who, 0, "refile_claim", clid, "", A_EULER, "archived report")))
+        self.assertEqual(judge(c, clid)["outcome"], "APPROVED")
+        return clid, bid
+
+    def test_5_flip_refile_reapprove_pays_once(self):
+        c = fresh()
+        pid = make_pool(c)
+        clid, bid = self.flip_then_reapprove(c, pid)
+        k = c.claims[clid - 1]
+        self.assertEqual(int(k.batch_id), bid)          # same open batch...
+        self.assertEqual(self_ids(c, bid).count(clid), 1)   # ...listed once
+        out = settle_ready(c, bid)
+        self.assertTrue(ok(out), out)
+        self.assertEqual(out["claims_paid"], 1)
+        gross = C._gross(GEN, 10000, 1000)
+        self.assertEqual(int(k.payout_wei), gross)
+        self.assertEqual(int(c.payout_wei.get(ALICE)), gross)
+        self.assertEqual(str(c.covers[int(k.cover_id) - 1].status), "PAID")
+
+    def test_5_new_verdict_after_refile_can_be_contested(self):
+        c = fresh()
+        pid = make_pool(c)
+        clid, _ = self.flip_then_reapprove(c, pid)
+        self.assertEqual(str(c.claims[clid - 1].contest_status), "")
+        out = send(c, UW, int(c.contest_bond_wei), "contest", clid, "https://www.euler.finance/blog/x",
+                   "A further official note bears on the new verdict directly.")
+        self.assertTrue(ok(out), out)
+
+    def test_5_paid_cover_is_never_paid_again(self):
+        c = fresh()
+        pid = make_pool(c)
+        clid = file(c, buy(c, pid), R_EULER)
+        judge(c, clid)
+        bid = int(c.claims[clid - 1].batch_id)
+        settle_ready(c, bid)
+        cover = int(c.claims[clid - 1].cover_id)
+        # no second claim, no refile, no contest, no second finalize
+        self.assertTrue(rejected(send(c, ALICE, 0, "file_claim", cover, "1183:2023-03-13:Euler V1", A_EULER, "x")))
+        self.assertTrue(rejected(send(c, ALICE, 0, "refile_claim", clid, "", A_EULER, "x")))
+        self.assertTrue(rejected(send(c, UW, int(c.contest_bond_wei), "contest", clid, PM_EULER,
+                                      "Euler's own post-mortem is a new primary source on it.")))
+        self.assertTrue(rejected(send(c, STRANGER, 0, "finalize_incident", bid)))
+        self.assertEqual(int(c.payout_wei.get(ALICE)), C._gross(GEN, 10000, 1000))
+
+    def test_5_payouts_never_exceed_locked_capacity_random(self):
+        rnd = random.Random(11)
+        for _ in range(12):
+            c = fresh()
+            coll = rnd.choice([2000, 5000, 10000])
+            pid = make_pool(c, capital=3 * GEN, coll=coll, max_cover=GEN)
+            buyers = [ALICE, BOB, CAROL]
+            claims = []
+            for who in buyers:
+                advance(MIN)
+                clid = file(c, buy(c, pid, who=who, amount=GEN), R_EULER,
+                            key=rnd.choice(["1183:2023-03-13", "1183:2023-03-13:Euler V1",
+                                            "1183:2023-03-13:euler  v1"]))
+                judge(c, clid)
+                claims.append(clid)
+            if rnd.random() < 0.7:
+                self.flip_on(c, claims[0])
+            for bid in sorted({int(c.claims[k - 1].batch_id) for k in claims if int(c.claims[k - 1].batch_id)}):
+                settle_ready(c, bid)
+            locks = sum(int(cv.lock_wei) for cv in c.covers)
+            paid = sum(int(k.payout_wei) for k in c.claims)
+            self.assertLessEqual(paid, locks)
+            for k in c.claims:
+                self.assertLessEqual(int(k.payout_wei), C._gross(GEN, 10000, 1000))
+            self.assertEqual(len({int(k.cover_id) for k in c.claims if int(k.payout_wei) > 0}),
+                             len([k for k in c.claims if int(k.payout_wei) > 0]))
+
+    def flip_on(self, c, clid):
+        send(c, UW, int(c.contest_bond_wei), "contest", clid, PM_EULER,
+             "Euler's own post-mortem is a new primary source on the root cause.")
+        MODEL.serve_raw(_TopStrength("INCONCLUSIVE", "NONE", "NONE"))
+        send(c, STRANGER, 0, "judge_contest", clid)
+        who = c.claims[clid - 1].claimant
+        send(c, who, 0, "refile_claim", clid, "", A_EULER, "archived report")
+        judge(c, clid)
+
+
+class TestBindingAudit6(unittest.TestCase):
+    """Item 6: other stored results bound to the record, cover and policy."""
+
+    def test_registry_ignores_display_names(self):
+        c = fresh(demo=False)
+        # a pool NAMED "Aave" over Euler's slug and id
+        pid = make_pool(c, spec=dict(EULER, name="Aave"), wait=0)
+        buy(c, pid, days=30)
+        advance(DAY)
+        self.assertFalse(view(c, "get_active_cover", ALICE.as_hex, "Aave")["found"])
+        self.assertTrue(view(c, "get_active_cover", ALICE.as_hex, "euler-v1")["found"])
+
+    def test_wayback_metadata_never_dates_a_page(self):
+        url = "https://web.archive.org/web/20220810000000/https://rekt.news/curve-finance-rekt/"
+        install_web()
+        WEB[url] = (200, "<html><!-- BEGIN WAYBACK TOOLBAR INSERT --><div>Aug 10, 2022 "
+                         "captured 12 times between July 30, 2023 and Aug 1, 2023</div>"
+                         "<!-- END WAYBACK TOOLBAR INSERT --><p>Curve was hit.</p>"
+                         "<!-- FILE ARCHIVED ON 00:00:00 Jul 31, 2023 AND RETRIEVED --></html>")
+        RENDER.pop(url, None)
+        ok_, text = C._page(url)
+        self.assertTrue(ok_)
+        self.assertEqual(C._dates_in(C._norm(text), 40), [])
+
+    def test_severity_window_follows_the_record_not_the_filing_time(self):
+        # the same claim filed at two different times reads the same window
+        f = euler_facts(protocol_name="Curve", llama_slug="curve-dex", llama_id="3",
+                        urls=[R_VYPER], key=K_VYPER)
+        a = C._reading(f, fetch_raw(f))
+        set_now(NOW + 40 * DAY)
+        b = C._reading(f, fetch_raw(f))
+        self.assertEqual(a["tvl_line"], b["tvl_line"])
+        self.assertIn("anchor 2023-07-30 ", a["tvl_line"])
+
+    def test_outcome_inputs_are_this_cover_and_this_pool(self):
+        src = ast.unparse(_methods(_class(TREE, "CoverClaim"))["judge_claim"])
+        call = src[src.index("_outcome("):src.index(")", src.index("bool(d['tvl_measured'])")) + 1]
+        for want in ("cover.start", "cover.end", "pool.waiting_days", "cover.amount_wei",
+                     "self._table(pool)", "pool.deductible_bps", "d['effective']",
+                     "d['incident_day']", "d['bucket']", "d['tvl_measured']"):
+            self.assertIn(want, call, want)
+
+
+def self_ids(c, bid):
+    return [int(x) for x in (c.batch_claims.get(str(bid)) or [])]
 
 
 class TestLoophole09_OwnerPauseCannotFreezeMoney(unittest.TestCase):
@@ -4035,7 +4339,7 @@ class TestSourceInvariants(unittest.TestCase):
                 if isinstance(n, ast.Assign):
                     for t in n.targets:
                         if isinstance(t, ast.Attribute) and t.attr in verdict \
-                                and t.attr not in ("judged_at", "incident_day"):
+                                and t.attr not in ("judged_at", "incident_day", "incident_id"):
                             self.fail((name, t.attr))
 
     def test_sentence_in_source(self):
@@ -4260,7 +4564,12 @@ class TestRegistry(unittest.TestCase):
         buy(self.c, self.pid, days=30)
         advance(8 * DAY)
         self.assertTrue(view(self.r, "is_covered", ALICE.as_hex, "euler-v1"))
-        self.assertTrue(view(self.r, "is_covered", ALICE.as_hex, "Euler"))
+        # frozen DeFi Llama identity only: slug, id, or slug:id - never the
+        # pool's free-text display name
+        self.assertTrue(view(self.r, "is_covered", ALICE.as_hex, "1183"))
+        self.assertTrue(view(self.r, "is_covered", ALICE.as_hex, "euler-v1:1183"))
+        self.assertFalse(view(self.r, "is_covered", ALICE.as_hex, "Euler"))
+        self.assertFalse(view(self.r, "is_covered", ALICE.as_hex, "euler-v1:3"))
 
     def test_other_protocol_not_covered(self):
         buy(self.c, self.pid, days=30)

@@ -150,6 +150,7 @@ class Claim:
 
     # --- verdict
     judged_at: u64
+    incident_id: str
     classification: str
     event_match: str
     effective: str
@@ -213,6 +214,7 @@ class Batch:
     capacity locked for those covers cannot pay them all in full."""
     batch_id: u32
     pool_id: u32
+    incident_id: str
     incident_day: u64
     opened_at: u64
     closes_at: u64
