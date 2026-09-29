@@ -33,11 +33,11 @@ Status legend: [ ] todo · [x] done · [!] blocked (reason inline)
 - [x] collect → docs/EVIDENCE.md
 - [x] drain demo to exactly 0
 - [x] audit incl. no-latest-row + hash-binding checks; README addresses == deployments.json
-- [ ] source byte-for-byte vs GitHub after push
+- [x] source byte-for-byte vs GitHub after push (commit aec7e1f: CoverClaim ffb55c47…, CoverRegistry 7aa73378… — identical to repo and chain)
 
 ## Docs / frontend / ship
 - [x] README, docs/EVIDENCE.md, docs/ARTICLE.md — 52/0 audit, 17/17 chain scenarios
 - [x] frontend: incident picker (live api.llama.fi), `check_incident`, refile with key, binding shown; builds
 - [x] Vercel production env → new addresses; deployed; live bundle has only the new addresses
 - [x] RESUBMISSION.md
-- [ ] push (no Co-Authored-By)
+- [x] push (no Co-Authored-By) — aec7e1f
